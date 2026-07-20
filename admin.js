@@ -17,121 +17,512 @@ if (!localStorage.getItem('altereco_users')) {
 function getPendingPosts() { return JSON.parse(localStorage.getItem('altereco_pending_posts')); }
 function getApprovedPosts() { return JSON.parse(localStorage.getItem('altereco_approved_posts')); }
 
-/* ════════════ AUTHENTICATION ════════════ */
+/* ════════════ AUTHENTICATION — SUPABASE ════════════ */
 
-window.processLogin = function(event, role) {
+const ALTERECO_ROLE_MAP = {
+    admin: 'admin',
+    curador: 'curator',
+    curator: 'curator'
+};
+
+function getSupabaseClient() {
+    if (!window.alterecoSupabase) {
+        throw new Error('A conexão com o Supabase não foi carregada.');
+    }
+    return window.alterecoSupabase;
+}
+
+function saveVerifiedSession(user, profile) {
+    const sessionData = {
+        id: user.id,
+        email: user.email,
+        name: profile.full_name || user.email,
+        role: profile.role
+    };
+
+    sessionStorage.setItem(
+        'altereco_session',
+        JSON.stringify(sessionData)
+    );
+
+    return sessionData;
+}
+
+function clearAlterEcoSession() {
+    sessionStorage.removeItem('altereco_session');
+}
+
+async function getVerifiedAccess(expectedRole = null) {
+    const supabaseClient = getSupabaseClient();
+
+    const {
+        data: { session },
+        error: sessionError
+    } = await supabaseClient.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    if (!session || !session.user) {
+        clearAlterEcoSession();
+        return null;
+    }
+
+    const { data: profile, error: profileError } = await supabaseClient
+        .from('profiles')
+        .select('id, full_name, role, active')
+        .eq('id', session.user.id)
+        .single();
+
+    if (profileError) throw profileError;
+
+    if (!profile || profile.active !== true) {
+        await supabaseClient.auth.signOut();
+        clearAlterEcoSession();
+        throw new Error(
+            'Sua conta existe, mas ainda não foi ativada pela administração.'
+        );
+    }
+
+    const normalizedExpectedRole = expectedRole
+        ? ALTERECO_ROLE_MAP[expectedRole]
+        : null;
+
+    if (
+        normalizedExpectedRole === 'admin' &&
+        profile.role !== 'admin'
+    ) {
+        throw new Error(
+            'Esta conta não possui permissão de administradora.'
+        );
+    }
+
+    if (
+        normalizedExpectedRole === 'curator' &&
+        !['admin', 'curator'].includes(profile.role)
+    ) {
+        throw new Error(
+            'Esta conta não possui permissão para a curadoria.'
+        );
+    }
+
+    return saveVerifiedSession(session.user, profile);
+}
+
+window.processLogin = async function(event, role) {
     event.preventDefault();
-    const email = document.getElementById('log-email').value;
-    const pass = document.getElementById('log-pass').value;
-    const users = JSON.parse(localStorage.getItem('altereco_users'));
-    const user = users.find(u => u.email === email && u.pass === pass && u.role === role);
-    
-    if (user) {
-        sessionStorage.setItem('altereco_session', JSON.stringify({ role: user.role, name: user.name, email: user.email }));
-        if(role === 'admin') renderAdminDashboard();
-        else renderCuradorDashboard();
-    } else {
-        alert('Credenciais incorretas ou acesso restrito.');
+
+    const emailInput = document.getElementById('log-email');
+    const passwordInput = document.getElementById('log-pass');
+    const submitButton = event.submitter;
+
+    const email = emailInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+    const normalizedRole = ALTERECO_ROLE_MAP[role];
+
+    if (!normalizedRole) {
+        alert('Tipo de acesso inválido.');
+        return;
+    }
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Verificando acesso...';
+    }
+
+    try {
+        const supabaseClient = getSupabaseClient();
+
+        const { error: loginError } =
+            await supabaseClient.auth.signInWithPassword({
+                email,
+                password
+            });
+
+        if (loginError) throw loginError;
+
+        const verifiedSession =
+            await getVerifiedAccess(normalizedRole);
+
+        if (!verifiedSession) {
+            throw new Error(
+                'Não foi possível confirmar a sessão.'
+            );
+        }
+
+        if (normalizedRole === 'admin') {
+            await renderAdminDashboard();
+        } else {
+            await renderCuradorDashboard();
+        }
+    } catch (error) {
+        console.error('Erro no login AlterECO:', error);
+
+        try {
+            await window.alterecoSupabase?.auth.signOut();
+        } catch (_) {
+            // Não interrompe a mensagem principal.
+        }
+
+        clearAlterEcoSession();
+
+        const friendlyMessage =
+            error.message === 'Invalid login credentials'
+                ? 'E-mail ou senha incorretos.'
+                : error.message;
+
+        alert(
+            `Não foi possível entrar.\n\n${friendlyMessage}`
+        );
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Entrar no Sistema';
+        }
     }
 };
 
-window.logout = function() {
-    sessionStorage.removeItem('altereco_session');
-    location.reload();
+window.logout = async function() {
+    try {
+        if (window.alterecoSupabase) {
+            await window.alterecoSupabase.auth.signOut();
+        }
+    } catch (error) {
+        console.error('Erro ao encerrar sessão:', error);
+    } finally {
+        clearAlterEcoSession();
+        renderPage('home');
+    }
 };
 
 function renderLogin(role) {
     const c = document.getElementById('content-area');
-    const title = role === 'admin' ? 'Acesso Administrativo' : 'Painel do Curador';
-    
+    const title =
+        role === 'admin'
+            ? 'Acesso Administrativo'
+            : 'Painel da Curadoria';
+
     c.innerHTML = `
-    <div style="min-height: 80vh; display:flex; align-items:center; justify-content:center; background: var(--bg-light);">
-        <div style="background:var(--white); padding: 4rem; border-radius: var(--border-radius); box-shadow: var(--shadow); max-width: 450px; width:100%;">
-            <div style="text-align:center; margin-bottom: 2rem;">
-                <i data-lucide="${role === 'admin' ? 'shield-check' : 'user-check'}" style="width:64px; height:64px; color:var(--primary-navy);"></i>
-                <h2 style="color:var(--primary-navy); margin-top: 1rem;">${title}</h2>
-                <p style="color:var(--text-gray); font-size: 0.9rem;">Área protegida</p>
+    <div style="min-height:80vh; display:flex; align-items:center; justify-content:center; background:var(--bg-light); padding:2rem;">
+        <div style="background:var(--white); padding:clamp(2rem, 6vw, 4rem); border-radius:var(--border-radius); box-shadow:var(--shadow); max-width:450px; width:100%;">
+            <div style="text-align:center; margin-bottom:2rem;">
+                <i
+                    data-lucide="${role === 'admin' ? 'shield-check' : 'user-check'}"
+                    style="width:64px; height:64px; color:var(--primary-navy);"
+                    aria-hidden="true"
+                ></i>
+
+                <h2 style="color:var(--primary-navy); margin-top:1rem;">
+                    ${title}
+                </h2>
+
+                <p style="color:var(--text-gray); font-size:0.9rem;">
+                    Área protegida por autenticação individual
+                </p>
             </div>
-            <form onsubmit="processLogin(event, '${role}')" style="display:flex; flex-direction:column; gap:1.5rem;">
+
+            <form
+                onsubmit="processLogin(event, '${role}')"
+                style="display:flex; flex-direction:column; gap:1.5rem;"
+            >
                 <div>
-                     <label style="font-weight:bold; display:block; margin-bottom:0.5rem;">Email Institucional</label>
-                     <input type="email" id="log-email" required placeholder="ex: ${role}@altereco.org" style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;">
+                    <label
+                        for="log-email"
+                        style="font-weight:bold; display:block; margin-bottom:0.5rem;"
+                    >
+                        E-mail cadastrado
+                    </label>
+
+                    <input
+                        type="email"
+                        id="log-email"
+                        autocomplete="email"
+                        required
+                        placeholder="seuemail@instituicao.br"
+                        style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;"
+                    >
                 </div>
+
                 <div>
-                     <label style="font-weight:bold; display:block; margin-bottom:0.5rem;">Senha Segura</label>
-                     <input type="password" id="log-pass" required placeholder="Sua senha secreta" style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;">
+                    <label
+                        for="log-pass"
+                        style="font-weight:bold; display:block; margin-bottom:0.5rem;"
+                    >
+                        Senha
+                    </label>
+
+                    <input
+                        type="password"
+                        id="log-pass"
+                        autocomplete="current-password"
+                        required
+                        placeholder="Sua senha"
+                        style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;"
+                    >
                 </div>
-                <button type="submit" style="width:100%; padding:1rem; border:none; cursor:pointer; font-weight:bold; font-size:1.1rem; background:var(--primary-navy); color:white; border-radius:8px; transition:0.3s;">Entrar no Sistema</button>
+
+                <button
+                    type="submit"
+                    style="width:100%; padding:1rem; border:none; cursor:pointer; font-weight:bold; font-size:1.1rem; background:var(--primary-navy); color:white; border-radius:8px; transition:0.3s;"
+                >
+                    Entrar no Sistema
+                </button>
             </form>
-            
+
             <div style="display:flex; justify-content:center; margin-top:1.5rem; font-size:0.9rem; font-weight:500;">
-                <a href="#" onclick="event.preventDefault(); renderResetPassword('${role}');" style="color:var(--text-gray); text-decoration:underline;">Esqueceu a senha?</a>
+                <a
+                    href="#"
+                    onclick="event.preventDefault(); renderResetPassword('${role}');"
+                    style="color:var(--text-gray); text-decoration:underline;"
+                >
+                    Esqueci minha senha
+                </a>
             </div>
         </div>
     </div>
     `;
+
     if (window.lucide) window.lucide.createIcons();
-    window.scrollTo(0,0);
+    window.scrollTo(0, 0);
 }
 
 window.renderResetPassword = function(role) {
     const c = document.getElementById('content-area');
+
     c.innerHTML = `
-    <div style="min-height: 80vh; display:flex; align-items:center; justify-content:center; background: var(--bg-light);">
-        <div style="background:var(--white); padding: 4rem; border-radius: var(--border-radius); box-shadow: var(--shadow); max-width: 450px; width:100%;">
-            <div style="text-align:center; margin-bottom: 2rem;">
-                <i data-lucide="key" style="width:64px; height:64px; color:var(--mint-teal);"></i>
-                <h2 style="color:var(--primary-navy); margin-top: 1rem;">Alterar Senha</h2>
-                <p style="color:var(--text-gray); font-size: 0.9rem;">Redefinição para ${role === 'admin' ? 'Administração' : 'Curadoria'}</p>
+    <div style="min-height:80vh; display:flex; align-items:center; justify-content:center; background:var(--bg-light); padding:2rem;">
+        <div style="background:var(--white); padding:clamp(2rem, 6vw, 4rem); border-radius:var(--border-radius); box-shadow:var(--shadow); max-width:450px; width:100%;">
+            <div style="text-align:center; margin-bottom:2rem;">
+                <i
+                    data-lucide="mail-check"
+                    style="width:64px; height:64px; color:var(--mint-teal);"
+                    aria-hidden="true"
+                ></i>
+
+                <h2 style="color:var(--primary-navy); margin-top:1rem;">
+                    Recuperar senha
+                </h2>
+
+                <p style="color:var(--text-gray); font-size:0.9rem; line-height:1.5;">
+                    Digite o e-mail cadastrado. O Supabase enviará um link seguro para você criar uma nova senha.
+                </p>
             </div>
-            <form onsubmit="processResetPassword(event, '${role}')" style="display:flex; flex-direction:column; gap:1.5rem;">
+
+            <form
+                onsubmit="processResetPassword(event, '${role}')"
+                style="display:flex; flex-direction:column; gap:1.5rem;"
+            >
                 <div>
-                     <label style="font-weight:bold; display:block; margin-bottom:0.5rem;">Email Institucional Cadastrado</label>
-                     <input type="email" id="res-email" required placeholder="Seu email cadastrado" style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;">
+                    <label
+                        for="res-email"
+                        style="font-weight:bold; display:block; margin-bottom:0.5rem;"
+                    >
+                        E-mail cadastrado
+                    </label>
+
+                    <input
+                        type="email"
+                        id="res-email"
+                        autocomplete="email"
+                        required
+                        placeholder="seuemail@instituicao.br"
+                        style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;"
+                    >
                 </div>
-                <div>
-                     <label style="font-weight:bold; display:block; margin-bottom:0.5rem;">Nova Senha</label>
-                     <input type="password" id="res-pass" required placeholder="Mínimo 6 caracteres" minlength="6" style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;">
-                </div>
-                <div>
-                     <label style="font-weight:bold; display:block; margin-bottom:0.5rem;">Confirmar Nova Senha</label>
-                     <input type="password" id="res-pass-conf" required placeholder="Repita a senha" style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;">
-                </div>
-                <button type="submit" style="width:100%; padding:1rem; border:none; cursor:pointer; font-weight:bold; font-size:1.1rem; background:var(--mint-teal); color:#005555; border-radius:8px; transition:0.3s;">Salvar Nova Senha</button>
+
+                <button
+                    type="submit"
+                    style="width:100%; padding:1rem; border:none; cursor:pointer; font-weight:bold; background:var(--mint-teal); color:#005555; border-radius:8px;"
+                >
+                    Enviar link de recuperação
+                </button>
             </form>
-            
-            <button onclick="renderLogin('${role}')" style="width:100%; padding:0.8rem; background:none; border:none; color:var(--text-gray); font-weight:bold; cursor:pointer; margin-top:1rem; text-decoration:underline;">Voltar ao Login</button>
+
+            <button
+                onclick="renderLogin('${role}')"
+                style="width:100%; padding:0.8rem; background:none; border:none; color:var(--text-gray); font-weight:bold; cursor:pointer; margin-top:1rem; text-decoration:underline;"
+            >
+                Voltar ao login
+            </button>
         </div>
     </div>
     `;
+
     if (window.lucide) window.lucide.createIcons();
-    window.scrollTo(0,0);
+    window.scrollTo(0, 0);
 };
 
-window.processResetPassword = function(event, role) {
+window.processResetPassword = async function(event, role) {
     event.preventDefault();
-    const email = document.getElementById('res-email').value;
-    const newPass = document.getElementById('res-pass').value;
-    const confPass = document.getElementById('res-pass-conf').value;
 
-    if (newPass !== confPass) {
-        alert("Atenção: As novas senhas digitadas não coincidem. Tente novamente.");
+    const email = document
+        .getElementById('res-email')
+        .value
+        .trim()
+        .toLowerCase();
+
+    const submitButton = event.submitter;
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Enviando...';
+    }
+
+    try {
+        const supabaseClient = getSupabaseClient();
+
+        const redirectTo =
+            `${window.location.origin}${window.location.pathname}`;
+
+        const { error } =
+            await supabaseClient.auth.resetPasswordForEmail(
+                email,
+                { redirectTo }
+            );
+
+        if (error) throw error;
+
+        alert(
+            'Se esse e-mail estiver cadastrado, você receberá um link seguro para redefinir a senha.'
+        );
+
+        renderLogin(role);
+    } catch (error) {
+        console.error('Erro na recuperação de senha:', error);
+
+        alert(
+            `Não foi possível enviar o link.\n\n${error.message}`
+        );
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent =
+                'Enviar link de recuperação';
+        }
+    }
+};
+
+window.renderUpdatePassword = function() {
+    const c = document.getElementById('content-area');
+
+    c.innerHTML = `
+    <div style="min-height:80vh; display:flex; align-items:center; justify-content:center; background:var(--bg-light); padding:2rem;">
+        <div style="background:var(--white); padding:clamp(2rem, 6vw, 4rem); border-radius:var(--border-radius); box-shadow:var(--shadow); max-width:450px; width:100%;">
+            <h2 style="color:var(--primary-navy); margin-bottom:1rem;">
+                Criar nova senha
+            </h2>
+
+            <p style="color:var(--text-gray); margin-bottom:2rem;">
+                Escolha uma senha longa e exclusiva para o AlterECO.
+            </p>
+
+            <form
+                onsubmit="processUpdatePassword(event)"
+                style="display:flex; flex-direction:column; gap:1.5rem;"
+            >
+                <div>
+                    <label
+                        for="new-password"
+                        style="font-weight:bold; display:block; margin-bottom:0.5rem;"
+                    >
+                        Nova senha
+                    </label>
+
+                    <input
+                        type="password"
+                        id="new-password"
+                        minlength="12"
+                        autocomplete="new-password"
+                        required
+                        style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;"
+                    >
+                </div>
+
+                <div>
+                    <label
+                        for="confirm-password"
+                        style="font-weight:bold; display:block; margin-bottom:0.5rem;"
+                    >
+                        Confirmar nova senha
+                    </label>
+
+                    <input
+                        type="password"
+                        id="confirm-password"
+                        minlength="12"
+                        autocomplete="new-password"
+                        required
+                        style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;"
+                    >
+                </div>
+
+                <button
+                    type="submit"
+                    style="width:100%; padding:1rem; border:none; cursor:pointer; font-weight:bold; background:var(--primary-navy); color:white; border-radius:8px;"
+                >
+                    Salvar nova senha
+                </button>
+            </form>
+        </div>
+    </div>
+    `;
+
+    window.scrollTo(0, 0);
+};
+
+window.processUpdatePassword = async function(event) {
+    event.preventDefault();
+
+    const password =
+        document.getElementById('new-password').value;
+
+    const confirmation =
+        document.getElementById('confirm-password').value;
+
+    if (password !== confirmation) {
+        alert('As duas senhas não são iguais.');
         return;
     }
 
-    let users = JSON.parse(localStorage.getItem('altereco_users'));
-    const userIndex = users.findIndex(u => u.email === email && u.role === role);
-    
-    if (userIndex > -1) {
-        users[userIndex].pass = newPass;
-        localStorage.setItem('altereco_users', JSON.stringify(users));
-        alert('✅ Senha redefinida com sucesso! Você já pode fazer login com a nova senha.');
-        renderLogin(role);
-    } else {
-        alert('❌ Erro: Email não encontrado no sistema para o status de ' + role + '. Certifique-se de usar o mesmo email do cadastro.');
+    try {
+        const supabaseClient = getSupabaseClient();
+
+        const { error } =
+            await supabaseClient.auth.updateUser({
+                password
+            });
+
+        if (error) throw error;
+
+        alert(
+            'Senha alterada com sucesso. Entre novamente com sua nova senha.'
+        );
+
+        await logout();
+    } catch (error) {
+        console.error('Erro ao atualizar senha:', error);
+
+        alert(
+            `Não foi possível alterar a senha.\n\n${error.message}`
+        );
     }
 };
 
+if (window.alterecoSupabase) {
+    window.alterecoSupabase.auth.onAuthStateChange(
+        (event) => {
+            if (event === 'PASSWORD_RECOVERY') {
+                setTimeout(
+                    () => window.renderUpdatePassword(),
+                    0
+                );
+            }
+
+            if (event === 'SIGNED_OUT') {
+                clearAlterEcoSession();
+            }
+        }
+    );
+}
 
 /* ════════════ CURATOR FLOW ════════════ */
 
@@ -158,9 +549,18 @@ window.submitCuratorPost = function(event) {
     renderCuradorDashboard(); 
 };
 
-window.renderCuradorDashboard = function() {
-    const session = JSON.parse(sessionStorage.getItem('altereco_session'));
-    if (!session || session.role !== 'curador') return renderLogin('curador');
+window.renderCuradorDashboard = async function() {
+    let session;
+
+    try {
+        session = await getVerifiedAccess('curator');
+    } catch (error) {
+        console.error('Acesso à curadoria negado:', error);
+        alert(error.message);
+        return renderLogin('curador');
+    }
+
+    if (!session) return renderLogin('curador');
 
     const c = document.getElementById('content-area');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -292,9 +692,18 @@ window.deleteApprovedPost = function(id) {
     renderAdminDashboard('approved');
 };
 
-window.renderAdminDashboard = function(tab = 'pending') {
-    const session = JSON.parse(sessionStorage.getItem('altereco_session'));
-    if (!session || session.role !== 'admin') return renderLogin('admin');
+window.renderAdminDashboard = async function(tab = 'pending') {
+    let session;
+
+    try {
+        session = await getVerifiedAccess('admin');
+    } catch (error) {
+        console.error('Acesso administrativo negado:', error);
+        alert(error.message);
+        return renderLogin('admin');
+    }
+
+    if (!session) return renderLogin('admin');
 
     const c = document.getElementById('content-area');
     document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
@@ -528,90 +937,11 @@ window.changePostDate = function(id) {
 };
 
 window.sendCommandToCurator = async function() {
-    const input = document.getElementById('admin-ai-input');
-    const chat = document.getElementById('admin-ai-chat');
-    const text = input.value.trim();
-    if(!text) return;
-    
-    // User message
-    const uMsg = document.createElement('div');
-    uMsg.style.cssText = "background:#EEF2F6; padding:1rem; border-radius:15px; font-size:0.9rem; align-self:flex-end; max-width:85%; color:#333;";
-    uMsg.innerText = text;
-    chat.appendChild(uMsg);
-    input.value = '';
-    chat.scrollTop = chat.scrollHeight;
-
-    // Loading
-    const lMsg = document.createElement('div');
-    lMsg.innerText = "🤖 ECO IA está analisando...";
-    lMsg.style.cssText = "font-size:0.8rem; color:var(--text-gray); margin:5px;";
-    chat.appendChild(lMsg);
-
-    try {
-        const apiKey = CONFIG.GEMINI_API_KEY;
-        const systemPrompt = `Você é a ECO IA Curadora da AlterECO. Sua tarefa é encontrar e estruturar conteúdos reais e modernos sobre MÉTODOS SUBSTITUTIVOS AO USO DE ANIMAIS (3Rs).
-        REGRAS DE RESPOSTA:
-        1. Responda em Português do Brasil.
-        2. Primeiro, mande um texto curto amigável.
-        3. Depois, mande OBRIGATORIAMENTE um bloco: [JSON_START] [{...}, {...}] [JSON_END].
-        4. No JSON inclua: title, author (ECO IA), area (publicacoes/metodos/materiais/legislacao/bases-dados), tags (lista), description, url, image.`;
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                contents: [ 
-                    { role: 'user', parts: [{ text: "INSTRUÇÕES: " + systemPrompt }] },
-                    { role: 'model', parts: [{ text: "Entendido, sou a ECO IA Curadora. O que deseja buscar?" }] },
-                    { role: 'user', parts: [{ text: text }] } 
-                ] 
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || data.error) {
-            const errMsg = data.error ? data.error.message : "Erro na rede";
-            lMsg.innerHTML = `<span style="color:#D32F2F;">❌ ERRO: ${errMsg}</span>`;
-            return;
-        }
-
-        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-             lMsg.innerText = "❌ Sem resposta da IA.";
-             return;
-        }
-
-        const aiFullText = data.candidates[0].content.parts[0].text;
-        lMsg.remove();
-        
-        const chatPart = aiFullText.split('[JSON_START]')[0].trim();
-        const jsonPartRaw = aiFullText.match(/\[JSON_START\](.*?)\[JSON_END\]/s);
-        
-        const aiMsg = document.createElement('div');
-        aiMsg.style.cssText = "background:#F9F1D2; padding:1rem; border-radius:15px; font-size:0.9rem; color:#333;";
-        aiMsg.innerText = chatPart || "Resultados da curadoria:";
-        chat.appendChild(aiMsg);
-        
-        if(jsonPartRaw) {
-            try {
-                const results = JSON.parse(jsonPartRaw[1].trim());
-                let pending = getPendingPosts();
-                results.forEach(r => { r.id = Date.now() + Math.random(); pending.push(r); });
-                localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
-                renderAdminDashboard('pending');
-                const okMsg = document.createElement('div');
-                okMsg.style.cssText = "font-size:0.8rem; color:#2E7D32; font-weight:bold; margin-top:5px;";
-                okMsg.innerText = `✅ ECO IA inseriu ${results.length} itens na fila.`;
-                chat.appendChild(okMsg);
-            } catch(e) { console.error("JSON Error", e); }
-        }
-        chat.scrollTop = chat.scrollHeight;
-        if (window.lucide) window.lucide.createIcons();
-
-    } catch(err) {
-        console.error("Critical Error:", err);
-        lMsg.innerHTML = "❌ FALHA CRÍTICA DE CONEXÃO.";
-    }
+    alert(
+        'A IA curadora foi temporariamente desativada por segurança. ' +
+        'A chave antiga estava no navegador. Na próxima etapa, vamos ' +
+        'ligá-la por uma função protegida do Supabase.'
+    );
 };
 
 window.triggerAICuratorChat = function() {
@@ -631,56 +961,178 @@ window.shareCard = function(btn) {
     if (titleElement) cardTitle = titleElement.innerText.replace(/Postado por.*/g, '');
     alert(`Compartilhar: "\n${cardTitle.trim()}"\n\nLink copiado para a área de transferência! Envie para WhatsApp ou E-mail.`);
 };
-window.renderAdminSettings = function() {
-    const session = JSON.parse(sessionStorage.getItem('altereco_session'));
+window.renderAdminSettings = async function() {
+    let session;
+
+    try {
+        session = await getVerifiedAccess('admin');
+    } catch (error) {
+        alert(error.message);
+        return renderLogin('admin');
+    }
+
     const c = document.getElementById('content-area');
-    
+
     c.innerHTML = `
-    <div style="background:var(--white); border-bottom:1px solid rgba(128,128,128,0.15); padding: 1.5rem 2rem; display:flex; justify-content:space-between; align-items:center;">
-        <h2 style="font-size:1.3rem; color:var(--primary-navy); font-weight:800;">SEGURANÇA DA CONTA</h2>
-        <button onclick="renderAdminDashboard()" style="background:var(--primary-navy); color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;">Voltar ao Dashboard</button>
+    <div style="background:var(--white); border-bottom:1px solid rgba(128,128,128,0.15); padding:1.5rem 2rem; display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="font-size:1.3rem; color:var(--primary-navy); font-weight:800;">
+            SEGURANÇA DA CONTA
+        </h2>
+
+        <button
+            onclick="renderAdminDashboard()"
+            style="background:var(--primary-navy); color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer;"
+        >
+            Voltar ao Dashboard
+        </button>
     </div>
-    
-    <div style="max-width: 600px; margin: 4rem auto; padding: 2rem; background:var(--white); border:1px solid rgba(128,128,128,0.15); border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.05);">
-        <h3 style="margin-bottom:2rem; color:var(--primary-navy);">Alterar Credenciais Administrativas</h3>
-        
-        <form onsubmit="updateAdminCredentials(event)" style="display:flex; flex-direction:column; gap:1.5rem;">
+
+    <div style="max-width:600px; margin:4rem auto; padding:2rem; background:var(--white); border:1px solid rgba(128,128,128,0.15); border-radius:20px; box-shadow:0 10px 30px rgba(0,0,0,0.05);">
+        <h3 style="margin-bottom:2rem; color:var(--primary-navy);">
+            Alterar meus dados
+        </h3>
+
+        <form
+            onsubmit="updateAdminCredentials(event)"
+            style="display:flex; flex-direction:column; gap:1.5rem;"
+        >
             <div>
-                <label style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:0.9rem;">Seu Nome (Exibido no Painel)</label>
-                <input type="text" id="set-name" value="${session.name}" required style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,0.2); border-radius:10px;">
+                <label
+                    for="set-name"
+                    style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:0.9rem;"
+                >
+                    Nome exibido no painel
+                </label>
+
+                <input
+                    type="text"
+                    id="set-name"
+                    value="${session.name || ''}"
+                    required
+                    style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,0.2); border-radius:10px;"
+                >
             </div>
+
             <div>
-                <label style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:0.9rem;">Email de Acesso</label>
-                <input type="email" id="set-email" value="${session.email}" required style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,0.2); border-radius:10px;">
+                <label
+                    for="set-email"
+                    style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:0.9rem;"
+                >
+                    E-mail de acesso
+                </label>
+
+                <input
+                    type="email"
+                    id="set-email"
+                    value="${session.email || ''}"
+                    required
+                    style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,0.2); border-radius:10px;"
+                >
             </div>
+
             <div>
-                <label style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:0.9rem;">Nova Senha</label>
-                <input type="password" id="set-pass" placeholder="Deixe em branco para não alterar" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,0.2); border-radius:10px;">
+                <label
+                    for="set-pass"
+                    style="display:block; font-weight:bold; margin-bottom:0.5rem; font-size:0.9rem;"
+                >
+                    Nova senha
+                </label>
+
+                <input
+                    type="password"
+                    id="set-pass"
+                    minlength="12"
+                    autocomplete="new-password"
+                    placeholder="Deixe em branco para não alterar"
+                    style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,0.2); border-radius:10px;"
+                >
             </div>
-            <button type="submit" style="background:var(--primary-navy); color:white; border:none; padding:1.2rem; border-radius:10px; font-weight:bold; cursor:pointer; font-size:1rem;">Salvar Novas Credenciais</button>
+
+            <button
+                type="submit"
+                style="background:var(--primary-navy); color:white; border:none; padding:1.2rem; border-radius:10px; font-weight:bold; cursor:pointer; font-size:1rem;"
+            >
+                Salvar alterações
+            </button>
         </form>
+
+        <p style="margin-top:1.5rem; color:var(--text-gray); font-size:0.85rem; line-height:1.5;">
+            Se o e-mail for alterado, o Supabase poderá solicitar confirmação no endereço novo.
+            Depois da alteração, será necessário entrar novamente.
+        </p>
     </div>
     `;
 };
 
-window.updateAdminCredentials = function(e) {
-    e.preventDefault();
-    const name = document.getElementById('set-name').value;
-    const email = document.getElementById('set-email').value;
-    const pass = document.getElementById('set-pass').value;
-    
-    let users = JSON.parse(localStorage.getItem('altereco_users'));
-    const session = JSON.parse(sessionStorage.getItem('altereco_session'));
-    
-    const userIndex = users.findIndex(u => u.email === session.email);
-    if(userIndex > -1){
-        users[userIndex].name = name;
-        users[userIndex].email = email;
-        if(pass) users[userIndex].pass = pass;
-        
-        localStorage.setItem('altereco_users', JSON.stringify(users));
-        alert('Credenciais atualizadas com sucesso! Por segurança, faça login novamente.');
-        logout();
+window.updateAdminCredentials = async function(event) {
+    event.preventDefault();
+
+    const name =
+        document.getElementById('set-name').value.trim();
+
+    const email =
+        document.getElementById('set-email').value.trim().toLowerCase();
+
+    const password =
+        document.getElementById('set-pass').value;
+
+    const submitButton = event.submitter;
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Salvando...';
+    }
+
+    try {
+        const session = await getVerifiedAccess('admin');
+
+        if (!session) {
+            throw new Error('Sessão administrativa não encontrada.');
+        }
+
+        const supabaseClient = getSupabaseClient();
+
+        const authChanges = {};
+
+        if (email && email !== session.email) {
+            authChanges.email = email;
+        }
+
+        if (password) {
+            authChanges.password = password;
+        }
+
+        if (Object.keys(authChanges).length > 0) {
+            const { error: authError } =
+                await supabaseClient.auth.updateUser(authChanges);
+
+            if (authError) throw authError;
+        }
+
+        const { error: profileError } =
+            await supabaseClient
+                .from('profiles')
+                .update({ full_name: name })
+                .eq('id', session.id);
+
+        if (profileError) throw profileError;
+
+        alert(
+            'Dados atualizados. Por segurança, entre novamente.'
+        );
+
+        await logout();
+    } catch (error) {
+        console.error('Erro ao atualizar conta:', error);
+
+        alert(
+            `Não foi possível salvar.\n\n${error.message}`
+        );
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Salvar alterações';
+        }
     }
 };
 
