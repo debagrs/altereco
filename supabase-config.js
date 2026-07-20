@@ -20,11 +20,11 @@
         'https://plzywjjrezuzmzskjgly.supabase.co';
 
     const SUPABASE_PUBLISHABLE_KEY =
-        'COLE-AQUI-A-SUA-PUBLISHABLE-KEY';
+        'sb_secret_p8q9ol9BSIEbNhr4BvYsrg_ajZLOZeB';
 
     const hasValidKey =
         SUPABASE_PUBLISHABLE_KEY &&
-        !SUPABASE_PUBLISHABLE_KEY.includes('COLE-AQUI');
+        !SUPABASE_PUBLISHABLE_KEY.includes('sb_publishable_XmZjne98-8RsObNrab3-Qw_aAgwtJmW');
 
     if (!hasValidKey) {
         console.error(
