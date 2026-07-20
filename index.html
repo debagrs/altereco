@@ -3,179 +3,693 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
     <title>AlterECO | Ciência Ética e Métodos Substitutivos</title>
 
     <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    >
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    >
+
     <link
         href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap"
-        rel="stylesheet">
-    <!-- Material Icons (Google) -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+        rel="stylesheet"
+    >
 
-    <!-- External Libraries -->
+    <!-- Material Icons -->
+    <link
+        href="https://fonts.googleapis.com/icon?family=Material+Icons"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet"
+    >
+
+    <!-- Bibliotecas externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="style.css">
+    <!-- Estilos -->
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
 </head>
 
 <body>
-    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+    <a
+        href="#main-content"
+        class="skip-link"
+    >
+        Pular para o conteúdo principal
+    </a>
+
     <div id="app">
-        <!-- Static Navy Header -->
-        <header id="main-header" role="banner">
+
+        <!-- Cabeçalho principal -->
+        <header
+            id="main-header"
+            role="banner"
+        >
             <div class="header-container">
+
                 <div class="header-left">
-                    <button class="hamburger-menu" id="menu-trigger" title="Menu principal" aria-label="Abrir menu de navegação" aria-expanded="false" aria-controls="side-menu">
-                        <span class="material-icons" aria-hidden="true" style="font-size:30px; color:white;">menu</span>
+                    <button
+                        class="hamburger-menu"
+                        id="menu-trigger"
+                        title="Menu principal"
+                        aria-label="Abrir menu de navegação"
+                        aria-expanded="false"
+                        aria-controls="side-menu"
+                    >
+                        <span
+                            class="material-icons"
+                            aria-hidden="true"
+                            style="font-size: 30px; color: white;"
+                        >
+                            menu
+                        </span>
                     </button>
-                    <img src="assets/marca.png" alt="AlterECO – Início" id="nav-logo" data-page="home"
-                        style="cursor:pointer; height: 60px; object-fit:contain;">
+
+                    <img
+                        src="assets/marca.png"
+                        alt="AlterECO – Início"
+                        id="nav-logo"
+                        data-page="home"
+                        style="cursor: pointer; height: 60px; object-fit: contain;"
+                    >
                 </div>
 
-                <!-- Desktop Nav (Hidden on Mobile) -->
-                <nav id="desktop-nav" aria-label="Navegação principal">
-                    <button class="nav-btn active" data-page="home">Início</button>
-                    <button class="nav-btn" data-page="sobre">Sobre</button>
-                    <button class="nav-btn" data-page="metodos">Métodos</button>
-                    <button class="nav-btn" data-page="publicacoes">Publicações</button>
-                    <button class="nav-btn" data-page="materiais">Materiais</button>
-                    <button class="nav-btn" data-page="legislacao">Legislação</button>
-                    <button class="nav-btn" data-page="bases-dados">Bases de Dados</button>
-                    <button class="nav-btn" data-page="curadoria">Curadoria</button>
-                    <button class="nav-btn nav-btn--highlight" data-page="observatorio">Observatório</button>
+                <!-- Navegação desktop -->
+                <nav
+                    id="desktop-nav"
+                    aria-label="Navegação principal"
+                >
+                    <button
+                        class="nav-btn active"
+                        data-page="home"
+                    >
+                        Início
+                    </button>
+
+                    <button
+                        class="nav-btn"
+                        data-page="sobre"
+                    >
+                        Sobre
+                    </button>
+
+                    <button
+                        class="nav-btn"
+                        data-page="metodos"
+                    >
+                        Métodos
+                    </button>
+
+                    <button
+                        class="nav-btn"
+                        data-page="publicacoes"
+                    >
+                        Publicações
+                    </button>
+
+                    <button
+                        class="nav-btn"
+                        data-page="materiais"
+                    >
+                        Materiais
+                    </button>
+
+                    <button
+                        class="nav-btn"
+                        data-page="legislacao"
+                    >
+                        Legislação
+                    </button>
+
+                    <button
+                        class="nav-btn"
+                        data-page="bases-dados"
+                    >
+                        Bases de Dados
+                    </button>
+
+                    <button
+                        class="nav-btn"
+                        data-page="curadoria"
+                    >
+                        Curadoria
+                    </button>
+
+                    <button
+                        class="nav-btn nav-btn--highlight"
+                        data-page="observatorio"
+                    >
+                        Observatório
+                    </button>
                 </nav>
 
-                <button id="theme-toggle" title="Alternar Tema Claro/Escuro" aria-label="Alternar tema claro/escuro"
-                    style="background:none; border:none; cursor:pointer; margin-left: 1rem; color: var(--accent-orange); display: flex; align-items: center; justify-content: center;">
-                    <span class="material-icons" id="theme-icon" aria-hidden="true">dark_mode</span>
+                <!-- Alternância de tema -->
+                <button
+                    id="theme-toggle"
+                    title="Alternar Tema Claro/Escuro"
+                    aria-label="Alternar tema claro/escuro"
+                    style="
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        margin-left: 1rem;
+                        color: var(--accent-orange);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    "
+                >
+                    <span
+                        class="material-icons"
+                        id="theme-icon"
+                        aria-hidden="true"
+                    >
+                        dark_mode
+                    </span>
                 </button>
-                <button id="nav-bot-trigger" class="nav-btn" data-page="ai-eco" title="Assistente de Pesquisa IA" aria-label="Abrir assistente ECO"
-                    style="background:none; border:none; cursor:pointer; margin-left: 1rem; color: var(--mint-teal); font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 0.4rem; justify-content: center;">
-                    ECO<span class="material-icons" aria-hidden="true" style="font-size:22px;">smart_toy</span>
+
+                <!-- Assistente ECO -->
+                <button
+                    id="nav-bot-trigger"
+                    class="nav-btn"
+                    data-page="ai-eco"
+                    title="Assistente de Pesquisa IA"
+                    aria-label="Abrir assistente ECO"
+                    style="
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        margin-left: 1rem;
+                        color: var(--mint-teal);
+                        font-weight: 700;
+                        font-size: 1.1rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.4rem;
+                        justify-content: center;
+                    "
+                >
+                    ECO
+
+                    <span
+                        class="material-icons"
+                        aria-hidden="true"
+                        style="font-size: 22px;"
+                    >
+                        smart_toy
+                    </span>
                 </button>
             </div>
         </header>
 
-        <!-- Mobile Side Menu Overlay -->
-        <div id="nav-overlay" class="overlay"></div>
-        <aside id="side-menu" class="drawer" role="dialog" aria-modal="true" aria-label="Menu de navegação">
+        <!-- Fundo do menu lateral -->
+        <div
+            id="nav-overlay"
+            class="overlay"
+        ></div>
+
+        <!-- Menu lateral para dispositivos móveis -->
+        <aside
+            id="side-menu"
+            class="drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu de navegação"
+        >
             <div class="drawer-header">
-                <img src="assets/marca.png" alt="AlterECO" style="height:60px; filter: none;">
-                <button id="close-menu" aria-label="Fechar menu" style="background:none; border:none; color:white; cursor:pointer; padding:0.5rem;">
-                    <span class="material-icons" aria-hidden="true" style="font-size:26px;">close</span>
+
+                <img
+                    src="assets/marca.png"
+                    alt="AlterECO"
+                    style="height: 60px; filter: none;"
+                >
+
+                <button
+                    id="close-menu"
+                    aria-label="Fechar menu"
+                    style="
+                        background: none;
+                        border: none;
+                        color: white;
+                        cursor: pointer;
+                        padding: 0.5rem;
+                    "
+                >
+                    <span
+                        class="material-icons"
+                        aria-hidden="true"
+                        style="font-size: 26px;"
+                    >
+                        close
+                    </span>
                 </button>
             </div>
-            <nav class="drawer-content" aria-label="Menu lateral">
-                <button class="drawer-link" data-page="home">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">home</span>Início</button>
-                <button class="drawer-link" data-page="sobre">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">info</span>Sobre</button>
-                <button class="drawer-link" data-page="metodos">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">science</span>Métodos Substitutivos</button>
-                <button class="drawer-link" data-page="publicacoes">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">menu_book</span>Publicações</button>
-                <button class="drawer-link" data-page="materiais">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">school</span>Materiais Didáticos</button>
-                <button class="drawer-link" data-page="bases-dados">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">storage</span>Bases de Dados</button>
-                <button class="drawer-link" data-page="legislacao">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">gavel</span>Legislação</button>
-                <button class="drawer-link" data-page="curadoria">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">groups</span>Curadoria</button>
-                <button class="drawer-link" data-page="eventos">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">event</span>Eventos</button>
-                <button class="drawer-link" data-page="forum">
-                    <span class="material-icons drawer-link-icon" aria-hidden="true">forum</span>Fórum</button>
-                <div style="margin-top:2rem; padding-top:2rem; border-top:1px solid rgba(255,255,255,0.15);">
-                    <button class="drawer-link drawer-link--obs" data-page="observatorio">
-                        <span class="material-icons drawer-link-icon" aria-hidden="true">telescope</span>Observatório
+
+            <nav
+                class="drawer-content"
+                aria-label="Menu lateral"
+            >
+                <button
+                    class="drawer-link"
+                    data-page="home"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        home
+                    </span>
+
+                    Início
+                </button>
+
+                <button
+                    class="drawer-link"
+                    data-page="sobre"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        info
+                    </span>
+
+                    Sobre
+                </button>
+
+                <button
+                    class="drawer-link"
+                    data-page="metodos"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        science
+                    </span>
+
+                    Métodos Substitutivos
+                </button>
+
+                <button
+                    class="drawer-link"
+                    data-page="publicacoes"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        menu_book
+                    </span>
+
+                    Publicações
+                </button>
+
+                <button
+                    class="drawer-link"
+                    data-page="materiais"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        school
+                    </span>
+
+                    Materiais Didáticos
+                </button>
+
+                <button
+                    class="drawer-link"
+                    data-page="bases-dados"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        storage
+                    </span>
+
+                    Bases de Dados
+                </button>
+
+                <button
+                    class="drawer-link"
+                    data-page="legislacao"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        gavel
+                    </span>
+
+                    Legislação
+                </button>
+
+                <button
+                    class="drawer-link"
+                    data-page="curadoria"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        groups
+                    </span>
+
+                    Curadoria
+                </button>
+
+                <button
+                    class="drawer-link"
+                    data-page="eventos"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        event
+                    </span>
+
+                    Eventos
+                </button>
+
+                <button
+                    class="drawer-link"
+                    data-page="forum"
+                >
+                    <span
+                        class="material-icons drawer-link-icon"
+                        aria-hidden="true"
+                    >
+                        forum
+                    </span>
+
+                    Fórum
+                </button>
+
+                <div
+                    style="
+                        margin-top: 2rem;
+                        padding-top: 2rem;
+                        border-top: 1px solid rgba(255, 255, 255, 0.15);
+                    "
+                >
+                    <button
+                        class="drawer-link drawer-link--obs"
+                        data-page="observatorio"
+                    >
+                        <span
+                            class="material-icons drawer-link-icon"
+                            aria-hidden="true"
+                        >
+                            telescope
+                        </span>
+
+                        Observatório
                     </button>
                 </div>
             </nav>
         </aside>
 
-        <!-- Main SPA Area -->
-        <main id="content-area">
-            <!-- Mockup flows injected here -->
+        <!-- Área principal da aplicação -->
+        <main
+            id="content-area"
+            tabindex="-1"
+        >
+            <!-- As páginas são inseridas aqui pelo JavaScript -->
         </main>
 
-        <!-- Persistent Navy Footer -->
+        <!-- Rodapé -->
         <footer id="platform-footer">
+
             <div
-                style="width: 95%; max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 3rem; text-align: left;">
+                style="
+                    width: 95%;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    display: grid;
+                    grid-template-columns: repeat(
+                        auto-fit,
+                        minmax(200px, 1fr)
+                    );
+                    gap: 3rem;
+                    text-align: left;
+                "
+            >
                 <div>
-                    <img src="assets/marca.png" alt="AlterECO Footer Logo"
-                        style="height: 70px; margin-bottom: 1.5rem; filter: none;">
-                    <p style="color: #bbb; line-height: 1.6;">O projeto AlterECO é uma iniciativa científica e ética
-                        focada na substituição do uso animal no ensino e pesquisa.</p>
+                    <img
+                        src="assets/marca.png"
+                        alt="AlterECO"
+                        style="
+                            height: 70px;
+                            margin-bottom: 1.5rem;
+                            filter: none;
+                        "
+                    >
+
+                    <p
+                        style="
+                            color: #bbb;
+                            line-height: 1.6;
+                        "
+                    >
+                        O projeto AlterECO é uma iniciativa científica e ética
+                        focada na substituição do uso animal no ensino e pesquisa.
+                    </p>
                 </div>
+
                 <div>
                     <h4
-                        style="color: var(--white); margin-bottom: 1.5rem; text-transform: uppercase; font-size: 0.9rem;">
-                        Links Rápidos</h4>
-                    <ul style="list-style: none; color: #888; font-size: 0.95rem;">
-                        <li style="margin-bottom: 0.8rem; cursor: pointer;" data-page="home">Ir para o Início</li>
-                        <li style="margin-bottom: 0.8rem; cursor: pointer;" data-page="materiais">Materiais Didáticos
+                        style="
+                            color: var(--white);
+                            margin-bottom: 1.5rem;
+                            text-transform: uppercase;
+                            font-size: 0.9rem;
+                        "
+                    >
+                        Links Rápidos
+                    </h4>
+
+                    <ul
+                        style="
+                            list-style: none;
+                            color: #888;
+                            font-size: 0.95rem;
+                        "
+                    >
+                        <li
+                            style="
+                                margin-bottom: 0.8rem;
+                                cursor: pointer;
+                            "
+                            data-page="home"
+                        >
+                            Ir para o Início
                         </li>
-                        <li style="margin-bottom: 0.8rem; cursor: pointer;" data-page="bases-dados">Bases de Dados</li>
-                        <li style="margin-bottom: 0.8rem; cursor: pointer;" data-page="observatorio">Observatório
-                            Digital</li>
+
+                        <li
+                            style="
+                                margin-bottom: 0.8rem;
+                                cursor: pointer;
+                            "
+                            data-page="materiais"
+                        >
+                            Materiais Didáticos
+                        </li>
+
+                        <li
+                            style="
+                                margin-bottom: 0.8rem;
+                                cursor: pointer;
+                            "
+                            data-page="bases-dados"
+                        >
+                            Bases de Dados
+                        </li>
+
+                        <li
+                            style="
+                                margin-bottom: 0.8rem;
+                                cursor: pointer;
+                            "
+                            data-page="observatorio"
+                        >
+                            Observatório Digital
+                        </li>
                     </ul>
                 </div>
+
                 <div>
                     <h4
-                        style="color: var(--white); margin-bottom: 1.5rem; text-transform: uppercase; font-size: 0.9rem;">
-                        Contato e Sede</h4>
+                        style="
+                            color: var(--white);
+                            margin-bottom: 1.5rem;
+                            text-transform: uppercase;
+                            font-size: 0.9rem;
+                        "
+                    >
+                        Contato e Sede
+                    </h4>
+
                     <p class="footer-contact">
-                        Email: debora.gasparetto@ufsm.br<br>
-                        Universidade Federal de Santa Maria (UFSM)<br>
+                        Email: debora.gasparetto@ufsm.br
+                        <br>
+
+                        Universidade Federal de Santa Maria (UFSM)
+                        <br>
+
                         Santa Maria, Rio Grande do Sul - Brasil
                     </p>
                 </div>
             </div>
+
             <div
-                style="margin-top: 5rem; border-top: 1px solid #222; padding-top: 2rem; color: #555; font-size: 0.85rem; max-width: 1200px; margin: 5rem auto 0; width: 95%; display: flex; justify-content: space-between;">
-                <span style="display:flex; align-items:center; gap:1.5rem;">
+                style="
+                    margin-top: 5rem;
+                    border-top: 1px solid #222;
+                    padding-top: 2rem;
+                    color: #555;
+                    font-size: 0.85rem;
+                    max-width: 1200px;
+                    margin-left: auto;
+                    margin-right: auto;
+                    width: 95%;
+                    display: flex;
+                    justify-content: space-between;
+                "
+            >
+                <span
+                    style="
+                        display: flex;
+                        align-items: center;
+                        gap: 1.5rem;
+                    "
+                >
                     <div class="footer-copy">
-                    &copy; 2026 AlterECO. Todos os direitos reservados. Design, Ciência e Tecnologia/Cnpq
-                    </div>    <img src="assets/marca.png" alt="AlterECO" style="height:45px; opacity:0.8;">
+                        &copy; 2026 AlterECO. Todos os direitos reservados.
+                        Design, Ciência e Tecnologia/CNPq
+                    </div>
+
+                    <img
+                        src="assets/marca.png"
+                        alt="AlterECO"
+                        style="
+                            height: 45px;
+                            opacity: 0.8;
+                        "
+                    >
                 </span>
-                <span style="display:flex; gap: 1rem;">
-                    <a href="#" style="color:#888; text-decoration:none;"
-                        onclick="event.preventDefault(); renderAdminDashboard();">Administração</a>
-                    <a href="#" style="color:#888; text-decoration:none;"
-                        onclick="event.preventDefault(); renderCuradorDashboard();">Painel do Curador</a>
+
+                <span
+                    style="
+                        display: flex;
+                        gap: 1rem;
+                    "
+                >
+                    <a
+                        href="#"
+                        style="
+                            color: #888;
+                            text-decoration: none;
+                        "
+                        onclick="
+                            event.preventDefault();
+                            renderAdminDashboard();
+                        "
+                    >
+                        Administração
+                    </a>
+
+                    <a
+                        href="#"
+                        style="
+                            color: #888;
+                            text-decoration: none;
+                        "
+                        onclick="
+                            event.preventDefault();
+                            renderCuradorDashboard();
+                        "
+                    >
+                        Painel do Curador
+                    </a>
                 </span>
             </div>
         </footer>
-
     </div>
 
-    <!-- Botão ECO Flutuante -->
+    <!-- Botão flutuante do ECO -->
     <div class="fixed-icons">
-        <button class="fixed-icon-btn" title="Assistente IA – ECO" onclick="renderPage('ai-eco')" aria-label="Abrir Assistente de Pesquisa ECO">
-            <img src="assets/eco.png" alt="ECO – Assistente IA">
+        <button
+            class="fixed-icon-btn"
+            title="Assistente IA – ECO"
+            onclick="renderPage('ai-eco')"
+            aria-label="Abrir Assistente de Pesquisa ECO"
+        >
+            <img
+                src="assets/eco.png"
+                alt="ECO – Assistente IA"
+            >
         </button>
     </div>
 
-    <!-- Scripts -->
+    <!-- =====================================================
+         SCRIPTS
+         A ordem é importante.
+         ===================================================== -->
+
+    <!-- Biblioteca oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Configuração pública do projeto Supabase -->
+    <script src="supabase-config.js"></script>
+
+    <!-- Configuração atual do AlterECO -->
     <script src="config.js"></script>
+
+    <!-- Repositórios e conteúdos -->
     <script src="repositories.js?v=2"></script>
+
+    <!-- Administração e curadoria -->
     <script src="admin.js"></script>
+
+    <!-- Observatório -->
     <script src="observatorio-data.js?v=2"></script>
     <script src="observatorio.js"></script>
+
+    <!-- Assistente ECO -->
     <script src="ai-eco.js"></script>
+
+    <!-- Aplicação principal -->
     <script src="app.js"></script>
 
     <script>
-        if (window.lucide) window.lucide.createIcons();
-        // localStorage.removeItem('theme'); // Removed so theme persists between sessions
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
     </script>
 </body>
 
