@@ -20,7 +20,7 @@
         'https://plzywjjrezuzmzskjgly.supabase.co';
 
     const SUPABASE_PUBLISHABLE_KEY =
-        'sb_secret_p8q9ol9BSIEbNhr4BvYsrg_ajZLOZeB';
+        'sb_publishable_XmZjne98-8RsObNrab3-Qw_aAgwtJmW';
 
     const hasValidKey =
         SUPABASE_PUBLISHABLE_KEY &&
