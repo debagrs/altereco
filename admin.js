@@ -1,21 +1,162 @@
 ﻿/* ══════════════════════════════════════════════════════
-   ADMIN & CURATOR DASHBOARD LOGIC
-   Handles Auth, Submissions, Approvals, and Deletion
+   ALTERECO — ADMINISTRAÇÃO E CURADORIA
+   Supabase Auth + content_items + RLS
 ══════════════════════════════════════════════════════ */
 
-if (!localStorage.getItem('altereco_pending_posts')) localStorage.setItem('altereco_pending_posts', JSON.stringify([]));
-if (!localStorage.getItem('altereco_approved_posts')) localStorage.setItem('altereco_approved_posts', JSON.stringify([]));
+const ALTERECO_CONTENT_AREAS = new Set([
+    'metodos',
+    'materiais',
+    'publicacoes',
+    'legislacao',
+    'bases-dados',
+    'eventos'
+]);
 
-// Mock Accounts for Security Simulation
-if (!localStorage.getItem('altereco_users')) {
-    localStorage.setItem('altereco_users', JSON.stringify([
-        { email: 'deboraaitagasparetto@gmail.com', pass: 'debora123', role: 'admin', name: 'Débora' },
-        { email: 'curador@altereco.org', pass: 'curador123', role: 'curador', name: 'Curador Oficial' }
-    ]));
+const alterecoContentCache = {
+    approved: [],
+    loaded: false
+};
+
+function escapeHtml(value = '') {
+    return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
 }
 
-function getPendingPosts() { return JSON.parse(localStorage.getItem('altereco_pending_posts')); }
-function getApprovedPosts() { return JSON.parse(localStorage.getItem('altereco_approved_posts')); }
+function normalizeExternalUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw || raw === '#') return null;
+
+    try {
+        const parsed = new URL(raw);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+        return parsed.href;
+    } catch (_) {
+        return null;
+    }
+}
+
+function normalizeContentArea(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'bases') return 'bases-dados';
+    return ALTERECO_CONTENT_AREAS.has(normalized)
+        ? normalized
+        : 'publicacoes';
+}
+
+function normalizeTags(value) {
+    if (Array.isArray(value)) {
+        return [...new Set(
+            value
+                .map(tag => String(tag).trim())
+                .filter(Boolean)
+                .slice(0, 20)
+        )];
+    }
+
+    return [...new Set(
+        String(value || '')
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(Boolean)
+            .slice(0, 20)
+    )];
+}
+
+function formatContentDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    }).format(date);
+}
+
+function mapContentItemToLegacyPost(item) {
+    return {
+        id: item.id,
+        title: item.title,
+        author: item.author_name,
+        area: item.area,
+        tags: Array.isArray(item.tags) ? item.tags : [],
+        description: item.description,
+        long_description: item.long_description || '',
+        url: item.external_url || '#',
+        image: item.image_url || '',
+        date: formatContentDate(
+            item.published_at || item.reviewed_at || item.submitted_at
+        ),
+        status: item.status,
+        submitted_by: item.submitted_by,
+        submitted_at: item.submitted_at,
+        reviewed_at: item.reviewed_at,
+        rejection_reason: item.rejection_reason || ''
+    };
+}
+
+async function fetchContentItemsByStatus(status) {
+    const client = getSupabaseClient();
+
+    const { data, error } = await client
+        .from('content_items')
+        .select(`
+            id,
+            title,
+            author_name,
+            area,
+            tags,
+            description,
+            long_description,
+            external_url,
+            image_url,
+            status,
+            submitted_by,
+            reviewed_by,
+            submitted_at,
+            reviewed_at,
+            published_at,
+            rejection_reason,
+            created_at,
+            updated_at
+        `)
+        .eq('status', status)
+        .order('submitted_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []).map(mapContentItemToLegacyPost);
+}
+
+async function refreshApprovedContentCache() {
+    try {
+        alterecoContentCache.approved =
+            await fetchContentItemsByStatus('approved');
+        alterecoContentCache.loaded = true;
+
+        window.dispatchEvent(new CustomEvent(
+            'altereco:content-updated',
+            { detail: { status: 'approved' } }
+        ));
+    } catch (error) {
+        console.error('Erro ao carregar conteúdos públicos:', error);
+    }
+}
+
+window.getDynamicPostsForArea = function(areaId) {
+    const area = normalizeContentArea(areaId);
+
+    if (!alterecoContentCache.loaded) {
+        refreshApprovedContentCache();
+    }
+
+    return alterecoContentCache.approved.filter(
+        post => post.area === area
+    );
+};
 
 /* ════════════ AUTHENTICATION — SUPABASE ════════════ */
 
@@ -524,29 +665,63 @@ if (window.alterecoSupabase) {
     );
 }
 
-/* ════════════ CURATOR FLOW ════════════ */
 
-window.submitCuratorPost = function(event) {
+/* ════════════ CURADORIA — SUPABASE ════════════ */
+
+window.submitCuratorPost = async function(event) {
     event.preventDefault();
-    const session = JSON.parse(sessionStorage.getItem('altereco_session'));
-    const title = document.getElementById('cur-title').value;
-    const author = session ? session.name : document.getElementById('cur-author').value;
-    const area = document.getElementById('cur-area').value;
-    const tags = document.getElementById('cur-tags').value.split(',').map(t => t.trim());
-    const desc = document.getElementById('cur-desc').value;
-    const link = document.getElementById('cur-link').value || '#';
+    const submitButton = event.submitter;
 
-    const post = {
-        id: Date.now().toString(),
-        title, author, area, tags, description: desc, url: link, date: new Date().toLocaleDateString()
-    };
+    try {
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Enviando para curadoria...';
+        }
 
-    const pending = getPendingPosts();
-    pending.push(post);
-    localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
+        const session = await getVerifiedAccess('curator');
+        if (!session) throw new Error('Sessão de curadoria não encontrada.');
 
-    alert('✅ Arquivos e dados enviados com sucesso! Aguardando aprovação da Administração.');
-    renderCuradorDashboard(); 
+        const payload = {
+            title: document.getElementById('cur-title').value.trim(),
+            author_name: session.name,
+            area: normalizeContentArea(
+                document.getElementById('cur-area').value
+            ),
+            tags: normalizeTags(
+                document.getElementById('cur-tags').value
+            ),
+            description: document.getElementById('cur-desc').value.trim(),
+            external_url: normalizeExternalUrl(
+                document.getElementById('cur-link').value
+            ),
+            image_url: normalizeExternalUrl(
+                document.getElementById('cur-image')?.value
+            ),
+            status: 'pending',
+            submitted_by: session.id
+        };
+
+        const client = getSupabaseClient();
+        const { error } = await client
+            .from('content_items')
+            .insert(payload);
+
+        if (error) throw error;
+
+        alert(
+            'Conteúdo enviado com segurança. Ele já está na fila da administração.'
+        );
+
+        await renderCuradorDashboard();
+    } catch (error) {
+        console.error('Erro ao enviar conteúdo:', error);
+        alert(`Não foi possível enviar.\n\n${error.message}`);
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Cadastrar e enviar para aprovação';
+        }
+    }
 };
 
 window.renderCuradorDashboard = async function() {
@@ -555,142 +730,252 @@ window.renderCuradorDashboard = async function() {
     try {
         session = await getVerifiedAccess('curator');
     } catch (error) {
-        console.error('Acesso à curadoria negado:', error);
         alert(error.message);
         return renderLogin('curador');
     }
 
     if (!session) return renderLogin('curador');
 
+    const client = getSupabaseClient();
+    const { data: ownItems, error } = await client
+        .from('content_items')
+        .select('id, title, area, status, submitted_at, rejection_reason')
+        .eq('submitted_by', session.id)
+        .order('submitted_at', { ascending: false });
+
+    if (error) {
+        console.error(error);
+        alert(`Não foi possível carregar suas submissões.\n\n${error.message}`);
+    }
+
+    const statusLabels = {
+        pending: 'Aguardando análise',
+        approved: 'Publicado',
+        rejected: 'Não aprovado',
+        archived: 'Arquivado'
+    };
+
+    const submissionsHtml = (ownItems || []).length
+        ? (ownItems || []).map(item => `
+            <article style="background:var(--white); border:1px solid rgba(128,128,128,.16); border-radius:14px; padding:1rem 1.2rem; margin-bottom:.8rem;">
+                <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start;">
+                    <div>
+                        <strong style="color:var(--primary-navy);">${escapeHtml(item.title)}</strong>
+                        <div style="font-size:.82rem; color:var(--text-gray); margin-top:.35rem;">
+                            ${escapeHtml(item.area)} · ${escapeHtml(formatContentDate(item.submitted_at))}
+                        </div>
+                    </div>
+                    <span class="page-badge" style="background:var(--bg-light); color:var(--primary-navy); white-space:nowrap;">
+                        ${escapeHtml(statusLabels[item.status] || item.status)}
+                    </span>
+                </div>
+                ${item.rejection_reason ? `
+                    <p style="margin-top:.8rem; color:#9B1C1C; font-size:.86rem;">
+                        Motivo: ${escapeHtml(item.rejection_reason)}
+                    </p>
+                ` : ''}
+            </article>
+        `).join('')
+        : '<p style="color:var(--text-gray);">Você ainda não enviou conteúdos.</p>';
+
     const c = document.getElementById('content-area');
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    
+    document.querySelectorAll('.nav-btn').forEach(
+        btn => btn.classList.remove('active')
+    );
+
     c.innerHTML = `
     <div class="page-dark-hero">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
             <div>
-                <span class="page-badge" style="background: var(--accent-orange);">Área Restrita</span>
-                <h1>Painel do Curador</h1>
+                <span class="page-badge" style="background:var(--accent-orange);">Área Restrita</span>
+                <h1>Painel da Curadoria</h1>
+                <p>Bem-vinda, ${escapeHtml(session.name)}.</p>
             </div>
-            <button onclick="logout()" style="background:rgba(255,255,255,0.1); color:white; border:none; padding:10px 20px; border-radius:20px; cursor:pointer;" title="Sair da Conta">Sair <i data-lucide="log-out" style="width:16px;"></i></button>
+            <button onclick="logout()" style="background:rgba(255,255,255,.1); color:white; border:none; padding:10px 20px; border-radius:20px; cursor:pointer;">
+                Sair
+            </button>
         </div>
-        <p>Bem-vindo(a), ${session.name}. Arraste e envie novos materiais.</p>
     </div>
-    <div class="content-white-section" style="max-width: 800px; margin: 0 auto; background: var(--bg-light);">
-        <h2 style="margin-bottom: 2rem; color: var(--primary-navy);">Nova Submissão de Conteúdo</h2>
-        
-        <form onsubmit="submitCuratorPost(event)" style="display:flex; flex-direction:column; gap: 1.5rem; background:var(--white); padding: 3rem; border-radius: var(--border-radius); box-shadow: var(--shadow);">
-            <div id="drop-zone" style="border: 2px dashed #bbb; border-radius: var(--border-radius); padding: 3rem; text-align: center; cursor: pointer; transition: 0.3s; background:var(--bg-light);">
-                <i data-lucide="upload-cloud" style="width: 48px; height: 48px; color:var(--text-gray); margin-bottom: 1rem;"></i>
-                <p style="color:var(--text-gray); font-weight: 600;">Arraste e solte arquivos aqui ou clique para selecionar</p>
-                <p style="font-size: 0.85rem; color:var(--text-gray); margin-top: 5px;">Suporta anexos PDF, imagens ou planilhas</p>
-                <input type="file" id="file-input" style="display:none;" />
-            </div>
 
-            <div>
-                <label style="display:block; font-weight:600; margin-bottom:0.5rem;">Título da Postagem</label>
-                <input type="text" id="cur-title" required style="width:100%; padding: 0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius: 8px;">
-            </div>
-            
-            <div style="display:grid; grid-template-columns: 1fr; gap: 1.5rem;">
+    <div class="content-white-section" style="max-width:1100px; margin:0 auto; background:var(--bg-light); display:grid; grid-template-columns:minmax(0,1.25fr) minmax(280px,.75fr); gap:2rem; align-items:start;">
+        <section>
+            <h2 style="margin-bottom:2rem; color:var(--primary-navy);">Nova submissão</h2>
+
+            <form onsubmit="submitCuratorPost(event)" style="display:flex; flex-direction:column; gap:1.5rem; background:var(--white); padding:clamp(1.5rem,4vw,3rem); border-radius:var(--border-radius); box-shadow:var(--shadow);">
                 <div>
-                    <label style="display:block; font-weight:600; margin-bottom:0.5rem;">Área Predeterminada de Destino</label>
-                    <select id="cur-area" required style="width:100%; padding: 0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius: 8px;">
+                    <label for="cur-title" style="display:block; font-weight:600; margin-bottom:.5rem;">Título</label>
+                    <input type="text" id="cur-title" required minlength="3" maxlength="300" style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:8px;">
+                </div>
+
+                <div>
+                    <label for="cur-area" style="display:block; font-weight:600; margin-bottom:.5rem;">Área de destino</label>
+                    <select id="cur-area" required style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:8px;">
                         <option value="metodos">Métodos Substitutivos</option>
                         <option value="materiais">Materiais Didáticos</option>
                         <option value="publicacoes">Publicações</option>
                         <option value="legislacao">Legislação</option>
-                        <option value="bases">Bases de Dados</option>
+                        <option value="bases-dados">Bases de Dados</option>
+                        <option value="eventos">Eventos</option>
                     </select>
                 </div>
-            </div>
 
-            <div>
-                <label style="display:block; font-weight:600; margin-bottom:0.5rem;">Sistema de Tags sobre o Assunto (separe por vírgulas)</label>
-                <input type="text" id="cur-tags" required placeholder="Ex: Farmacologia, In vitro, Ética no Ensino" style="width:100%; padding: 0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius: 8px;">
-            </div>
+                <div>
+                    <label for="cur-tags" style="display:block; font-weight:600; margin-bottom:.5rem;">Tags, separadas por vírgulas</label>
+                    <input type="text" id="cur-tags" required placeholder="Ex.: Farmacologia, in vitro, ética" style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:8px;">
+                </div>
 
-            <div>
-                <label style="display:block; font-weight:600; margin-bottom:0.5rem;">Descrição / Resumo</label>
-                <textarea id="cur-desc" rows="4" required style="width:100%; padding: 0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius: 8px;"></textarea>
-            </div>
-            
-            <div>
-                <label style="display:block; font-weight:600; margin-bottom:0.5rem;">Link Externo (Opcional)</label>
-                <input type="url" id="cur-link" placeholder="https://" style="width:100%; padding: 0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius: 8px;">
-            </div>
+                <div>
+                    <label for="cur-desc" style="display:block; font-weight:600; margin-bottom:.5rem;">Descrição ou resumo</label>
+                    <textarea id="cur-desc" rows="5" required minlength="10" maxlength="4000" style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:8px; font-family:inherit;"></textarea>
+                </div>
 
-            <button type="submit" style="background: var(--primary-navy); color: white; padding: 1.2rem; border:none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; cursor:pointer; width:100%; text-align:center; display:flex; align-items:center; justify-content:center; gap:8px;">
-                Cadastrar e Enviar para Aprovação <span class="material-icons" aria-hidden="true" style="font-size:18px;">send</span>
-            </button>
-        </form>
-    </div>
-    `;
+                <div>
+                    <label for="cur-link" style="display:block; font-weight:600; margin-bottom:.5rem;">Link externo, opcional</label>
+                    <input type="url" id="cur-link" placeholder="https://" style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:8px;">
+                </div>
 
-    setTimeout(() => {
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        if(dropZone && fileInput) {
-            dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = 'var(--accent-orange)'; });
-            dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); dropZone.style.borderColor = '#ccc'; });
-            dropZone.addEventListener('drop', (e) => { 
-                e.preventDefault(); dropZone.style.borderColor = '#ccc'; 
-                if(e.dataTransfer.files.length > 0) {
-                    dropZone.innerHTML = `<i data-lucide="file-video" style="color:var(--mint-teal); width:48px; height:48px; margin-bottom: 1rem;"></i><p style="font-weight:bold; color:var(--primary-navy);">${e.dataTransfer.files[0].name}</p><p style="font-size: 0.85rem; color:var(--text-gray);">Arquivo anexado para publicação</p>`;
-                    if (window.lucide) window.lucide.createIcons();
-                }
-            });
-            fileInput.addEventListener('change', (e) => {
-                if(e.target.files.length > 0) {
-                    dropZone.innerHTML = `<i data-lucide="file-check-2" style="color:var(--mint-teal); width:48px; height:48px; margin-bottom: 1rem;"></i><p style="font-weight:bold; color:var(--primary-navy);">${e.target.files[0].name}</p><p style="font-size: 0.85rem; color:var(--text-gray);">Arquivo selecionado</p>`;
-                    if (window.lucide) window.lucide.createIcons();
-                }
-            });
-        }
-    }, 100);
+                <div>
+                    <label for="cur-image" style="display:block; font-weight:600; margin-bottom:.5rem;">URL de imagem, opcional</label>
+                    <input type="url" id="cur-image" placeholder="https://" style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:8px;">
+                    <p style="font-size:.8rem; color:var(--text-gray); margin-top:.45rem;">O envio direto de arquivos será conectado ao Supabase Storage na próxima etapa.</p>
+                </div>
+
+                <button type="submit" style="background:var(--primary-navy); color:white; padding:1.2rem; border:none; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer;">
+                    Cadastrar e enviar para aprovação
+                </button>
+            </form>
+        </section>
+
+        <aside style="background:var(--white); padding:1.5rem; border-radius:var(--border-radius); box-shadow:var(--shadow);">
+            <h2 style="font-size:1.25rem; color:var(--primary-navy); margin-bottom:1rem;">Minhas submissões</h2>
+            ${submissionsHtml}
+        </aside>
+    </div>`;
 
     if (window.lucide) window.lucide.createIcons();
     window.scrollTo(0, 0);
 };
 
+/* ════════════ ADMINISTRAÇÃO — SUPABASE ════════════ */
 
-/* ════════════ ADMIN FLOW ════════════ */
+window.approvePost = async function(id) {
+    if (!confirm('Aprovar e publicar este conteúdo?')) return;
 
-window.approvePost = function(id) {
-    let pending = getPendingPosts();
-    const postIndex = pending.findIndex(p => String(p.id) === String(id));
-    if(postIndex > -1){
-        const post = pending[postIndex];
-        let approved = getApprovedPosts();
-        approved.push(post);
-        localStorage.setItem('altereco_approved_posts', JSON.stringify(approved));
-        
-        pending.splice(postIndex, 1);
-        localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
-        
-        alert(`✅ Post "${post.title}" aprovado e publicado!`);
-        renderAdminDashboard('pending');
+    try {
+        await getVerifiedAccess('admin');
+        const client = getSupabaseClient();
+        const { error } = await client.rpc('approve_content_item', {
+            content_id: id
+        });
+        if (error) throw error;
+
+        await refreshApprovedContentCache();
+        alert('Conteúdo aprovado e publicado.');
+        await renderAdminDashboard('pending');
+    } catch (error) {
+        console.error(error);
+        alert(`Não foi possível aprovar.\n\n${error.message}`);
     }
 };
 
-window.rejectPost = function(id) {
-    if(!confirm("Atenção: O post da curadoria será deletado definitivamente. Tem certeza?")) return;
-    let pending = getPendingPosts();
-    pending = pending.filter(p => String(p.id) !== String(id));
-    localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
-    alert('❌ Post rejeitado com sucesso.');
-    renderAdminDashboard('pending');
+window.rejectPost = async function(id) {
+    const reason = prompt(
+        'Informe o motivo da não aprovação. Ele poderá ser visto pela pessoa que enviou:'
+    );
+    if (reason === null) return;
+
+    try {
+        await getVerifiedAccess('admin');
+        const client = getSupabaseClient();
+        const { error } = await client.rpc('reject_content_item', {
+            content_id: id,
+            reason: reason.trim() || null
+        });
+        if (error) throw error;
+
+        alert('Conteúdo marcado como não aprovado.');
+        await renderAdminDashboard('pending');
+    } catch (error) {
+        console.error(error);
+        alert(`Não foi possível rejeitar.\n\n${error.message}`);
+    }
 };
 
-window.deleteApprovedPost = function(id) {
-    if(!confirm("CUIDADO: Isso removerá o conteúdo do ar imediatamente. Confirmar Exclusão?")) return;
-    let approved = getApprovedPosts();
-    approved = approved.filter(p => String(p.id) !== String(id));
-    localStorage.setItem('altereco_approved_posts', JSON.stringify(approved));
-    alert('🗑️ Conteúdo removido da plataforma!');
-    renderAdminDashboard('approved');
+window.deleteApprovedPost = async function(id) {
+    if (!confirm('Remover este conteúdo definitivamente da plataforma?')) return;
+
+    try {
+        await getVerifiedAccess('admin');
+        const client = getSupabaseClient();
+        const { error } = await client
+            .from('content_items')
+            .delete()
+            .eq('id', id);
+        if (error) throw error;
+
+        await refreshApprovedContentCache();
+        alert('Conteúdo removido.');
+        await renderAdminDashboard('approved');
+    } catch (error) {
+        console.error(error);
+        alert(`Não foi possível remover.\n\n${error.message}`);
+    }
 };
+
+function renderPendingCard(post) {
+    const tags = post.tags.map(tag => `
+        <span class="pill-tag" style="background:#eee; color:var(--text-gray);">
+            #${escapeHtml(tag)}
+        </span>
+    `).join('');
+
+    return `
+    <article style="background:var(--white); border-radius:var(--border-radius); padding:2rem; margin-bottom:2rem; box-shadow:var(--shadow); border-left:5px solid var(--accent-orange);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1.5rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+            <div style="display:flex; gap:1.25rem; align-items:flex-start; min-width:0;">
+                <div style="width:140px; height:100px; border-radius:8px; overflow:hidden; background:var(--bg-light); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px dashed #ccc;">
+                    ${post.image
+                        ? `<img src="${escapeHtml(post.image)}" alt="" style="width:100%; height:100%; object-fit:cover;">`
+                        : '<span style="color:var(--text-gray); font-size:.8rem;">Sem imagem</span>'}
+                </div>
+                <div style="min-width:0;">
+                    <button onclick="changePostDestination('${post.id}')" class="page-badge" style="border:none; margin-bottom:1rem; background:rgba(0,0,0,.05); color:var(--primary-navy); cursor:pointer;">
+                        DESTINO: ${escapeHtml(post.area)}
+                    </button>
+                    <h3 style="color:var(--primary-navy); font-size:1.5rem; margin-bottom:.5rem;">${escapeHtml(post.title)}</h3>
+                    <p style="font-size:.95rem; color:var(--text-gray);">Enviado por <strong>${escapeHtml(post.author)}</strong> — ${escapeHtml(post.date)}</p>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:.8rem; flex-wrap:wrap;">
+                <button onclick="approvePost('${post.id}')" style="background:#E5F8ED; color:#2E7D32; border:none; padding:10px 20px; border-radius:30px; font-weight:bold; cursor:pointer;">Aprovar</button>
+                <button onclick="rejectPost('${post.id}')" style="background:#FFF0F0; color:#D32F2F; border:none; padding:10px 20px; border-radius:30px; font-weight:bold; cursor:pointer;">Não aprovar</button>
+            </div>
+        </div>
+
+        <p style="color:var(--text-gray); margin-bottom:.8rem; font-size:1.02rem; line-height:1.7; background:var(--bg-light); padding:1.5rem; border-radius:8px;">${escapeHtml(post.description)}</p>
+
+        <div style="font-size:.88rem; color:var(--text-gray); margin-bottom:1.5rem; padding-left:1rem; border-left:2px solid rgba(128,128,128,.2);">
+            <strong>Texto expandido:</strong> ${escapeHtml(post.long_description || 'Não preenchido.')}
+        </div>
+
+        <div style="margin-bottom:1.5rem; display:flex; gap:.5rem; flex-wrap:wrap;">${tags}</div>
+
+        <div style="display:flex; justify-content:space-between; gap:1rem; align-items:center; border-top:1px solid rgba(128,128,128,.15); padding-top:1rem; flex-wrap:wrap;">
+            ${post.url && post.url !== '#'
+                ? `<a href="${escapeHtml(post.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent-orange); font-weight:bold; text-decoration:none;">Acessar fonte</a>`
+                : '<span style="color:var(--text-gray); font-size:.9rem;">Sem link</span>'}
+
+            <div style="display:flex; gap:.4rem; flex-wrap:wrap;">
+                <button onclick="editPostField('${post.id}', 'title', 'Título')" style="background:none; border:1px solid rgba(128,128,128,.2); padding:6px 9px; border-radius:15px; cursor:pointer;">Título</button>
+                <button onclick="editPostField('${post.id}', 'description', 'Descrição')" style="background:none; border:1px solid rgba(128,128,128,.2); padding:6px 9px; border-radius:15px; cursor:pointer;">Descrição</button>
+                <button onclick="editPostField('${post.id}', 'long_description', 'Texto expandido')" style="background:none; border:1px solid rgba(128,128,128,.2); padding:6px 9px; border-radius:15px; cursor:pointer;">Texto longo</button>
+                <button onclick="changePostUrl('${post.id}')" style="background:none; border:1px solid rgba(128,128,128,.2); padding:6px 9px; border-radius:15px; cursor:pointer;">Link</button>
+                <button onclick="changePostImage('${post.id}')" style="background:none; border:1px solid rgba(128,128,128,.2); padding:6px 9px; border-radius:15px; cursor:pointer;">Imagem</button>
+            </div>
+        </div>
+    </article>`;
+}
 
 window.renderAdminDashboard = async function(tab = 'pending') {
     let session;
@@ -698,269 +983,226 @@ window.renderAdminDashboard = async function(tab = 'pending') {
     try {
         session = await getVerifiedAccess('admin');
     } catch (error) {
-        console.error('Acesso administrativo negado:', error);
         alert(error.message);
         return renderLogin('admin');
     }
 
     if (!session) return renderLogin('admin');
 
-    const c = document.getElementById('content-area');
-    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-    
-    // Tab lists
-    const pending = getPendingPosts();
-    const approved = getApprovedPosts();
-    
+    let pending = [];
+    let approved = [];
+
+    try {
+        [pending, approved] = await Promise.all([
+            fetchContentItemsByStatus('pending'),
+            fetchContentItemsByStatus('approved')
+        ]);
+        alterecoContentCache.approved = approved;
+        alterecoContentCache.loaded = true;
+    } catch (error) {
+        console.error(error);
+        alert(`Não foi possível carregar os conteúdos.\n\n${error.message}`);
+    }
+
     let contentHTML = '';
 
     if (tab === 'pending') {
-        if(pending.length === 0){
-            contentHTML = '<div style="background:var(--white); border-radius:var(--border-radius); padding: 4rem; text-align:center; box-shadow: var(--shadow);"><i data-lucide="shield-check" style="width:64px; height:64px; color:#ddd; margin-bottom:1rem;"></i><h3 style="color:var(--text-gray);">Nenhuma submissão pendente</h3><p style="color:var(--text-gray);">Toda a curadoria está em dia.</p></div>';
-        } else {
-            contentHTML = pending.map(p => `
-            <div style="background:var(--white); border-radius: var(--border-radius); padding: 2rem; margin-bottom: 2rem; box-shadow: var(--shadow); border-left: 5px solid var(--accent-orange);">
-                <div style="display:flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-                    <div style="display:flex; gap: 1.5rem; align-items:flex-start;">
-                        <div style="position:relative; overflow:hidden; border-radius:8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); width: 140px; height: 100px; flex-shrink:0; background:var(--bg-light); display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px dashed #ccc;">
-                            ${p.image ? `<img src="${p.image}" alt="Preview" style="position:absolute; top:0; left:0; width: 100%; height: 100%; object-fit: cover; z-index:0;">` : `<div style="z-index:0; text-align:center;"><i data-lucide="image-plus" style="width:24px; color:var(--text-gray);"></i><div style="font-size:0.7rem; color:var(--text-gray); margin-top:4px;">Sem Imagem</div></div>`}
-                            <div style="position:absolute; bottom:0; left:0; right:0; display:flex; font-size:0.65rem; text-align:center; z-index:10;">
-                                <div onclick="changePostImage('${p.id}')" style="flex:1; background:rgba(0,0,0,0.7); color:white; padding:4px; cursor:pointer;" title="Colar Link URL">🔗 URL</div>
-                                <div onclick="document.getElementById('upload-img-${p.id}').click()" style="flex:1; background:rgba(30,100,50,0.8); color:white; padding:4px; cursor:pointer; border-left:1px solid #555;" title="Enviar do Computador">📁 PC</div>
-                            </div>
-                            <input type="file" id="upload-img-${p.id}" accept="image/*" style="display:none;" onchange="handleLocalImageUpload(event, '${p.id}')">
-                        </div>
-                        <div>
-                            <span onclick="changePostDestination('${p.id}')" class="page-badge" style="margin-bottom:1rem; background: rgba(0,0,0,0.05); color: var(--primary-navy); text-transform:uppercase; cursor:pointer;" title="Clique para editar destino">DESTINO: ${p.area} <i data-lucide="edit-2" style="width:12px; margin-left:4px;"></i></span>
-                            <h3 style="color: var(--primary-navy); font-size: 1.5rem; margin-bottom: 0.5rem;">${p.title}</h3>
-                            <p style="font-size: 0.95rem; color:var(--text-gray);">Enviado por: <strong>${p.author}</strong> — ${p.date}</p>
-                        </div>
+        contentHTML = pending.length
+            ? pending.map(renderPendingCard).join('')
+            : `<div style="background:var(--white); border-radius:var(--border-radius); padding:4rem; text-align:center; box-shadow:var(--shadow);">
+                <h3 style="color:var(--text-gray);">Nenhuma submissão pendente</h3>
+                <p style="color:var(--text-gray);">Toda a curadoria está em dia.</p>
+            </div>`;
+    } else if (tab === 'approved') {
+        contentHTML = approved.length
+            ? approved.map(post => `
+                <article style="background:var(--white); border-radius:var(--border-radius); padding:1.5rem; margin-bottom:1.5rem; border:1px solid rgba(128,128,128,.15); display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                    <div>
+                        <span class="page-badge" style="background:var(--bg-gray); color:var(--primary-navy); margin-bottom:.5rem;">${escapeHtml(post.area)}</span>
+                        <h3 style="color:var(--primary-navy); font-size:1.3rem;">${escapeHtml(post.title)}</h3>
+                        <p style="font-size:.9rem; color:var(--text-gray);">${escapeHtml(post.author)} · ${escapeHtml(post.date)}</p>
                     </div>
-                    <div style="display:flex; gap: 0.8rem;">
-                        <button onclick="approvePost('${p.id}')" style="background:#E5F8ED; color:#2E7D32; border:none; padding: 10px 20px; border-radius:30px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.3s; box-shadow:0 3px 10px rgba(0,0,0,0.05);">Aprovar <i data-lucide="check" style="width:16px;"></i></button>
-                        <button onclick="rejectPost('${p.id}')" style="background:#FFF0F0; color:#D32F2F; border:none; padding: 10px 20px; border-radius:30px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.3s;">Rejeitar <i data-lucide="x" style="width:16px;"></i></button>
-                    </div>
-                </div>
-                <p style="color: var(--text-gray); margin-bottom: 0.5rem; font-size:1.05rem; line-height: 1.7; background:var(--bg-light); padding: 1.5rem; border-radius: 8px;">${p.description}</p>
-                <div style="font-size:0.85rem; color:var(--text-gray); margin-bottom:1.5rem; border-left:2px solid rgba(128,128,128,0.2); padding-left:1rem;">
-                    <strong>Texto Expandido (Long):</strong> ${p.long_description || 'Nenhum texto longo preenchido.'}
-                </div>
-                
-                <div style="margin-bottom: 1.5rem; display:flex; gap: 0.5rem; flex-wrap:wrap;">
-                    ${p.tags.map(t => `<span class="pill-tag" style="background:#eee; color:var(--text-gray);">#${t}</span>`).join('')}
-                </div>
-
-                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(128,128,128,0.15); padding-top:1rem; flex-wrap:wrap; gap:10px;">
-                    ${p.url && p.url !== '#' ? `<a href="${p.url}" target="_blank" style="color: var(--accent-orange); font-size:0.95rem; font-weight:bold; text-decoration:none;"><i data-lucide="link" style="width:16px; display:inline; margin-right:4px; vertical-align:middle;"></i> Acessar fonte</a>` : `<span style="color:var(--text-gray); font-size:0.9rem;">Sem link</span>`}
-                    <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
-                        <button onclick="editPostField('${p.id}', 'title', 'Título do Conteúdo')" style="background:none; border:1px solid rgba(128,128,128,0.2); color:var(--text-gray); padding:5px 8px; border-radius:15px; font-size:0.7rem; cursor:pointer;">✏️ Título</button>
-                        <button onclick="editPostField('${p.id}', 'description', 'Descrição Curta (UX Writing)')" style="background:none; border:1px solid rgba(128,128,128,0.2); color:var(--text-gray); padding:5px 8px; border-radius:15px; font-size:0.7rem; cursor:pointer;">✏️ Descrição</button>
-                        <button onclick="editPostField('${p.id}', 'long_description', 'Texto Expandido do Post')" style="background:none; border:1px solid rgba(128,128,128,0.2); color:var(--text-gray); padding:5px 8px; border-radius:15px; font-size:0.7rem; cursor:pointer;">📝 Texto Longo</button>
-                        <button onclick="changePostDate('${p.id}')" style="background:none; border:1px solid rgba(128,128,128,0.2); color:var(--text-gray); padding:5px 8px; border-radius:15px; font-size:0.7rem; cursor:pointer;">📅 Data</button>
-                        <button onclick="changePostUrl('${p.id}')" style="background:none; border:1px solid rgba(128,128,128,0.2); color:var(--text-gray); padding:5px 8px; border-radius:15px; font-size:0.7rem; cursor:pointer;">🔗 Link</button>
-                    </div>
-                </div>
-            </div>`).join('');
-        }
-    } else {
-        // Render Approved content tab for Deletion
-        if(approved.length === 0){
-             contentHTML = '<div style="background:var(--white); border-radius:var(--border-radius); padding: 4rem; text-align:center; box-shadow: var(--shadow);"><i data-lucide="folder-search" style="width:64px; height:64px; color:#ddd; margin-bottom:1rem;"></i><h3 style="color:var(--text-gray);">Nenhum conteúdo dinâmico inserido no ar.</h3></div>';
-        } else {
-            contentHTML = approved.map(p => `
-            <div style="background:var(--white); border-radius: var(--border-radius); padding: 1.5rem; margin-bottom: 1.5rem; border:1px solid rgba(128,128,128,0.15); display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <span class="page-badge" style="background:var(--bg-gray); color:var(--primary-navy); margin-bottom:0.5rem;">Página: ${p.area}</span>
-                    <h3 style="color:var(--primary-navy); font-size:1.3rem;">${p.title}</h3>
-                    <p style="font-size:0.9rem; color:var(--text-gray);">Autor: ${p.author} | Publicado em ${p.date}</p>
-                </div>
-                <div>
-                     <button onclick="deleteApprovedPost('${p.id}')" style="background:none; border:2px solid #D32F2F; color:#D32F2F; padding: 8px 16px; border-radius:8px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:5px; transition:0.3s;"><i data-lucide="trash-2" style="width:16px;"></i> Excluir Definitivamente</button>
-                </div>
-            </div>`).join('');
-        }
+                    <button onclick="deleteApprovedPost('${post.id}')" style="background:none; border:2px solid #D32F2F; color:#D32F2F; padding:8px 16px; border-radius:8px; font-weight:bold; cursor:pointer;">Excluir</button>
+                </article>
+            `).join('')
+            : '<div style="background:var(--white); padding:4rem; text-align:center; border-radius:var(--border-radius);"><p style="color:var(--text-gray);">Nenhum conteúdo publicado pelo painel.</p></div>';
     }
 
+    const c = document.getElementById('content-area');
+    document.querySelectorAll('.nav-btn').forEach(
+        btn => btn.classList.remove('active')
+    );
+
     c.innerHTML = `
-    <div style="background:var(--white); border-bottom:1px solid rgba(128,128,128,0.15); padding: 1.5rem 2rem; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
-        <div style="display:flex; align-items:center; gap: 1rem;">
-            <div style="width:50px; height:50px; background:var(--primary-navy); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
-                <i data-lucide="shield" style="width:24px;"></i>
-            </div>
-            <div>
-                <h2 style="font-size:1.3rem; color:var(--primary-navy); font-weight:800;">DASHBOARD ADMIN</h2>
-                <div style="display:flex; gap: 0.5rem; align-items:center;">
-                    <span class="page-badge" style="background:#E5F8ED; color:#2E7D32;">Acesso Nível 1 - Master</span>
-                    <span style="color:var(--text-gray); font-size:0.8rem;">Logado como ${session.name}</span>
-                </div>
-            </div>
-        </div>
-        <div style="display:flex; gap: 1rem;">
-             <button onclick="renderAdminDashboard('approved')" class="nav-btn ${tab === 'approved' ? 'active' : ''}" style="background:none; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:bold; color:var(--text-gray);">Publicados (${approved.length})</button>
-             <button onclick="renderAdminDashboard('pending')" class="nav-btn ${tab === 'pending' ? 'active' : ''}" style="background:none; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:bold; color:var(--text-gray);">Curadoria (${pending.length})</button>
-             <button onclick="renderAdminDashboard('new')" class="nav-btn ${tab === 'new' ? 'active' : ''}" style="background:var(--primary-navy); color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:bold; display:flex; align-items:center; gap:5px;"><span class="material-icons" aria-hidden="true" style="font-size:16px;">add_circle</span> Novo Conteúdo</button>
-             <button onclick="renderAdminDashboard('forum')" class="nav-btn ${tab === 'forum' ? 'active' : ''}" style="background:none; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:bold; color:var(--text-gray);">Fórum</button>
-             <button onclick="renderAdminSettings()" class="nav-btn" style="background:#f0f0f0; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:bold; color:var(--text-gray);"><i data-lucide="settings" style="width:16px; vertical-align:middle;"></i> Segurança</button>
-             <button onclick="logout()" style="background:#FFF0F0; color:#D32F2F; border:none; padding: 10px 20px; border-radius:10px; font-weight:bold; cursor:pointer;">Sair</button>
-        </div>
-    </div>
-
-    <div style="max-width: 1400px; margin: 0 auto; padding: 2rem; display: grid; grid-template-columns: 2fr 1.2fr; gap: 2rem; align-items: flex-start;">
-        <!-- Left: Queue -->
+    <div style="background:var(--white); border-bottom:1px solid rgba(128,128,128,.15); padding:1.5rem 2rem; display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap; position:sticky; top:0; z-index:100;">
         <div>
-            <div style="margin-bottom: 2rem; display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="font-size:1.8rem; font-weight:800; color:var(--primary-navy);">${tab === 'pending' ? 'Aprovação de Conteúdos' : 'Conteúdos em Produção'}</h2>
-            </div>
-            <div id="admin-main-list">
-                ${tab === 'forum' ? renderForumModerationList() : (tab === 'new' ? renderManualEntryForm() : contentHTML)}
-            </div>
+            <h2 style="font-size:1.3rem; color:var(--primary-navy); font-weight:800;">DASHBOARD ADMIN</h2>
+            <span style="color:var(--text-gray); font-size:.82rem;">${escapeHtml(session.name)}</span>
         </div>
-
-        <!-- Right: AI Assistant -->
-        <div style="position: sticky; top: 120px;">
-            <div id="ai-curator-console" style="background:var(--white); border-radius: 20px; padding: 2rem; border:1px solid rgba(128,128,128,0.15); box-shadow: 0 10px 40px rgba(0,0,0,0.05); min-height: 500px; display:flex; flex-direction:column;">
-                <div style="display:flex; align-items:center; gap: 1rem; margin-bottom:1.5rem; border-bottom:1px solid rgba(128,128,128,0.15); padding-bottom:1rem;">
-                    <img src="assets/eco.png" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
-                    <div>
-                        <h3 style="font-size:1.1rem; color:var(--primary-navy); font-weight:700;">ECO IA CURADORA</h3>
-                        <span style="font-size:0.75rem; color:#4DB6AC;">Console de Curação Inteligente</span>
-                    </div>
-                </div>
-                
-                <div id="admin-ai-chat" style="flex:1; overflow-y:auto; max-height: 400px; padding-bottom:1rem; display:flex; flex-direction:column; gap:1rem;">
-                    <div style="background:var(--bg-light); padding:1.2rem; border-radius:15px; font-size:0.9rem; color:var(--text-gray); line-height:1.5;">
-                        "Olá, ${session.name.split(' ')[0]}! Sou sua assistente curadora. Peça algo como: <strong>'Encontre editais abertos na Espanha para biotecnologia'</strong> ou <strong>'Sugira 3 novos congressos de fisiologia sem animais'</strong>."
-                    </div>
-                </div>
-                
-                <div style="margin-top:1rem; border-top:1px solid rgba(128,128,128,0.15); padding-top:1.5rem;">
-                    <textarea id="admin-ai-input" placeholder="Comande a IA aqui..." style="width:100%; height:80px; border:1px solid rgba(128,128,128,0.15); background:var(--bg-light); border-radius:15px; padding:1rem; font-family:inherit; resize:none; font-size:0.9rem; outline:none;"></textarea>
-                    <button onclick="sendCommandToCurator()" id="send-ai-btn" style="width:100%; margin-top:0.8rem; background:var(--primary-navy); color:white; border:none; padding:15px; border-radius:15px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
-                        Conversar com IA <i data-lucide="send" style="width:16px;"></i>
-                    </button>
-                    <p style="font-size:0.7rem; color:var(--text-gray); margin-top:1rem; text-align:center;">As sugestões aprovadas pela IA cairão direto na sua fila ao lado.</p>
-                </div>
-            </div>
+        <div style="display:flex; gap:.6rem; flex-wrap:wrap;">
+            <button onclick="renderAdminDashboard('pending')" style="border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold; ${tab === 'pending' ? 'background:var(--primary-navy); color:white;' : 'background:var(--bg-light); color:var(--text-gray);'}">Curadoria (${pending.length})</button>
+            <button onclick="renderAdminDashboard('approved')" style="border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold; ${tab === 'approved' ? 'background:var(--primary-navy); color:white;' : 'background:var(--bg-light); color:var(--text-gray);'}">Publicados (${approved.length})</button>
+            <button onclick="renderAdminDashboard('new')" style="background:var(--accent-orange); color:white; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Novo conteúdo</button>
+            <button onclick="renderAdminDashboard('forum')" style="background:var(--bg-light); color:var(--text-gray); border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Fórum</button>
+            <button onclick="renderAdminSettings()" style="background:var(--bg-light); color:var(--text-gray); border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Segurança</button>
+            <button onclick="logout()" style="background:#FFF0F0; color:#D32F2F; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Sair</button>
         </div>
     </div>
-    `;
+
+    <div style="max-width:1400px; margin:0 auto; padding:2rem; display:grid; grid-template-columns:minmax(0,2fr) minmax(300px,1fr); gap:2rem; align-items:start;">
+        <main>
+            <h2 style="font-size:1.8rem; color:var(--primary-navy); margin-bottom:2rem;">
+                ${tab === 'pending' ? 'Aprovação de conteúdos' : tab === 'approved' ? 'Conteúdos publicados' : tab === 'new' ? 'Novo conteúdo' : 'Moderação do fórum'}
+            </h2>
+            <div id="admin-main-list">
+                ${tab === 'forum'
+                    ? renderForumModerationList()
+                    : tab === 'new'
+                        ? renderManualEntryForm()
+                        : contentHTML}
+            </div>
+        </main>
+
+        <aside style="position:sticky; top:120px;">
+            <div style="background:var(--white); border-radius:20px; padding:2rem; border:1px solid rgba(128,128,128,.15); box-shadow:0 10px 40px rgba(0,0,0,.05);">
+                <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
+                    <img src="assets/eco.png" alt="" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
+                    <div>
+                        <h3 style="font-size:1.1rem; color:var(--primary-navy);">ECO IA CURADORA</h3>
+                        <span style="font-size:.75rem; color:#4DB6AC;">Integração protegida será a próxima etapa</span>
+                    </div>
+                </div>
+                <p style="color:var(--text-gray); line-height:1.6; font-size:.9rem;">A IA permanece desativada para não expor a chave Gemini no navegador.</p>
+                <button onclick="sendCommandToCurator()" style="width:100%; margin-top:1rem; background:var(--primary-navy); color:white; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:bold;">Sobre a integração da IA</button>
+            </div>
+        </aside>
+    </div>`;
 
     if (window.lucide) window.lucide.createIcons();
     window.scrollTo(0, 0);
 };
 
-window.editPostField = function(id, field, label) {
-    let pending = getPendingPosts();
-    const postIndex = pending.findIndex(p => String(p.id) === String(id));
-    if(postIndex > -1){
-        const current = pending[postIndex][field] || '';
-        const newValue = prompt(`Editar ${label}:`, current);
-        if (newValue !== null) {
-            pending[postIndex][field] = newValue.trim();
-            localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
-            renderAdminDashboard('pending');
-        }
+async function updatePendingContentField(id, field, value) {
+    await getVerifiedAccess('admin');
+    const client = getSupabaseClient();
+
+    const allowed = new Set([
+        'title',
+        'description',
+        'long_description',
+        'external_url',
+        'image_url',
+        'area',
+        'tags'
+    ]);
+
+    if (!allowed.has(field)) {
+        throw new Error('Campo não autorizado para edição.');
+    }
+
+    const { error } = await client
+        .from('content_items')
+        .update({ [field]: value })
+        .eq('id', id)
+        .eq('status', 'pending');
+
+    if (error) throw error;
+}
+
+window.editPostField = async function(id, field, label) {
+    const newValue = prompt(`Editar ${label}:`);
+    if (newValue === null) return;
+
+    try {
+        await updatePendingContentField(id, field, newValue.trim());
+        await renderAdminDashboard('pending');
+    } catch (error) {
+        alert(`Não foi possível editar.\n\n${error.message}`);
     }
 };
 
-window.changePostDestination = function(id) {
-    let pending = getPendingPosts();
-    const postIndex = pending.findIndex(p => String(p.id) === String(id));
-    if(postIndex > -1){
-        const current = pending[postIndex].area;
-        const newArea = prompt("Mudança de Destino Rápida\\n\\nDigite a nova área (ex: materiais, publicacoes, bases-dados, legislacao):", current);
-        if (newArea && newArea.trim() !== current) {
-            pending[postIndex].area = newArea.trim().toLowerCase();
-            localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
-            renderAdminDashboard('pending');
-        }
+window.changePostDestination = async function(id) {
+    const newArea = prompt(
+        'Digite a área: metodos, materiais, publicacoes, legislacao, bases-dados ou eventos'
+    );
+    if (newArea === null) return;
+
+    const area = normalizeContentArea(newArea);
+
+    try {
+        await updatePendingContentField(id, 'area', area);
+        await renderAdminDashboard('pending');
+    } catch (error) {
+        alert(`Não foi possível alterar.\n\n${error.message}`);
     }
 };
 
-window.changePostImage = function(id) {
-    let pending = getPendingPosts();
-    const postIndex = pending.findIndex(p => String(p.id) === String(id));
-    if(postIndex > -1){
-        const current = pending[postIndex].image || '';
-        const newImage = prompt("Deseja alterar a miniatura do conteúdo?\\nCole a nova URL de imagem, ou deixe vazio para remover:", current);
-        if (newImage !== null) {
-            pending[postIndex].image = newImage.trim();
-            localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
-            renderAdminDashboard('pending');
-        }
+window.changePostImage = async function(id) {
+    const value = prompt('Cole uma URL HTTPS para a imagem, ou deixe vazio para remover:');
+    if (value === null) return;
+
+    const url = normalizeExternalUrl(value);
+    if (value.trim() && !url) {
+        alert('Use uma URL válida iniciada por https://');
+        return;
+    }
+
+    try {
+        await updatePendingContentField(id, 'image_url', url);
+        await renderAdminDashboard('pending');
+    } catch (error) {
+        alert(`Não foi possível alterar.\n\n${error.message}`);
     }
 };
 
-window.handleLocalImageUpload = function(event, id) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        let pending = getPendingPosts();
-        const postIndex = pending.findIndex(p => String(p.id) === String(id));
-        if (postIndex > -1) {
-            pending[postIndex].image = e.target.result;
-            localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
-            renderAdminDashboard('pending');
-        }
-    };
-    reader.readAsDataURL(file);
+window.handleLocalImageUpload = function() {
+    alert('O upload de arquivos será conectado ao Supabase Storage na próxima etapa. Por enquanto, use uma URL HTTPS.');
 };
 
-window.changePostUrl = function(id) {
-    let pending = getPendingPosts();
-    const postIndex = pending.findIndex(p => String(p.id) === String(id));
-    if(postIndex > -1){
-        const current = pending[postIndex].url || '';
-        const newUrl = prompt("Editar Link da Chamada Público ou Evento:\nCole a URL oficial de destino (ou '#' para limpar):", current);
-        if (newUrl !== null) {
-            pending[postIndex].url = newUrl.trim() || '#';
-            localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
-            renderAdminDashboard('pending');
-        }
+window.changePostUrl = async function(id) {
+    const value = prompt('Cole a URL oficial, ou deixe vazio para remover:');
+    if (value === null) return;
+
+    const url = normalizeExternalUrl(value);
+    if (value.trim() && !url) {
+        alert('Use uma URL válida iniciada por https://');
+        return;
+    }
+
+    try {
+        await updatePendingContentField(id, 'external_url', url);
+        await renderAdminDashboard('pending');
+    } catch (error) {
+        alert(`Não foi possível alterar.\n\n${error.message}`);
     }
 };
 
-window.changePostDate = function(id) {
-    let pending = getPendingPosts();
-    const postIndex = pending.findIndex(p => String(p.id) === String(id));
-    if(postIndex > -1){
-        const current = pending[postIndex].date || '';
-        const newDate = prompt("Editar Data do Conteúdo/Evento:\nExemplo: '15/Maio' ou '2025-06-20'", current);
-        if (newDate !== null) {
-            pending[postIndex].date = newDate.trim();
-            localStorage.setItem('altereco_pending_posts', JSON.stringify(pending));
-            renderAdminDashboard('pending');
-        }
-    }
+window.changePostDate = function() {
+    alert('As datas agora são registradas automaticamente pelo Supabase e não podem ser alteradas manualmente.');
 };
 
 window.sendCommandToCurator = async function() {
-    alert(
-        'A IA curadora foi temporariamente desativada por segurança. ' +
-        'A chave antiga estava no navegador. Na próxima etapa, vamos ' +
-        'ligá-la por uma função protegida do Supabase.'
-    );
+    alert('A IA curadora está temporariamente desativada. Ela será ligada por uma Edge Function do Supabase, sem expor a chave Gemini.');
 };
 
 window.triggerAICuratorChat = function() {
-    const input = document.getElementById('admin-ai-input');
-    input.focus();
-    input.classList.add('pulse-highlight');
-    setTimeout(() => input.classList.remove('pulse-highlight'), 1000);
-};
-
-window.getDynamicPostsForArea = function(areaId) {
-    return getApprovedPosts().filter(p => p.area === areaId);
+    window.sendCommandToCurator();
 };
 
 window.shareCard = function(btn) {
-    let cardTitle = "Conteúdo AlterECO";
-    const titleElement = btn.closest('div').parentElement.querySelector('h2, h3, .pub-card-title, .materiais-card-title, .legis-card-title, .db-card-name');
+    let cardTitle = 'Conteúdo AlterECO';
+    const titleElement = btn.closest('div')?.parentElement?.querySelector(
+        'h2, h3, .pub-card-title, .materiais-card-title, .legis-card-title, .db-card-name'
+    );
     if (titleElement) cardTitle = titleElement.innerText.replace(/Postado por.*/g, '');
-    alert(`Compartilhar: "\n${cardTitle.trim()}"\n\nLink copiado para a área de transferência! Envie para WhatsApp ou E-mail.`);
+
+    if (navigator.clipboard && window.location.href) {
+        navigator.clipboard.writeText(window.location.href).catch(() => {});
+    }
+
+    alert(`Compartilhar: ${cardTitle.trim()}\n\nLink da página copiado.`);
 };
+
 window.renderAdminSettings = async function() {
     let session;
 
@@ -1173,88 +1415,128 @@ window.moderateForumPost = function(id, action) {
     }
 };
 
+
 window.renderManualEntryForm = function() {
     return `
-    <div style="background:var(--white); padding: 3rem; border-radius: 20px; box-shadow: var(--shadow); border:1px solid rgba(128,128,128,0.15);">
-        <h3 style="color: var(--primary-navy); margin-bottom: 2rem; display:flex; align-items:center; gap:10px;"><i data-lucide="edit-3"></i> Cadastro Manual de Conteúdo</h3>
-        
+    <div style="background:var(--white); padding:clamp(1.5rem,4vw,3rem); border-radius:20px; box-shadow:var(--shadow); border:1px solid rgba(128,128,128,.15);">
+        <h3 style="color:var(--primary-navy); margin-bottom:2rem;">Cadastro administrativo de conteúdo</h3>
+
         <form onsubmit="processManualAdminPost(event)" style="display:flex; flex-direction:column; gap:1.5rem;">
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1.5rem;">
                 <div>
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; font-size:0.9rem;">Título da Publicação / Método</label>
-                    <input type="text" id="man-title" required placeholder="Ex: Bioética na Ciência" style="width:100%; padding: 1rem; border:1px solid rgba(128,128,128,0.2); border-radius: 12px; font-size:1rem;">
+                    <label for="man-title" style="display:block; font-weight:700; margin-bottom:.5rem;">Título</label>
+                    <input type="text" id="man-title" required minlength="3" maxlength="300" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px;">
                 </div>
                 <div>
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; font-size:0.9rem;">Autor(a) ou Instituição</label>
-                    <input type="text" id="man-author" required placeholder="Ex: Rita Leal Paixão" style="width:100%; padding: 1rem; border:1px solid rgba(128,128,128,0.2); border-radius: 12px; font-size:1rem;">
+                    <label for="man-author" style="display:block; font-weight:700; margin-bottom:.5rem;">Autor ou instituição</label>
+                    <input type="text" id="man-author" required minlength="2" maxlength="200" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px;">
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1.5rem;">
                 <div>
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; font-size:0.9rem;">Área de Destino</label>
-                    <select id="man-area" required style="width:100%; padding: 1rem; border:1px solid rgba(128,128,128,0.2); border-radius: 12px; font-size:1rem; cursor:pointer;">
-                        <option value="publicacoes">Publicações (Livros/Artigos)</option>
+                    <label for="man-area" style="display:block; font-weight:700; margin-bottom:.5rem;">Área</label>
+                    <select id="man-area" required style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px;">
+                        <option value="publicacoes">Publicações</option>
                         <option value="metodos">Métodos Substitutivos</option>
                         <option value="materiais">Materiais Didáticos</option>
                         <option value="legislacao">Legislação</option>
-                        <option value="bases">Bases de Dados</option>
+                        <option value="bases-dados">Bases de Dados</option>
+                        <option value="eventos">Eventos</option>
                     </select>
                 </div>
                 <div>
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; font-size:0.9rem;">Tags (separe por vírgula)</label>
-                    <input type="text" id="man-tags" placeholder="Ex: Bioética, PDF, Livro" style="width:100%; padding: 1rem; border:1px solid rgba(128,128,128,0.2); border-radius: 12px; font-size:1rem;">
+                    <label for="man-tags" style="display:block; font-weight:700; margin-bottom:.5rem;">Tags</label>
+                    <input type="text" id="man-tags" placeholder="Bioética, PDF, livro" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px;">
                 </div>
             </div>
 
             <div>
-                <label style="display:block; font-weight:700; margin-bottom:0.5rem; font-size:0.9rem;">Resumo / Descrição (IA Sugestiva pode ser inserida aqui)</label>
-                <textarea id="man-desc" rows="5" required placeholder="Escreva um pequeno resumo do conteúdo..." style="width:100%; padding: 1rem; border:1px solid rgba(128,128,128,0.2); border-radius: 12px; font-size:1rem; resize:vertical; font-family:inherit;"></textarea>
+                <label for="man-desc" style="display:block; font-weight:700; margin-bottom:.5rem;">Resumo ou descrição</label>
+                <textarea id="man-desc" rows="5" required minlength="10" maxlength="4000" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px; font-family:inherit;"></textarea>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div>
+                <label for="man-long-desc" style="display:block; font-weight:700; margin-bottom:.5rem;">Texto expandido, opcional</label>
+                <textarea id="man-long-desc" rows="6" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px; font-family:inherit;"></textarea>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1.5rem;">
                 <div>
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; font-size:0.9rem;">Link Externo (URL)</label>
-                    <input type="url" id="man-link" placeholder="https://" style="width:100%; padding: 1rem; border:1px solid rgba(128,128,128,0.2); border-radius: 12px; font-size:1rem;">
+                    <label for="man-link" style="display:block; font-weight:700; margin-bottom:.5rem;">Link externo</label>
+                    <input type="url" id="man-link" placeholder="https://" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px;">
                 </div>
                 <div>
-                    <label style="display:block; font-weight:700; margin-bottom:0.5rem; font-size:0.9rem;">URL da Imagem (Capa do Livro)</label>
-                    <input type="url" id="man-image" placeholder="https://... ou vazio para padrão" style="width:100%; padding: 1rem; border:1px solid rgba(128,128,128,0.2); border-radius: 12px; font-size:1rem;">
+                    <label for="man-image" style="display:block; font-weight:700; margin-bottom:.5rem;">URL da imagem</label>
+                    <input type="url" id="man-image" placeholder="https://" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px;">
                 </div>
             </div>
 
-            <div style="background:var(--bg-light); padding: 1.5rem; border-radius: 12px; border: 1px solid #e0e4e7;">
-                <p style="font-size:0.85rem; color:var(--text-gray); margin:0;"><strong>Dica:</strong> Como você é Administradora, este conteúdo será publicado <strong>imediatamente</strong> na seção escolhida sem passar pela fila de aprovação.</p>
+            <div style="background:var(--bg-light); padding:1.3rem; border-radius:12px; color:var(--text-gray); font-size:.88rem;">
+                O sistema cria o registro como pendente e o aprova por uma função protegida. Isso mantém a mesma trilha de segurança dos demais conteúdos.
             </div>
 
-            <button type="submit" style="background: var(--primary-navy); color: white; padding: 1.2rem; border:none; border-radius: 15px; font-weight: 800; font-size: 1.1rem; cursor:pointer; width:100%; text-align:center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top:1rem; transition:0.3s;">
-                Publicar Agora na Plataforma <i data-lucide="check" style="width:20px; margin-left:8px;"></i>
+            <button type="submit" style="background:var(--primary-navy); color:white; padding:1.2rem; border:none; border-radius:15px; font-weight:800; font-size:1.05rem; cursor:pointer;">
+                Publicar agora
             </button>
         </form>
-    </div>
-    `;
+    </div>`;
 };
 
-window.processManualAdminPost = function(event) {
+window.processManualAdminPost = async function(event) {
     event.preventDefault();
-    const title = document.getElementById('man-title').value;
-    const author = document.getElementById('man-author').value;
-    const area = document.getElementById('man-area').value;
-    const tags = document.getElementById('man-tags').value.split(',').map(t => t.trim()).filter(t => t !== '');
-    const desc = document.getElementById('man-desc').value;
-    const url = document.getElementById('man-link').value || '#';
-    const image = document.getElementById('man-image').value;
+    const submitButton = event.submitter;
 
-    const post = {
-        id: Date.now().toString(),
-        title, author, area, tags, description: desc, url, image,
-        date: new Date().toLocaleDateString('pt-BR', {day:'2-digit', month:'long'})
-    };
+    try {
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = 'Publicando...';
+        }
 
-    let approved = getApprovedPosts();
-    approved.push(post);
-    localStorage.setItem('altereco_approved_posts', JSON.stringify(approved));
+        const session = await getVerifiedAccess('admin');
+        if (!session) throw new Error('Sessão administrativa não encontrada.');
 
-    alert('🚀 Sucesso! O conteúdo foi publicado diretamente na plataforma.');
-    renderAdminDashboard('approved');
+        const payload = {
+            title: document.getElementById('man-title').value.trim(),
+            author_name: document.getElementById('man-author').value.trim(),
+            area: normalizeContentArea(document.getElementById('man-area').value),
+            tags: normalizeTags(document.getElementById('man-tags').value),
+            description: document.getElementById('man-desc').value.trim(),
+            long_description: document.getElementById('man-long-desc').value.trim() || null,
+            external_url: normalizeExternalUrl(document.getElementById('man-link').value),
+            image_url: normalizeExternalUrl(document.getElementById('man-image').value),
+            status: 'pending',
+            submitted_by: session.id
+        };
+
+        const client = getSupabaseClient();
+        const { data, error: insertError } = await client
+            .from('content_items')
+            .insert(payload)
+            .select('id')
+            .single();
+
+        if (insertError) throw insertError;
+
+        const { error: approvalError } = await client.rpc(
+            'approve_content_item',
+            { content_id: data.id }
+        );
+
+        if (approvalError) throw approvalError;
+
+        await refreshApprovedContentCache();
+        alert('Conteúdo publicado com sucesso.');
+        await renderAdminDashboard('approved');
+    } catch (error) {
+        console.error(error);
+        alert(`Não foi possível publicar.\n\n${error.message}`);
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Publicar agora';
+        }
+    }
 };
+
+refreshApprovedContentCache();
