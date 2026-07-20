@@ -661,35 +661,30 @@
          A ordem é importante.
          ===================================================== -->
 
-    <!-- Biblioteca oficial do Supabase -->
+    <!-- 1. Biblioteca oficial do Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<!-- Scripts -->
+    <!-- 2. Conexão pública do AlterECO com o Supabase -->
+    <script src="supabase-config.js"></script>
 
-<!-- Biblioteca oficial do Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 3. Configuração atual do site -->
+    <script src="config.js"></script>
 
-<!-- Conexão pública do AlterECO com o Supabase -->
-<script src="supabase-config.js"></script>
+    <!-- 4. Conteúdos e repositórios -->
+    <script src="repositories.js?v=2"></script>
 
-<!-- Configuração atual do site -->
-<script src="config.js"></script>
+    <!-- 5. Administração e curadoria -->
+    <script src="admin.js"></script>
 
-<!-- Conteúdos e repositórios -->
-<script src="repositories.js?v=2"></script>
+    <!-- 6. Observatório -->
+    <script src="observatorio-data.js?v=2"></script>
+    <script src="observatorio.js"></script>
 
-<!-- Administração e curadoria -->
-<script src="admin.js"></script>
+    <!-- 7. Inteligência ECO -->
+    <script src="ai-eco.js"></script>
 
-<!-- Observatório -->
-<script src="observatorio-data.js?v=2"></script>
-<script src="observatorio.js"></script>
-
-<!-- Inteligência ECO -->
-<script src="ai-eco.js"></script>
-
-<!-- Aplicação principal -->
-<script src="app.js"></script>
+    <!-- 8. Aplicação principal -->
+    <script src="app.js"></script>
 
     <script>
         if (window.lucide) {
