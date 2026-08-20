@@ -254,7 +254,13 @@ function renderPage(pageId) {
     const contentArea = document.getElementById('content-area');
     const header = document.querySelector('header');
     const footer = document.querySelector('footer');
+    const floatingEco = document.querySelector('.fixed-icons');
     if (!contentArea) return;
+
+    // O atalho flutuante some dentro da própria página da ECO para não duplicar a interface.
+    if (floatingEco) {
+        floatingEco.classList.toggle('fixed-icons--hidden', pageId === 'ai-eco');
+    }
 
     contentArea.setAttribute('aria-live', 'polite');
 
@@ -408,9 +414,9 @@ function renderMetodosPage(c) {
         ${m.howToUse ? `<p class="metodo-field"><strong>${m.howToUse}</strong></p>` : ''}
         ${m.purpose ? `<p class="metodo-field">${m.purpose}</p>` : ''}
         ${m.source ? `<p class="metodo-source">${m.source}</p>` : ''}
-        <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
-            <a href="${m.url}" target="_blank" style="background:#2C2F33; color:white; border:none; padding:10px 22px; border-radius:8px; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px; text-decoration:none; cursor:pointer;">Acessar <i data-lucide="arrow-right" style="width:18px;"></i></a>
-            <button onclick="shareCard(this)" title="Compartilhar" style="background:none; border:none; cursor:pointer;"><i data-lucide="share-2" style="width:18px; color:var(--text-gray);"></i></button>
+        <div class="metodo-actions">
+            <a href="${m.url}" target="_blank" rel="noopener noreferrer" class="metodo-access-btn">Acessar <i data-lucide="arrow-right" aria-hidden="true"></i></a>
+            <button onclick="shareCard(this)" title="Compartilhar" aria-label="Compartilhar este método" class="metodo-share-btn"><i data-lucide="share-2" aria-hidden="true"></i></button>
         </div>
     </div>`).join('');
 
