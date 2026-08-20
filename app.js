@@ -93,13 +93,6 @@ const CURADORES_DATA = [
     }
 ];
 
-if (!localStorage.getItem('altereco_forum_posts')) {
-    localStorage.setItem('altereco_forum_posts', JSON.stringify([
-        { id: '1', author: 'Débora Aita Gasparetto', role: 'admin', title: 'Bem-vindos ao Fórum AlterECO!', body: 'Este é um espaço para compartilharmos experiências e dúvidas sobre métodos substitutivos e ensino humanitário no Brasil.', date: '04/Abril', status: 'approved', replies: [] },
-        { id: '2', author: 'Rita Leal Paixão', role: 'curador', title: 'Construção ética na universidade', body: 'Como vocês estão abordando a resistência institucional ao propor novos métodos de ensino sem uso animal?', date: '04/Abril', status: 'approved', replies: [ { author: 'Aldair Marins', body: 'Tenho focado na bioética da alteridade como ponte de diálogo.', date: '04/Abril' } ] }
-    ]));
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const initialPage = window.location.hash.replace('#', '') || 'home';
     renderPage(initialPage);
@@ -823,122 +816,205 @@ function renderEventosPage(c) {
 }
 
 /* ══════════════════════════════════════════════════════
-   FÓRUM (placeholder com aviso)
+   FÓRUM — SUPABASE
 ══════════════════════════════════════════════════════ */
 
-function renderForumPage(c) {
-    const session = JSON.parse(sessionStorage.getItem('altereco_session'));
-    const allPosts = JSON.parse(localStorage.getItem('altereco_forum_posts')) || [];
-    const activePosts = allPosts.filter(p => p.status === 'approved');
+function formatForumDate(value) {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    }).format(date);
+}
+
+async function getForumSession() {
+    try {
+        if (window.getCurrentAlterEcoSession) {
+            return await window.getCurrentAlterEcoSession();
+        }
+        return null;
+    } catch (_) {
+        return null;
+    }
+}
+
+async function fetchApprovedForumThreads() {
+    const client = window.alterecoSupabase;
+    if (!client) throw new Error('Supabase não carregado.');
+
+    const { data: topics, error: topicsError } = await client
+        .from('forum_topics')
+        .select('id, author_name, title, body, created_at')
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+
+    if (topicsError) throw topicsError;
+    if (!topics?.length) return [];
+
+    const topicIds = topics.map(topic => topic.id);
+    const { data: replies, error: repliesError } = await client
+        .from('forum_replies')
+        .select('id, topic_id, author_name, body, created_at')
+        .in('topic_id', topicIds)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: true });
+
+    if (repliesError) throw repliesError;
+
+    const byTopic = new Map();
+    (replies || []).forEach(reply => {
+        if (!byTopic.has(reply.topic_id)) byTopic.set(reply.topic_id, []);
+        byTopic.get(reply.topic_id).push(reply);
+    });
+
+    return topics.map(topic => ({
+        ...topic,
+        replies: byTopic.get(topic.id) || []
+    }));
+}
+
+async function renderForumPage(c) {
+    c.innerHTML = '<div style="padding:5rem; text-align:center; color:var(--text-gray);">Carregando fórum...</div>';
+
+    const session = await getForumSession();
+    let activePosts = [];
+    let loadError = null;
+
+    try {
+        activePosts = await fetchApprovedForumThreads();
+    } catch (error) {
+        console.error('Erro ao carregar fórum:', error);
+        loadError = error;
+    }
 
     const threadsHTML = activePosts.map(post => `
         <div class="forum-thread" style="background:var(--white); border-radius:20px; padding:2rem; margin-bottom:1.5rem; border:1px solid rgba(128,128,128,0.15); box-shadow:0 4px 15px rgba(0,0,0,0.03);">
-            <div style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:flex-start;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:flex-start; gap:1rem;">
                 <div>
-                     <h3 style="color:var(--primary-navy); margin:0 0 0.5rem; font-size:1.3rem; font-weight:800;">${post.title}</h3>
-                     <span style="font-size:0.8rem; color:var(--text-gray);">Por <strong>${post.author}</strong> • ${post.date}</span>
+                    <h3 style="color:var(--primary-navy); margin:0 0 .5rem; font-size:1.3rem; font-weight:800;">${escapeHtml(post.title)}</h3>
+                    <span style="font-size:.8rem; color:var(--text-gray);">Por <strong>${escapeHtml(post.author_name || 'Comunidade AlterECO')}</strong> • ${escapeHtml(formatForumDate(post.created_at))}</span>
                 </div>
-                <span class="page-badge" style="background:#f0f7f4; color:var(--mint-teal); text-transform:uppercase; font-size:0.7rem;">Discussão</span>
+                <span class="page-badge" style="background:#f0f7f4; color:#2f6d63; text-transform:uppercase; font-size:.7rem;">Discussão</span>
             </div>
-            <p style="color:var(--text-gray); line-height:1.6; margin-bottom:1.5rem; font-size:1rem;">${post.body}</p>
-            
+            <p style="color:var(--text-gray); line-height:1.6; margin-bottom:1.5rem; font-size:1rem; white-space:pre-line;">${escapeHtml(post.body)}</p>
+
             <div style="background:#f9f9f9; border-radius:15px; padding:1.2rem; margin-bottom:1.5rem;">
-                ${post.replies.length > 0 ? post.replies.map(r => `
-                    <div style="border-bottom:1px solid rgba(128,128,128,0.15); padding:1rem 0; last-child:border-none;">
-                        <span style="font-size:0.8rem; display:block; color:var(--text-gray); margin-bottom:0.4rem;"><strong>${r.author}</strong> disse:</span>
-                        <p style="margin:0; font-size:0.95rem; color:#444;">${r.body}</p>
+                ${post.replies.length ? post.replies.map(reply => `
+                    <div style="border-bottom:1px solid rgba(128,128,128,.15); padding:1rem 0;">
+                        <span style="font-size:.8rem; display:block; color:var(--text-gray); margin-bottom:.4rem;"><strong>${escapeHtml(reply.author_name || 'Participante')}</strong> disse:</span>
+                        <p style="margin:0; font-size:.95rem; color:#444; white-space:pre-line;">${escapeHtml(reply.body)}</p>
                     </div>
-                `).join('') : '<p style="color:var(--text-gray); font-style:italic; font-size:0.9rem; margin:0;">Nenhuma resposta ainda.</p>'}
+                `).join('') : '<p style="color:var(--text-gray); font-style:italic; font-size:.9rem; margin:0;">Nenhuma resposta ainda.</p>'}
             </div>
 
             ${session ? `
-                <div style="display:flex; gap:0.8rem;">
-                    <input type="text" id="reply-to-${post.id}" placeholder="Escreva uma resposta..." style="flex:1; border:1px solid rgba(128,128,128,0.2); border-radius:10px; padding:0.8rem 1.2rem; outline:none; font-size:0.9rem;">
+                <div style="display:flex; gap:.8rem; align-items:center;">
+                    <input type="text" maxlength="2000" id="reply-to-${post.id}" placeholder="Escreva uma resposta..." style="flex:1; border:1px solid rgba(128,128,128,.2); border-radius:10px; padding:.8rem 1.2rem; outline:none; font-size:.9rem;">
                     <button onclick="submitForumReply('${post.id}')" style="background:var(--primary-navy); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer;">Enviar</button>
                 </div>
-            ` : `<p style="font-size:0.8rem; color:var(--text-gray); text-align:center;">Faça login para participar da conversa.</p>`}
+            ` : '<p style="font-size:.8rem; color:var(--text-gray); text-align:center;">Faça login como curador(a) ou admin para participar.</p>'}
         </div>
-    `).reverse().join('');
+    `).join('');
 
     c.innerHTML = `
     <div class="page-dark-hero">
         <span class="page-badge" style="background:#FACD5F; color:#2C2C33;">Comunidade</span>
         <h1>Fórum Humanitário AlterECO</h1>
-        <p>Espaço colaborativo para troca de saberes éticos e tecnológicos.</p>
+        <p>Espaço colaborativo para troca de saberes sobre educação humanitária e métodos substitutivos.</p>
     </div>
 
     <div class="content-white-section" style="background:var(--bg-light); padding:4rem 0;">
         <div style="max-width:800px; margin:0 auto; padding:0 1.5rem;">
-            
+            ${loadError ? `<div style="background:#fff1f1; border:1px solid #e5aaaa; color:#8b2e2e; padding:1rem 1.2rem; border-radius:12px; margin-bottom:2rem;">Não foi possível carregar o fórum do Supabase: ${escapeHtml(loadError.message)}</div>` : ''}
+
             ${session ? `
                 <div style="background:var(--white); border-radius:25px; padding:2rem; margin-bottom:3rem; border:2px dashed var(--mint-teal); text-align:center;">
-                    <h2 style="color:var(--primary-navy); font-size:1.4rem; margin-bottom:1.5rem;">Deseja iniciar um debate, ${session.name.split(' ')[0]}?</h2>
+                    <h2 style="color:var(--primary-navy); font-size:1.4rem; margin-bottom:1.5rem;">Deseja iniciar um debate, ${escapeHtml(session.name.split(' ')[0])}?</h2>
                     <div style="display:flex; flex-direction:column; gap:1rem; text-align:left;">
-                        <input type="text" id="new-forum-title" placeholder="Título da discussão" style="width:100%; border:1px solid rgba(128,128,128,0.2); border-radius:10px; padding:1rem; font-weight:700;">
-                        <textarea id="new-forum-body" placeholder="O que você quer compartilhar ou perguntar?" style="width:100%; height:100px; border:1px solid rgba(128,128,128,0.2); border-radius:10px; padding:1rem; font-family:inherit; resize:none;"></textarea>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:0.8rem; color:var(--text-gray);"><i data-lucide="info" style="width:14px; vertical-align:middle;"></i> Novos tópicos passam por moderação.</span>
-                            <button onclick="submitForumTopic()" style="background:var(--accent-orange); color:white; border:none; padding:12px 30px; border-radius:12px; font-weight:bold; cursor:pointer; font-size:1.1rem;">Publicar Tópico</button>
+                        <input type="text" maxlength="300" id="new-forum-title" placeholder="Título da discussão" style="width:100%; border:1px solid rgba(128,128,128,.2); border-radius:10px; padding:1rem; font-weight:700;">
+                        <textarea id="new-forum-body" maxlength="6000" placeholder="O que você quer compartilhar ou perguntar?" style="width:100%; min-height:120px; border:1px solid rgba(128,128,128,.2); border-radius:10px; padding:1rem; font-family:inherit; resize:vertical;"></textarea>
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
+                            <span style="font-size:.8rem; color:var(--text-gray);"><i data-lucide="info" style="width:14px; vertical-align:middle;"></i> Novos tópicos ficam salvos no Supabase e passam por moderação.</span>
+                            <button onclick="submitForumTopic()" style="background:var(--accent-orange); color:white; border:none; padding:12px 30px; border-radius:12px; font-weight:bold; cursor:pointer; font-size:1rem;">Enviar tópico</button>
                         </div>
                     </div>
                 </div>
             ` : `
                 <div style="background:#deebf7; padding:2rem; border-radius:20px; text-align:center; margin-bottom:3rem; border:1px solid var(--primary-navy);">
-                    <h2 style="color:var(--primary-navy); margin-bottom:1rem;">Entre na conversa!</h2>
-                    <p style="color:#2C2C33; margin-bottom:1.5rem;">Faça login como curador(a) ou admin para postar no fórum.</p>
-                    <button onclick="renderAdminDashboard()" style="background:var(--primary-navy); color:white; border:none; padding:12px 24px; border-radius:10px; font-weight:bold; cursor:pointer;">Fazer Login</button>
+                    <h2 style="color:var(--primary-navy); margin-bottom:1rem;">Entre na conversa</h2>
+                    <p style="color:#2C2C33; margin-bottom:1.5rem;">Faça login como curador(a) ou admin para publicar e responder.</p>
+                    <button onclick="renderLogin('curador')" style="background:var(--primary-navy); color:white; border:none; padding:12px 24px; border-radius:10px; font-weight:bold; cursor:pointer;">Fazer login</button>
                 </div>
             `}
 
             <div id="forum-threads-list">
-                ${activePosts.length > 0 ? threadsHTML : '<p style="text-align:center; color:var(--text-gray); padding:4rem;">Ainda não há tópicos aprovados. Seja o primeiro a postar!</p>'}
+                ${activePosts.length ? threadsHTML : '<p style="text-align:center; color:var(--text-gray); padding:4rem;">Ainda não há tópicos aprovados.</p>'}
             </div>
         </div>
     </div>`;
+
     if (window.lucide) window.lucide.createIcons();
-    window.scrollTo(0,0);
+    window.scrollTo(0, 0);
 }
 
-window.submitForumTopic = function() {
-    const session = JSON.parse(sessionStorage.getItem('altereco_session'));
-    const title = document.getElementById('new-forum-title').value.trim();
-    const body = document.getElementById('new-forum-body').value.trim();
-    if(!title || !body) return alert("Por favor, preencha o título e o corpo da mensagem.");
+window.submitForumTopic = async function() {
+    try {
+        const session = await getVerifiedAccess('curator');
+        if (!session) throw new Error('Faça login para publicar.');
 
-    const posts = JSON.parse(localStorage.getItem('altereco_forum_posts'));
-    const newPost = {
-        id: Date.now().toString(),
-        author: session.name,
-        role: session.role,
-        title,
-        body,
-        date: new Date().toLocaleDateString('pt-BR', {day: '2-digit', month: 'short'}).replace('.',''),
-        status: 'pending', // Requer moderação
-        replies: []
-    };
-    
-    posts.push(newPost);
-    localStorage.setItem('altereco_forum_posts', JSON.stringify(posts));
-    alert("✅ Seu tópico foi enviado com sucesso e está aguardando a moderação da Débora (Adm).");
-    renderForumPage(document.getElementById('content-area'));
+        const title = document.getElementById('new-forum-title')?.value.trim();
+        const body = document.getElementById('new-forum-body')?.value.trim();
+        if (!title || !body) {
+            alert('Preencha o título e a mensagem.');
+            return;
+        }
+
+        const { error } = await getSupabaseClient()
+            .from('forum_topics')
+            .insert({
+                author_id: session.id,
+                author_name: session.name,
+                title,
+                body,
+                status: 'pending'
+            });
+
+        if (error) throw error;
+        alert('Tópico salvo no Supabase e enviado para moderação.');
+        await renderForumPage(document.getElementById('main-content') || document.getElementById('content-area'));
+    } catch (error) {
+        console.error(error);
+        alert(`Não foi possível enviar o tópico.\n\n${error.message}`);
+    }
 };
 
-window.submitForumReply = function(postId) {
-    const session = JSON.parse(sessionStorage.getItem('altereco_session'));
-    const replyInput = document.getElementById('reply-to-' + postId);
-    const body = replyInput.value.trim();
-    if(!body) return;
+window.submitForumReply = async function(postId) {
+    try {
+        const session = await getVerifiedAccess('curator');
+        if (!session) throw new Error('Faça login para responder.');
 
-    let posts = JSON.parse(localStorage.getItem('altereco_forum_posts'));
-    const postIndex = posts.findIndex(p => p.id === postId);
-    if(postIndex > -1){
-        posts[postIndex].replies.push({
-            author: session.name,
-            body,
-            date: new Date().toLocaleDateString()
-        });
-        localStorage.setItem('altereco_forum_posts', JSON.stringify(posts));
-        renderForumPage(document.getElementById('content-area'));
+        const replyInput = document.getElementById(`reply-to-${postId}`);
+        const body = replyInput?.value.trim();
+        if (!body) return;
+
+        const { error } = await getSupabaseClient()
+            .from('forum_replies')
+            .insert({
+                topic_id: postId,
+                author_id: session.id,
+                author_name: session.name,
+                body,
+                status: 'approved'
+            });
+
+        if (error) throw error;
+        await renderForumPage(document.getElementById('main-content') || document.getElementById('content-area'));
+    } catch (error) {
+        console.error(error);
+        alert(`Não foi possível enviar a resposta.\n\n${error.message}`);
     }
 };
 
