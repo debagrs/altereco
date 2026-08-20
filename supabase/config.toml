@@ -1,0 +1,4 @@
+project_id = "plzywjjrezuzmzskjgly"
+
+[functions.ai-eco]
+verify_jwt = false
