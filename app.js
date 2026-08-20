@@ -11,7 +11,7 @@ const CURADORES_DATA = [
         id: "debora",
         name: "Débora Aita Gasparetto",
         image: "assets/debora.jpg",
-        desc: "Idealizadora e Curadora da Plataforma AlterECO. Professora do curso de Desenho Industrial da Universidade Federal de Santa Maria (UFSM), atua nas áreas de design centrado no usuário, game design, experiência do usuário (UX), arte digital, história, teria e crítica de arte.",
+        desc: "Idealizadora e Curadora da Plataforma AlterECO. Professora do curso de Desenho Industrial da Universidade Federal de Santa Maria (UFSM), atua nas áreas de design centrado no usuário, game design, experiência do usuário (UX), arte digital, história, teoria e crítica de arte.",
         tags: ["Design de Interfaces", "Curadoria", "Jogos", "Tecnologias", "AR", "VR"],
         fullBio: "Idealizadora e Curadora da Plataforma AlterECO. Professora do curso de Design Desenho Industrial da Universidade Federal de Santa Maria (UFSM), atua nas áreas de design centrado no usuário, game design, experiência do usuário (UX), arte digital, história, teoria e crítica de arte. Com formação interdisciplinar, tem desenvolvido projetos voltados à ética e inovação no campo educacional e científico. Desde 2015, coordena iniciativas relacionadas aos métodos substitutivos ao uso de animais no ensino e na pesquisa, com destaque para o desenvolvimento do jogo Labchange e a idealização da plataforma AlterECO, que propõe soluções acessíveis, críticas e colaborativas para transformar a educação e a ciência no Brasil.",
         categories: [
@@ -20,7 +20,8 @@ const CURADORES_DATA = [
                 items: [
                     {
                         title: "Labchange",
-                        image: "assets/labchange.png",
+                        icon: "rabbit",
+                        mediaClass: "labchange",
                         desc: "Labchange é um jogo digital ficcional e educativo sobre substituição animal na pesquisa científica. Nele, o(a) jogador(a) assume o papel de animais usados em laboratório e resolve missões por meio da empatia e colaboração. A proposta une narrativa imersiva, crítica e design de interfaces para estimular reflexão e transformação.",
                         tags: ["LabChange", "Jogo", "VR", "Materiais Didáticos"],
                         link: "#"
@@ -32,14 +33,16 @@ const CURADORES_DATA = [
                 items: [
                     {
                         title: "FlorestAR: Experiência em Realidade Aumentada",
-                        image: "assets/florestar.png",
+                        icon: "trees",
+                        mediaClass: "florestar",
                         desc: "Aplicativo em realidade aumentada que utiliza imagens do satélite do INPE e insere virtualmente alguns dos animais ameaçados pelas queimadas na Amazônia. A proposta consiste em um quebra-cabeças, exposto em uma mesa e um aplicativo que lê as imagens e projeta sobre elas um modelo 3D.",
                         tags: ["Florestar", "AR", "Arte Digital", "Materiais Didáticos"],
                         link: "#"
                     },
                     {
                         title: "Be_FREE",
-                        image: "assets/befree.png",
+                        icon: "bird",
+                        mediaClass: "befree",
                         desc: "Aplicativo de Realidade Aumentada que utiliza imagens de natureza morta da história da arte, para redesenhar vidas.",
                         tags: ["Be_FREE", "AR", "Materiais Didáticos"],
                         link: "#",
@@ -197,14 +200,57 @@ function pillsHTML(pills) {
 /* ─── Navigation ─────────────────────────────────────── */
 
 function handleNavigation(pageId, btn) {
-    window.location.hash = pageId;
-    document.querySelectorAll('.nav-btn, .drawer-link').forEach(b => {
-        b.classList.toggle('active', b.dataset.page === pageId);
-    });
-    renderPage(pageId);
+    const nextHash = `#${pageId}`;
+    if (window.location.hash !== nextHash) {
+        window.location.hash = pageId;
+    } else {
+        renderPage(pageId);
+    }
 }
 
+function syncNavigationState(pageId) {
+    const activePage = pageId.startsWith('curador-') ? 'curadoria' : pageId;
+    document.querySelectorAll('.nav-btn, .drawer-link').forEach((b) => {
+        const isActive = b.dataset.page === activePage;
+        b.classList.toggle('active', isActive);
+        if (isActive) b.setAttribute('aria-current', 'page');
+        else b.removeAttribute('aria-current');
+    });
+}
+
+function updateProfileHeaderContext(pageId) {
+    const header = document.getElementById('main-header');
+    const headerLeft = document.querySelector('.header-left');
+    if (!header || !headerLeft) return;
+
+    let title = document.getElementById('profile-page-title');
+    if (!title) {
+        title = document.createElement('div');
+        title.id = 'profile-page-title';
+        title.className = 'profile-page-title';
+        headerLeft.appendChild(title);
+    }
+
+    const isProfile = pageId.startsWith('curador-');
+    header.classList.toggle('curator-profile-active', isProfile);
+
+    if (isProfile) {
+        const id = pageId.replace('curador-', '');
+        const curator = CURADORES_DATA.find((item) => item.id === id);
+        title.textContent = curator?.name || 'Perfil';
+    } else {
+        title.textContent = '';
+    }
+}
+
+window.addEventListener('hashchange', () => {
+    const pageId = window.location.hash.replace('#', '') || 'home';
+    renderPage(pageId);
+});
+
 function renderPage(pageId) {
+    syncNavigationState(pageId);
+    updateProfileHeaderContext(pageId);
     const contentArea = document.getElementById('content-area');
     const header = document.querySelector('header');
     const footer = document.querySelector('footer');
@@ -625,501 +671,181 @@ function switchLegisTab(val, btn) {
    CURADORIA — Página conforme print "Sobre"
 ══════════════════════════════════════════════════════ */
 
-function renderCuradoriaPage(c) {
-    const organizers = [
-        {
-            name: 'Dr. Adair Roberto Santos',
-            role: 'Curadoria Metodológica',
-            area: 'Neurobiologia / Toxicologia',
-            inst: 'UFSC - Farmacologia',
-            desc: 'Especialista em métodos alternativos in vitro e modelos computacionais aplicados à toxicologia e neurociência.'
-        },
-        {
-            name: 'Dra. Karin Werther',
-            role: 'Curadoria Científica',
-            area: 'Animais Selvagens / Bioética',
-            inst: 'UNESP - Jaboticabal',
-            desc: 'Docente com ampla atuação em patologia e bem-estar de animais selvagens, liderando transições éticas no ensino.'
-        },
-        {
-            name: 'Dra. Isabel Silva',
-            role: 'Curadoria de Conteúdo',
-            area: 'Bem-estar Animal',
-            inst: 'UFRGS',
-            desc: 'Coordena a validação de materiais didáticos substitutivos e roteiros de ensino baseados nos 3Rs.'
-        },
-        {
-            name: 'Dra. Debora Gasparetto',
-            role: 'Coordenação Executiva',
-            area: 'Tecnologia / Design Ético',
-            inst: 'UFSM',
-            desc: 'Lidera o projeto AlterECO e o desenvolvimento da plataforma observatória de métodos substitutivos.'
-        }
-    ];
-
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge">Curadoria</span>
-        <h1>Rede de Especialistas</h1>
-        <p>A curadoria da AlterECO é formada por docentes e pesquisadores(as) de diferentes áreas do conhecimento e regiões do país, conectados em uma rede interdisciplinar.</p>
-    </div>
-    <div class="content-white-section" style="background:#F7F8FA; padding-top: 4rem; padding-bottom: 6rem;">
-        <div style="max-width:1200px; margin:0 auto; width:95%;">
-            <div class="cards-grid-3">
-                ${organizers.map(p => `
-                    <div style="background:var(--white); padding:2rem; border-radius:24px; box-shadow:0 10px 30px rgba(0,0,0,0.05); text-align:center; border:1px solid rgba(128,128,128,0.15);">
-                        <div style="width:100px; height:100px; background:#f0f7ff; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 1.5rem; color:var(--mint-teal);">
-                            <i data-lucide="user" style="width:40px; height:40px;"></i>
-                        </div>
-                        <h3 style="color:var(--primary-navy); margin-bottom:0.5rem; font-size:1.3rem;">${p.name}</h3>
-                        <div style="color:var(--accent-orange); font-weight:bold; font-size:0.9rem; margin-bottom:1rem; text-transform:uppercase;">${p.role}</div>
-                        <p style="color:var(--text-gray); font-size:0.95rem; line-height:1.6; margin-bottom:1.5rem;">${p.desc}</p>
-                        <div style="background:#f8f9fa; padding:0.8rem; border-radius:12px; font-size:0.85rem; color:var(--text-gray);">
-                            <strong>Instituição:</strong> ${p.inst}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div style="margin-top: 5rem; padding: 3rem; background:var(--white); border-radius:24px; text-align:center;">
-                <h2 style="color:var(--primary-navy); margin-bottom:1.5rem;">Sobre a Seleção de Conteúdo</h2>
-                <p style="max-width:800px; margin:0 auto; color:var(--text-gray); line-height:1.9; font-size:1.1rem;">
-                    Nossa rede seleciona, organiza e valida os conteúdos da plataforma, garantindo qualidade, ética e atualização constante nos materiais sobre métodos substitutivos aplicados ao ensino e à pesquisa. Esta seção reúne perfis de curadores(as), suas áreas de atuação, produções indicadas e materiais organizados.
-                </p>
-            </div>
+function curatorTagsHTML(tags = []) {
+    if (!tags.length) return '';
+    return `
+        <div class="curator-tags" aria-label="Áreas de atuação">
+            ${tags.map((tag, index) => `
+                <span class="curator-tag ${index === 0 ? 'curator-tag--primary' : ''}">${tag}</span>
+            `).join('')}
         </div>
-    </div>`;
-    if (window.lucide) window.lucide.createIcons();
-    window.scrollTo(0, 0);
+    `;
 }
 
-/* ══════════════════════════════════════════════════════
-   EVENTOS (placeholder com aviso)
-══════════════════════════════════════════════════════ */
+function renderCuradoriaPage(c) {
+    const htmlCards = CURADORES_DATA.map(cur => `
+        <article class="curator-card">
+            <div class="curator-card-photo">
+                <img
+                    src="${cur.image}"
+                    alt="Retrato de ${cur.name}"
+                    loading="lazy"
+                    onerror="this.src='assets/debora.jpg'; this.style.opacity='0.45';"
+                >
+            </div>
 
-window.calendarOffset = window.calendarOffset || 0;
+            <div class="curator-card-content">
+                <h2>${cur.name}</h2>
+                <p>${cur.desc}</p>
+                ${curatorTagsHTML(cur.tags)}
 
-function renderEventosPage(c) {
-    const dynamicEvents = window.getDynamicPostsForArea ? getDynamicPostsForArea('eventos') : [];
-    const baseDate = new Date();
-    baseDate.setMonth(baseDate.getMonth() + window.calendarOffset);
+                <button
+                    type="button"
+                    class="curator-profile-link"
+                    data-page="curador-${cur.id}"
+                    aria-label="Acessar perfil de ${cur.name}"
+                >
+                    <span>Acessar Perfil</span>
+                    <i data-lucide="arrow-right" aria-hidden="true"></i>
+                </button>
+            </div>
+        </article>
+    `).join('');
 
-    const year = baseDate.getFullYear();
-    const month = baseDate.getMonth();
-    const monthName = baseDate.toLocaleString('default', { month: 'long' });
+    c.innerHTML = `
+        <div class="page-dark-hero">
+            <span class="page-badge">Equipe</span>
+            <h1>Conheça Nossos Curadores Científicos</h1>
+            <p>Especialistas responsáveis pela validação do conteúdo humanitário.</p>
+        </div>
 
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const prevDaysInMonth = new Date(year, month, 0).getDate();
-    const today = new Date();
+        <section class="curators-list-section" aria-label="Curadores AlterECO">
+            <div class="curators-list">
+                ${htmlCards}
+            </div>
+        </section>
+    `;
 
-    const hasEvent = (day) => {
-        // Simple logic: check if any event date string contains the day
-        // In a real app, this would be a proper date comparison
-        return dynamicEvents.some(ev => ev.date && ev.date.includes(String(day).padStart(2, '0')));
-    };
+    if (window.lucide) window.lucide.createIcons();
+}
 
-    let calendarDaysHTML = '';
-
-    // Previous month days
-    for (let i = firstDay - 1; i >= 0; i--) {
-        calendarDaysHTML += `<div style="color:var(--text-gray); font-size:1.1rem; padding:10px;">${prevDaysInMonth - i}</div>`;
-    }
-
-    // Current month days
-    for (let d = 1; d <= daysInMonth; d++) {
-        const isToday = today.getDate() === d && today.getMonth() === month && today.getFullYear() === year;
-        const marked = hasEvent(d);
-
-        calendarDaysHTML += `
-            <div style="position:relative; font-size:1.1rem; padding:10px; color:${isToday ? 'white' : '#666'};">
-                <div style="${isToday ? 'background:var(--mint-teal); color:white; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto; font-weight:bold; box-shadow:0 4px 10px rgba(0,229,255,0.3);' : ''}">
-                    ${d}
-                </div>
-                ${marked ? `<div style="position:absolute; bottom:5px; left:50%; transform:translateX(-50%); width:6px; height:6px; background:#ccc; border-radius:50%;" title="Evento cadastrado neste dia"></div>` : ''}
+function curatorProjectMediaHTML(item) {
+    if (item.bannerText) {
+        const lines = item.bannerText.split('\n');
+        return `
+            <div class="curator-project-media curator-project-media--${item.mediaClass || 'default'} curator-project-banner">
+                <strong>${lines[0] || item.title}</strong>
+                ${lines[1] ? `<span>${lines[1]}</span>` : ''}
+                ${lines[2] ? `<em>${lines[2]}</em>` : ''}
             </div>
         `;
     }
 
-    // Next month days
-    const totalCells = firstDay + daysInMonth;
-    const padding = (7 - (totalCells % 7)) % 7;
-    for (let j = 1; j <= padding; j++) {
-        calendarDaysHTML += `<div style="color:var(--text-gray); font-size:1.1rem; padding:10px;">${j}</div>`;
+    if (item.image) {
+        return `
+            <div class="curator-project-media">
+                <img
+                    src="${item.image}"
+                    alt=""
+                    loading="lazy"
+                    onerror="this.parentElement.classList.add('curator-project-media--fallback'); this.remove();"
+                >
+                <i data-lucide="${item.icon || 'sparkles'}" aria-hidden="true"></i>
+            </div>
+        `;
     }
 
-    const calendarHTML = `
-        <div style="background:#F2F4F8; padding:3rem 2rem; border-radius:15px 15px 0 0; position:relative;">
-            <div style="max-width:800px; margin:0 auto;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
-                    <h2 style="color:var(--text-gray); font-size:1.8rem; text-transform:capitalize;">${monthName} ${year}</h2>
-                    <div style="display:flex; gap:1rem; align-items:center; color:var(--mint-teal);">
-                        <button onclick="window.calendarOffset--; renderPage('eventos')" style="background:none; border:none; color:inherit; cursor:pointer;" title="Mês Anterior"><i data-lucide="chevron-left" style="width:28px; height:28px;"></i></button>
-                        <button onclick="window.calendarOffset = 0; renderPage('eventos')" style="background:none; border:none; color:inherit; cursor:pointer;" title="Mês Atual"><i data-lucide="calendar" style="width:28px; height:28px;"></i></button>
-                        <button onclick="window.calendarOffset++; renderPage('eventos')" style="background:none; border:none; color:inherit; cursor:pointer;" title="Próximo Mês"><i data-lucide="chevron-right" style="width:28px; height:28px;"></i></button>
-                    </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:repeat(7, 1fr); text-align:center; row-gap:1rem;">
-                    <div style="color:var(--text-gray); font-weight:600; padding-bottom:1rem;">Dom</div>
-                    <div style="color:var(--text-gray); font-weight:600; padding-bottom:1rem;">Seg</div>
-                    <div style="color:var(--text-gray); font-weight:600; padding-bottom:1rem;">Ter</div>
-                    <div style="color:var(--text-gray); font-weight:600; padding-bottom:1rem;">Qua</div>
-                    <div style="color:var(--text-gray); font-weight:600; padding-bottom:1rem;">Qui</div>
-                    <div style="color:var(--text-gray); font-weight:600; padding-bottom:1rem;">Sex</div>
-                    <div style="color:var(--text-gray); font-weight:600; padding-bottom:1rem;">Sáb</div>
-                    ${calendarDaysHTML}
-                </div>
-            </div>
-            <div style="position:absolute; bottom:0; left:0; width:100%; height:3px; background:var(--accent-yellow);"></div>
+    return `
+        <div class="curator-project-media curator-project-media--${item.mediaClass || 'default'}">
+            <i data-lucide="${item.icon || 'sparkles'}" aria-hidden="true"></i>
         </div>
     `;
-
-    const eventsToRender = dynamicEvents.length > 0 ? dynamicEvents : [{
-        title: 'WC13 Rio - 13th World Congress on Alternatives and Animal Use',
-        date: '31/08/2025',
-        description: 'Rio de Janeiro',
-        image: 'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&q=80&w=400',
-        url: 'https://wc13rio.org'
-    }];
-
-    const eventsHTML = eventsToRender.map(ev => `
-        <div style="background:var(--white); border-radius:12px; overflow:hidden; display:flex; box-shadow:0 4px 15px rgba(0,0,0,0.05); margin-bottom:1.5rem; border:1px solid rgba(128,128,128,0.15);">
-            <div style="width:250px; height:200px; flex-shrink:0; position:relative;">
-                ${ev.image ? `<img src="${ev.image}" alt="${ev.title}" style="width:100%; height:100%; object-fit:cover;">` : `<div style="background:#ddd; width:100%; height:100%;"></div>`}
-                <div style="position:absolute; left:0; top:0; width:5px; height:100%; background:var(--accent-yellow);"></div>
-            </div>
-            <div style="padding:1.5rem; display:flex; flex-direction:column; justify-content:center; flex:1;">
-                <h3 style="color:var(--text-gray); font-size:1.3rem; margin-bottom:1rem; font-weight:700;">${ev.title.split(' - ')[0]}</h3>
-                <p style="color:var(--text-gray); font-size:1rem; margin-bottom:0.3rem;">${ev.date}</p>
-                <p style="color:var(--text-gray); font-size:1rem; margin-bottom:1.5rem;">${ev.description}</p>
-                <a href="${ev.url}" target="_blank" style="background:#2C2F33; color:white; border:none; padding:10px 24px; border-radius:8px; font-weight:bold; text-decoration:none; display:inline-flex; align-items:center; gap:8px; width:fit-content;">Ver Mais <i data-lucide="arrow-right" style="width:18px;"></i></a>
-            </div>
-        </div>
-    `).join('');
-
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge">Eventos</span>
-        <h1>Prazos, Prêmios e Inscrições</h1>
-        <p>Acompanhe datas limites e grandes encontros. As notificações são varridas do mundo inteiro pela nossa inteligência artificial para o Brasil.</p>
-    </div>
-    <div class="content-white-section" style="background:var(--bg-light); padding:0;">
-        <div style="max-width:800px; margin:0 auto; padding-top:2rem; padding-bottom:4rem;">
-            ${calendarHTML}
-            <div style="padding:2rem; background:#F2F4F8; border-radius: 0 0 15px 15px; border-top:1px solid rgba(128,128,128,0.15);">
-                ${eventsHTML}
-            </div>
-        </div>
-    </div>`;
-    if (window.lucide) window.lucide.createIcons();
-}
-
-/* ══════════════════════════════════════════════════════
-   FÓRUM — SUPABASE
-══════════════════════════════════════════════════════ */
-
-function formatForumDate(value) {
-    if (!value) return '';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '';
-    return new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-    }).format(date);
-}
-
-async function getForumSession() {
-    try {
-        if (window.getCurrentAlterEcoSession) {
-            return await window.getCurrentAlterEcoSession();
-        }
-        return null;
-    } catch (_) {
-        return null;
-    }
-}
-
-async function fetchApprovedForumThreads() {
-    const client = window.alterecoSupabase;
-    if (!client) throw new Error('Supabase não carregado.');
-
-    const { data: topics, error: topicsError } = await client
-        .from('forum_topics')
-        .select('id, author_name, title, body, created_at')
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false });
-
-    if (topicsError) throw topicsError;
-    if (!topics?.length) return [];
-
-    const topicIds = topics.map(topic => topic.id);
-    const { data: replies, error: repliesError } = await client
-        .from('forum_replies')
-        .select('id, topic_id, author_name, body, created_at')
-        .in('topic_id', topicIds)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: true });
-
-    if (repliesError) throw repliesError;
-
-    const byTopic = new Map();
-    (replies || []).forEach(reply => {
-        if (!byTopic.has(reply.topic_id)) byTopic.set(reply.topic_id, []);
-        byTopic.get(reply.topic_id).push(reply);
-    });
-
-    return topics.map(topic => ({
-        ...topic,
-        replies: byTopic.get(topic.id) || []
-    }));
-}
-
-async function renderForumPage(c) {
-    c.innerHTML = '<div style="padding:5rem; text-align:center; color:var(--text-gray);">Carregando fórum...</div>';
-
-    const session = await getForumSession();
-    let activePosts = [];
-    let loadError = null;
-
-    try {
-        activePosts = await fetchApprovedForumThreads();
-    } catch (error) {
-        console.error('Erro ao carregar fórum:', error);
-        loadError = error;
-    }
-
-    const threadsHTML = activePosts.map(post => `
-        <div class="forum-thread" style="background:var(--white); border-radius:20px; padding:2rem; margin-bottom:1.5rem; border:1px solid rgba(128,128,128,0.15); box-shadow:0 4px 15px rgba(0,0,0,0.03);">
-            <div style="display:flex; justify-content:space-between; margin-bottom:1rem; align-items:flex-start; gap:1rem;">
-                <div>
-                    <h3 style="color:var(--primary-navy); margin:0 0 .5rem; font-size:1.3rem; font-weight:800;">${escapeHtml(post.title)}</h3>
-                    <span style="font-size:.8rem; color:var(--text-gray);">Por <strong>${escapeHtml(post.author_name || 'Comunidade AlterECO')}</strong> • ${escapeHtml(formatForumDate(post.created_at))}</span>
-                </div>
-                <span class="page-badge" style="background:#f0f7f4; color:#2f6d63; text-transform:uppercase; font-size:.7rem;">Discussão</span>
-            </div>
-            <p style="color:var(--text-gray); line-height:1.6; margin-bottom:1.5rem; font-size:1rem; white-space:pre-line;">${escapeHtml(post.body)}</p>
-
-            <div style="background:#f9f9f9; border-radius:15px; padding:1.2rem; margin-bottom:1.5rem;">
-                ${post.replies.length ? post.replies.map(reply => `
-                    <div style="border-bottom:1px solid rgba(128,128,128,.15); padding:1rem 0;">
-                        <span style="font-size:.8rem; display:block; color:var(--text-gray); margin-bottom:.4rem;"><strong>${escapeHtml(reply.author_name || 'Participante')}</strong> disse:</span>
-                        <p style="margin:0; font-size:.95rem; color:#444; white-space:pre-line;">${escapeHtml(reply.body)}</p>
-                    </div>
-                `).join('') : '<p style="color:var(--text-gray); font-style:italic; font-size:.9rem; margin:0;">Nenhuma resposta ainda.</p>'}
-            </div>
-
-            ${session ? `
-                <div style="display:flex; gap:.8rem; align-items:center;">
-                    <input type="text" maxlength="2000" id="reply-to-${post.id}" placeholder="Escreva uma resposta..." style="flex:1; border:1px solid rgba(128,128,128,.2); border-radius:10px; padding:.8rem 1.2rem; outline:none; font-size:.9rem;">
-                    <button onclick="submitForumReply('${post.id}')" style="background:var(--primary-navy); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:bold; cursor:pointer;">Enviar</button>
-                </div>
-            ` : '<p style="font-size:.8rem; color:var(--text-gray); text-align:center;">Faça login como curador(a) ou admin para participar.</p>'}
-        </div>
-    `).join('');
-
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge" style="background:#FACD5F; color:#2C2C33;">Comunidade</span>
-        <h1>Fórum Humanitário AlterECO</h1>
-        <p>Espaço colaborativo para troca de saberes sobre educação humanitária e métodos substitutivos.</p>
-    </div>
-
-    <div class="content-white-section" style="background:var(--bg-light); padding:4rem 0;">
-        <div style="max-width:800px; margin:0 auto; padding:0 1.5rem;">
-            ${loadError ? `<div style="background:#fff1f1; border:1px solid #e5aaaa; color:#8b2e2e; padding:1rem 1.2rem; border-radius:12px; margin-bottom:2rem;">Não foi possível carregar o fórum do Supabase: ${escapeHtml(loadError.message)}</div>` : ''}
-
-            ${session ? `
-                <div style="background:var(--white); border-radius:25px; padding:2rem; margin-bottom:3rem; border:2px dashed var(--mint-teal); text-align:center;">
-                    <h2 style="color:var(--primary-navy); font-size:1.4rem; margin-bottom:1.5rem;">Deseja iniciar um debate, ${escapeHtml(session.name.split(' ')[0])}?</h2>
-                    <div style="display:flex; flex-direction:column; gap:1rem; text-align:left;">
-                        <input type="text" maxlength="300" id="new-forum-title" placeholder="Título da discussão" style="width:100%; border:1px solid rgba(128,128,128,.2); border-radius:10px; padding:1rem; font-weight:700;">
-                        <textarea id="new-forum-body" maxlength="6000" placeholder="O que você quer compartilhar ou perguntar?" style="width:100%; min-height:120px; border:1px solid rgba(128,128,128,.2); border-radius:10px; padding:1rem; font-family:inherit; resize:vertical;"></textarea>
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:1rem; flex-wrap:wrap;">
-                            <span style="font-size:.8rem; color:var(--text-gray);"><i data-lucide="info" style="width:14px; vertical-align:middle;"></i> Novos tópicos ficam salvos no Supabase e passam por moderação.</span>
-                            <button onclick="submitForumTopic()" style="background:var(--accent-orange); color:white; border:none; padding:12px 30px; border-radius:12px; font-weight:bold; cursor:pointer; font-size:1rem;">Enviar tópico</button>
-                        </div>
-                    </div>
-                </div>
-            ` : `
-                <div style="background:#deebf7; padding:2rem; border-radius:20px; text-align:center; margin-bottom:3rem; border:1px solid var(--primary-navy);">
-                    <h2 style="color:var(--primary-navy); margin-bottom:1rem;">Entre na conversa</h2>
-                    <p style="color:#2C2C33; margin-bottom:1.5rem;">Faça login como curador(a) ou admin para publicar e responder.</p>
-                    <button onclick="renderLogin('curador')" style="background:var(--primary-navy); color:white; border:none; padding:12px 24px; border-radius:10px; font-weight:bold; cursor:pointer;">Fazer login</button>
-                </div>
-            `}
-
-            <div id="forum-threads-list">
-                ${activePosts.length ? threadsHTML : '<p style="text-align:center; color:var(--text-gray); padding:4rem;">Ainda não há tópicos aprovados.</p>'}
-            </div>
-        </div>
-    </div>`;
-
-    if (window.lucide) window.lucide.createIcons();
-    window.scrollTo(0, 0);
-}
-
-window.submitForumTopic = async function() {
-    try {
-        const session = await getVerifiedAccess('curator');
-        if (!session) throw new Error('Faça login para publicar.');
-
-        const title = document.getElementById('new-forum-title')?.value.trim();
-        const body = document.getElementById('new-forum-body')?.value.trim();
-        if (!title || !body) {
-            alert('Preencha o título e a mensagem.');
-            return;
-        }
-
-        const { error } = await getSupabaseClient()
-            .from('forum_topics')
-            .insert({
-                author_id: session.id,
-                author_name: session.name,
-                title,
-                body,
-                status: 'pending'
-            });
-
-        if (error) throw error;
-        alert('Tópico salvo no Supabase e enviado para moderação.');
-        await renderForumPage(document.getElementById('main-content') || document.getElementById('content-area'));
-    } catch (error) {
-        console.error(error);
-        alert(`Não foi possível enviar o tópico.\n\n${error.message}`);
-    }
-};
-
-window.submitForumReply = async function(postId) {
-    try {
-        const session = await getVerifiedAccess('curator');
-        if (!session) throw new Error('Faça login para responder.');
-
-        const replyInput = document.getElementById(`reply-to-${postId}`);
-        const body = replyInput?.value.trim();
-        if (!body) return;
-
-        const { error } = await getSupabaseClient()
-            .from('forum_replies')
-            .insert({
-                topic_id: postId,
-                author_id: session.id,
-                author_name: session.name,
-                body,
-                status: 'approved'
-            });
-
-        if (error) throw error;
-        await renderForumPage(document.getElementById('main-content') || document.getElementById('content-area'));
-    } catch (error) {
-        console.error(error);
-        alert(`Não foi possível enviar a resposta.\n\n${error.message}`);
-    }
-};
-
-/* ══════════════════════════════════════════════════════
-   CURADORIA
-══════════════════════════════════════════════════════ */
-
-function renderCuradoriaPage(c) {
-    const curadores = CURADORES_DATA;
-
-    const htmlCards = curadores.map(cur => `
-        <div style="background:#e8ecee; border-radius:15px; padding:2rem; display:flex; gap:2rem; align-items:flex-start; position:relative; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding-bottom:5rem;">
-            <div style="width:140px; height:140px; border-radius:50%; overflow:hidden; flex-shrink:0; background:#ddd;">
-                <img src="${cur.image}" alt="${cur.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='assets/debora.jpg'; this.style.opacity='0.5';">
-            </div>
-            <div style="border-left:3px solid var(--accent-yellow); padding-left:1.5rem; flex:1;">
-                <h2 style="color:var(--text-gray); margin-bottom:1rem; font-size:1.6rem; font-weight:700;">${cur.name}</h2>
-                <p style="color:var(--text-gray); line-height:1.6; font-size:1rem; margin-bottom:2rem;">${cur.desc}</p>
-                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                    <span style="background:#5a6268; color:white; padding:6px 16px; border-radius:20px; font-size:0.85rem; font-weight:600; border:2px solid #edc200;">${cur.tags[0]}</span>
-                    ${cur.tags.slice(1).map(tag => `<span style="background:var(--mint-teal); color:#005555; padding:6px 16px; border-radius:20px; font-size:0.85rem;">${tag}</span>`).join('')}
-                </div>
-            </div>
-            <a href="#curador-${cur.id || 'missing'}" class="dark-btn" style="position:absolute; bottom:1.5rem; right:1.5rem; border-radius:8px; padding:10px 20px; text-decoration:none; display:flex; align-items:center; gap:8px;">Acessar Perfil <i data-lucide="arrow-right" style="width:18px;"></i></a>
-        </div>
-    `).join('');
-
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge">Equipe</span>
-        <h1>Conheça Nossos Curadores Científicos</h1>
-        <p>Especialistas responsáveis pela validação do conteúdo humanitário.</p>
-    </div>
-    <div class="content-white-section" style="background:var(--bg-light); padding:4rem 0;">
-        <div style="max-width:800px; margin:0 auto; display:flex; flex-direction:column; gap:2rem;">
-            ${htmlCards}
-        </div>
-    </div>`;
-    if (window.lucide) window.lucide.createIcons();
 }
 
 function renderCuradorProfilePage(id, container) {
-    const curadores = CURADORES_DATA;
+    const cur = CURADORES_DATA.find(c => c.id === id);
 
-    const cur = curadores.find(c => c.id === id);
     if (!cur) {
-        container.innerHTML = "<h2>Curador não encontrado.</h2>";
+        container.innerHTML = `
+            <section class="curator-profile-shell">
+                <div class="curator-profile-empty">
+                    <h1>Curador não encontrado.</h1>
+                    <button class="curator-back-link" data-page="curadoria">
+                        <i data-lucide="arrow-left" aria-hidden="true"></i>
+                        Voltar para Curadoria
+                    </button>
+                </div>
+            </section>
+        `;
+        if (window.lucide) window.lucide.createIcons();
         return;
     }
 
-    const htmlCategories = cur.categories ? cur.categories.map(cat => `
-        <div class="profile-category-title" style="background:#eee; padding:1.5rem; text-align:center; margin-top:3rem; border-top:4px solid var(--accent-yellow);">
-            <h2 style="color:var(--primary-navy); margin:0; font-size:2rem; font-weight:800;">${cat.title}</h2>
-        </div>
-        <div style="padding: 2rem 1rem;">
-            ${cat.items.map(item => `
-                <div class="project-card" style="background:#e8ecee; border-radius:20px; overflow:hidden; margin-bottom:2rem; box-shadow:0 10px 30px rgba(0,0,0,0.05);">
-                    ${item.bannerText ? `
-                        <div style="background:var(--primary-navy); padding:4rem 2rem; text-align:center; color:white;">
-                            <h2 style="font-size:4rem; font-weight:900; margin:0; line-height:1;">${item.bannerText.split('\n')[0]}</h2>
-                            <p style="font-size:1.5rem; margin-top:1rem; opacity:0.9;">${item.bannerText.split('\n')[1]}</p>
-                            <p style="font-size:1.2rem; font-style:italic; opacity:0.8;">${item.bannerText.split('\n')[2]}</p>
+    const categoriesHTML = (cur.categories || []).map(cat => `
+        <section class="curator-category" aria-labelledby="category-${cur.id}-${cat.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}">
+            <div class="curator-category-heading">
+                <h2 id="category-${cur.id}-${cat.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}">${cat.title}</h2>
+            </div>
+
+            <div class="curator-projects-grid">
+                ${cat.items.map(item => `
+                    <article class="curator-project-card">
+                        ${curatorProjectMediaHTML(item)}
+                        <div class="curator-project-body">
+                            <h3>${item.title}</h3>
+                            <p>${item.desc}</p>
+                            ${curatorTagsHTML(item.tags || [])}
+                            ${item.link && item.link !== '#' ? `
+                                <a class="curator-project-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
+                                    Ver mais
+                                    <i data-lucide="arrow-up-right" aria-hidden="true"></i>
+                                </a>
+                            ` : ''}
                         </div>
-                    ` : `
-                        <div style="height:250px; position:relative; overflow:hidden;">
-                            <img src="${item.image}" alt="${item.title}" style="width:100%; height:100%; object-fit:cover;">
-                        </div>
-                    `}
-                    <div style="padding:2rem;">
-                        <h3 style="font-size:1.6rem; color:var(--text-gray); font-weight:800; margin-bottom:1.5rem;">${item.title}</h3>
-                        <div style="border-left:4px solid var(--accent-yellow); padding-left:1.5rem; margin-bottom:2rem;">
-                            <p style="color:var(--text-gray); line-height:1.6; font-size:1.05rem;">${item.desc}</p>
-                        </div>
-                        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:2rem;">
-                            <span style="background:#5a6268; color:white; padding:8px 18px; border-radius:20px; font-size:0.9rem; font-weight:700; border:2px solid #edc200;">${item.tags[0]}</span>
-                            ${item.tags.slice(1).map(tag => `<span style="background:var(--mint-teal); color:#005555; padding:8px 18px; border-radius:20px; font-size:0.9rem;">${tag}</span>`).join('')}
-                        </div>
-                        <div style="display:flex; justify-content:flex-end;">
-                            <a href="${item.link}" class="dark-btn" style="border-radius:10px; padding:12px 24px; font-weight:700; display:flex; align-items:center; gap:8px;">Ver mais <i data-lucide="arrow-right" style="width:18px;"></i></a>
-                        </div>
-                    </div>
-                </div>
-            `).join('')}
-        </div>
-    `).join('') : '';
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+    `).join('');
 
     container.innerHTML = `
-        <div class="page-dark-hero" style="padding:2rem 1.5rem; display:flex; align-items:center; gap:1rem;">
-             <button onclick="window.history.back()" style="background:none; border:none; color:white; cursor:pointer;"><i data-lucide="arrow-left"></i></button>
-             <h1 style="font-size:1.5rem; margin:0; font-weight:800;">${cur.name}</h1>
-        </div>
-        
-        <div style="background:var(--white); padding:3rem 2rem;">
-            <div style="text-align:center; margin-bottom:2rem;">
-                <div style="width:180px; height:180px; border-radius:50%; overflow:hidden; margin:0 auto 1.5rem; border:6px solid #f4f7f9; background:#ddd;">
-                    <img src="${cur.image}" alt="${cur.name}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='assets/debora.jpg'; this.style.opacity='0.5';">
-                </div>
-                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; justify-content:center; margin-bottom:1.5rem;">
-                    <span style="background:#5a6268; color:white; padding:8px 18px; border-radius:20px; font-size:0.9rem; font-weight:700; border:2px solid #edc200;">${cur.tags[0]}</span>
-                    ${cur.tags.slice(1).map(tag => `<span style="background:var(--mint-teal); color:#005555; padding:8px 18px; border-radius:20px; font-size:0.9rem;">${tag}</span>`).join('')}
-                </div>
-                <p style="color:var(--text-gray); line-height:1.8; text-align:left; font-size:1.1rem; max-width:800px; margin:0 auto;">${cur.fullBio || cur.desc}</p>
+        <div class="curator-profile-page">
+            <div class="curator-profile-actions">
+                <button type="button" class="curator-back-link" data-page="curadoria">
+                    <i data-lucide="arrow-left" aria-hidden="true"></i>
+                    <span>Curadoria</span>
+                </button>
             </div>
-            
-            ${htmlCategories}
+
+            <section class="curator-profile-shell" aria-labelledby="curator-profile-name">
+                <article class="curator-profile-card">
+                    <div class="curator-profile-photo">
+                        <img
+                            src="${cur.image}"
+                            alt="Retrato de ${cur.name}"
+                            onerror="this.src='assets/debora.jpg'; this.style.opacity='0.45';"
+                        >
+                    </div>
+
+                    <div class="curator-profile-main">
+                        <h1 id="curator-profile-name" class="curator-profile-name">${cur.name}</h1>
+                        ${curatorTagsHTML(cur.tags)}
+                        <p class="curator-profile-bio">${cur.fullBio || cur.desc}</p>
+                    </div>
+                </article>
+            </section>
+
+            ${categoriesHTML ? `
+                <div class="curator-profile-categories">
+                    ${categoriesHTML}
+                </div>
+            ` : `
+                <section class="curator-profile-coming-soon">
+                    <i data-lucide="sparkles" aria-hidden="true"></i>
+                    <h2>Perfil em expansão</h2>
+                    <p>Projetos e materiais deste curador serão adicionados progressivamente à plataforma.</p>
+                </section>
+            `}
         </div>
     `;
 
@@ -1127,6 +853,8 @@ function renderCuradorProfilePage(id, container) {
 }
 
 /* ─── Misc ──────────────────────────────────────────── */
+
+
 
 function handleTagFilter(tag, btn) {
     document.querySelectorAll('[data-tag]').forEach(b => b.classList.remove('active'));
