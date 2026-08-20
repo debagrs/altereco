@@ -720,32 +720,454 @@ function renderObsEntretenimento(c) {
     `;
 }
 
+const CAPES_BTD_RESOURCES = [
+    { year: 2015, id: '2ba5eaae-2e2c-4886-8c5c-0d20bd115ef2' },
+    { year: 2016, id: '7403d9ac-0e71-4539-bc44-8d7aa7b8f452' },
+    { year: 2017, id: '902bd63b-137f-4090-89e9-cab94f12c41d' },
+    { year: 2018, id: '638668a6-07da-4c7e-8aab-9044ae3cc753' },
+    { year: 2019, id: '8f4f2bce-2744-460a-8f14-f1648c7a16df' },
+    { year: 2020, id: 'e37df31a-f250-4405-8b21-ca7e5c7c1696' },
+    { year: 2021, id: '068003e4-196c-41f4-8c35-1f7c94b4e55c' },
+    { year: 2022, id: '78f73608-6f5e-463c-ba79-0bff4f8a578d' },
+    { year: 2023, id: 'bb0e4a57-ea99-49e1-a859-36391f541797' },
+    { year: 2024, id: '87133ba7-ac99-4d87-966e-8f580bc96231' },
+];
+
+const CAPES_API_URL = 'https://dadosabertos.capes.gov.br/pt_BR/api/3/action/datastore_search';
+const CAPES_PAGE_SIZE = 20;
+const capesSearchState = {
+    query: '',
+    year: 'all',
+    type: 'all',
+    records: [],
+    totals: {},
+    offsets: {},
+    exhausted: {},
+    loading: false,
+};
+
+function obsEscapeHTML(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function obsSafeUrl(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    try {
+        const parsed = new URL(raw, window.location.origin);
+        if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+        return parsed.href;
+    } catch (_) {
+        return '';
+    }
+}
+
+function firstObsValue(record, keys) {
+    for (const key of keys) {
+        const value = record?.[key];
+        if (value !== undefined && value !== null && String(value).trim()) return String(value).trim();
+    }
+    return '';
+}
+
+function normalizeCapesRecord(record, resourceYear) {
+    const title = firstObsValue(record, ['NM_PRODUCAO', 'NM_TITULO', 'DS_TITULO', 'TITULO']) || 'Produção sem título informado';
+    const author = firstObsValue(record, ['NM_DISCENTE', 'NM_AUTOR', 'AUTOR']);
+    const institution = firstObsValue(record, ['NM_ENTIDADE_ENSINO', 'SG_ENTIDADE_ENSINO', 'NM_IES', 'IES']);
+    const program = firstObsValue(record, ['NM_PROGRAMA', 'NM_PROGRAMA_IES', 'PROGRAMA']);
+    const area = firstObsValue(record, ['NM_AREA_CONHECIMENTO', 'NM_AREA_AVALIACAO', 'NM_AREA_CONCENTRACAO']);
+    const type = firstObsValue(record, ['NM_SUBTIPO_PRODUCAO', 'NM_GRAU_ACADEMICO', 'TP_TRABALHO']);
+    const summary = firstObsValue(record, ['DS_RESUMO', 'RESUMO']);
+    const keywords = firstObsValue(record, ['DS_PALAVRA_CHAVE', 'DS_KEYWORD', 'PALAVRA_CHAVE']);
+    const advisor = firstObsValue(record, ['NM_ORIENTADOR', 'ORIENTADOR']);
+    const date = firstObsValue(record, ['DT_TITULACAO', 'DT_DEFESA', 'DATA_DEFESA']);
+    const year = Number(firstObsValue(record, ['AN_BASE', 'ANO_BASE', 'ANO'])) || resourceYear;
+    const url = obsSafeUrl(firstObsValue(record, ['DS_URL_TEXTO_COMPLETO', 'URL_TEXTO_COMPLETO', 'DS_URL']));
+    const id = firstObsValue(record, ['ID_PRODUCAO_INTELECTUAL', 'ID_ADD_PRODUCAO_INTELECTUAL', '_id']) || `${resourceYear}-${title}-${author}`;
+    return { id, title, author, institution, program, area, type, summary, keywords, advisor, date, year, url, _raw: record };
+}
+
+function capesJSONP(params) {
+    return new Promise((resolve, reject) => {
+        const callbackName = `__alterecoCapes_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        const query = new URLSearchParams({ ...params, callback: callbackName });
+        const script = document.createElement('script');
+        let done = false;
+        const timeout = window.setTimeout(() => finish(new Error('A CAPES demorou para responder.')), 18000);
+
+        function cleanup() {
+            window.clearTimeout(timeout);
+            script.remove();
+            try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+        }
+        function finish(error, data) {
+            if (done) return;
+            done = true;
+            cleanup();
+            error ? reject(error) : resolve(data);
+        }
+
+        window[callbackName] = data => finish(null, data);
+        script.onerror = () => finish(new Error('Não foi possível acessar a API de Dados Abertos da CAPES.'));
+        script.src = `${CAPES_API_URL}?${query.toString()}`;
+        document.head.appendChild(script);
+    });
+}
+
+async function fetchCapesResource(resource, searchTerm, offset = 0) {
+    const params = {
+        resource_id: resource.id,
+        limit: String(CAPES_PAGE_SIZE),
+        offset: String(offset),
+        q: searchTerm,
+    };
+
+    // Primeiro tenta fetch normal; se o navegador bloquear CORS, usa o JSONP recomendado pelo CKAN/CAPES.
+    try {
+        const response = await fetch(`${CAPES_API_URL}?${new URLSearchParams(params).toString()}`, { mode: 'cors' });
+        if (!response.ok) throw new Error(`CAPES HTTP ${response.status}`);
+        const data = await response.json();
+        if (!data?.success) throw new Error(data?.error?.message || 'Resposta inválida da CAPES.');
+        return data;
+    } catch (_) {
+        const data = await capesJSONP(params);
+        if (!data?.success) throw new Error(data?.error?.message || 'Resposta inválida da CAPES.');
+        return data;
+    }
+}
+
+function selectedCapesResources() {
+    if (capesSearchState.year === 'all') return CAPES_BTD_RESOURCES;
+    return CAPES_BTD_RESOURCES.filter(item => String(item.year) === String(capesSearchState.year));
+}
+
+function capesTypeMatches(record) {
+    if (capesSearchState.type === 'all') return true;
+    const value = `${record.type} ${firstObsValue(record._raw, ['NM_GRAU_ACADEMICO'])}`.toLocaleLowerCase('pt-BR');
+    return capesSearchState.type === 'tese'
+        ? value.includes('tese') || value.includes('doutor')
+        : value.includes('disser') || value.includes('mestr');
+}
+
+function renderCapesSearchStatus(message, isError = false) {
+    const el = document.getElementById('capes-search-status');
+    if (!el) return;
+    el.className = `obs-capes-status${isError ? ' is-error' : ''}`;
+    el.textContent = message;
+}
+
+function capesRecordHTML(record) {
+    const summary = record.summary ? obsEscapeHTML(record.summary) : 'Resumo não informado neste registro da CAPES.';
+    const urlButton = record.url
+        ? `<a class="obs-capes-card-link" href="${obsEscapeHTML(record.url)}" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">open_in_new</span> Texto completo</a>`
+        : `<a class="obs-capes-card-link is-secondary" href="https://catalogodeteses.capes.gov.br/catalogo-teses/#!/" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">search</span> Catálogo CAPES</a>`;
+
+    return `
+        <article class="obs-capes-card">
+            <div class="obs-capes-card-topline">
+                <span class="obs-capes-year">${obsEscapeHTML(record.year)}</span>
+                ${record.type ? `<span class="obs-capes-type">${obsEscapeHTML(record.type)}</span>` : ''}
+            </div>
+            <h4>${obsEscapeHTML(record.title)}</h4>
+            <div class="obs-capes-meta">
+                ${record.author ? `<span><strong>Autoria:</strong> ${obsEscapeHTML(record.author)}</span>` : ''}
+                ${record.institution ? `<span><strong>IES:</strong> ${obsEscapeHTML(record.institution)}</span>` : ''}
+                ${record.program ? `<span><strong>Programa:</strong> ${obsEscapeHTML(record.program)}</span>` : ''}
+                ${record.area ? `<span><strong>Área:</strong> ${obsEscapeHTML(record.area)}</span>` : ''}
+                ${record.advisor ? `<span><strong>Orientação:</strong> ${obsEscapeHTML(record.advisor)}</span>` : ''}
+            </div>
+            <p class="obs-capes-summary">${summary}</p>
+            ${record.keywords ? `<p class="obs-capes-keywords"><strong>Palavras-chave:</strong> ${obsEscapeHTML(record.keywords)}</p>` : ''}
+            <div class="obs-capes-card-actions">${urlButton}</div>
+        </article>
+    `;
+}
+
+function renderCapesResults() {
+    const list = document.getElementById('capes-results-list');
+    const totalEl = document.getElementById('capes-results-total');
+    const more = document.getElementById('capes-load-more');
+    if (!list || !totalEl) return;
+
+    const visible = capesSearchState.records.filter(capesTypeMatches);
+    const unique = [];
+    const seen = new Set();
+    for (const record of visible) {
+        const key = `${record.year}|${record.id}|${record.title.toLocaleLowerCase('pt-BR')}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        unique.push(record);
+    }
+    unique.sort((a, b) => (b.year - a.year) || a.title.localeCompare(b.title, 'pt-BR'));
+
+    const rawTotal = Object.values(capesSearchState.totals).reduce((sum, value) => sum + Number(value || 0), 0);
+    const heroNumber = document.getElementById('capes-hero-number');
+    if (heroNumber && capesSearchState.query) heroNumber.textContent = rawTotal.toLocaleString('pt-BR');
+    const selectedTypeLabel = capesSearchState.type === 'tese' ? 'teses' : 'dissertações';
+    totalEl.textContent = rawTotal
+        ? (capesSearchState.type === 'all'
+            ? `${rawTotal.toLocaleString('pt-BR')} registros encontrados nos microdados consultados`
+            : `${rawTotal.toLocaleString('pt-BR')} registros brutos encontrados · exibindo apenas ${selectedTypeLabel} entre os resultados carregados`)
+        : 'Nenhum registro encontrado para esta busca.';
+
+    list.innerHTML = unique.length
+        ? unique.map(capesRecordHTML).join('')
+        : `<div class="obs-capes-empty"><span class="material-icons" aria-hidden="true">search_off</span><strong>Nenhum resultado carregado.</strong><span>Tente outro termo, por exemplo “bioética”, “bem-estar animal”, “senciência” ou “métodos substitutivos”.</span></div>`;
+
+    const resources = selectedCapesResources();
+    const hasMore = resources.some(resource => !capesSearchState.exhausted[resource.year]);
+    if (more) more.hidden = !hasMore || rawTotal === 0;
+}
+
+window.searchCapesTheses = async function(reset = true) {
+    if (capesSearchState.loading) return;
+    const input = document.getElementById('capes-search-input');
+    const yearSelect = document.getElementById('capes-year-filter');
+    const typeSelect = document.getElementById('capes-type-filter');
+    const button = document.getElementById('capes-search-button');
+    const term = String(input?.value || '').trim();
+
+    if (term.length < 2) {
+        renderCapesSearchStatus('Digite pelo menos 2 caracteres para pesquisar os microdados da CAPES.', true);
+        input?.focus();
+        return;
+    }
+
+    if (reset) {
+        capesSearchState.query = term;
+        capesSearchState.year = yearSelect?.value || 'all';
+        capesSearchState.type = typeSelect?.value || 'all';
+        capesSearchState.records = [];
+        capesSearchState.totals = {};
+        capesSearchState.offsets = {};
+        capesSearchState.exhausted = {};
+        document.getElementById('capes-results-list').innerHTML = '';
+    } else {
+        capesSearchState.type = typeSelect?.value || capesSearchState.type;
+    }
+
+    const resources = selectedCapesResources();
+    capesSearchState.loading = true;
+    if (button) button.disabled = true;
+    renderCapesSearchStatus(`Consultando ${resources.length} conjunto${resources.length > 1 ? 's' : ''} anual${resources.length > 1 ? 'is' : ''} da CAPES…`);
+
+    try {
+        const jobs = resources
+            .filter(resource => !capesSearchState.exhausted[resource.year])
+            .map(async resource => {
+                const offset = capesSearchState.offsets[resource.year] || 0;
+                try {
+                    const payload = await fetchCapesResource(resource, capesSearchState.query, offset);
+                    const result = payload?.result || {};
+                    const rows = Array.isArray(result.records) ? result.records : [];
+                    capesSearchState.totals[resource.year] = Number(result.total || 0);
+                    capesSearchState.offsets[resource.year] = offset + rows.length;
+                    capesSearchState.exhausted[resource.year] = rows.length === 0 || capesSearchState.offsets[resource.year] >= Number(result.total || 0);
+                    return rows.map(row => normalizeCapesRecord(row, resource.year));
+                } catch (error) {
+                    console.warn(`AlterECO: CAPES ${resource.year} indisponível`, error);
+                    capesSearchState.exhausted[resource.year] = true;
+                    return [];
+                }
+            });
+
+        const batches = await Promise.all(jobs);
+        capesSearchState.records.push(...batches.flat());
+        renderCapesResults();
+        const workingYears = resources.filter(resource => capesSearchState.totals[resource.year] !== undefined).length;
+        renderCapesSearchStatus(workingYears
+            ? `Microdados CAPES carregados: ${workingYears} ano${workingYears > 1 ? 's' : ''} responderam à consulta.`
+            : 'A API da CAPES não respondeu agora. Use o botão do Catálogo CAPES ou tente novamente em alguns instantes.',
+            workingYears === 0);
+    } finally {
+        capesSearchState.loading = false;
+        if (button) button.disabled = false;
+    }
+};
+
+window.loadMoreCapesTheses = function() {
+    return window.searchCapesTheses(false);
+};
+
+window.updateCapesTypeFilter = function() {
+    const select = document.getElementById('capes-type-filter');
+    capesSearchState.type = select?.value || 'all';
+    renderCapesResults();
+};
+
+window.setCapesQuickSearch = function(term) {
+    const input = document.getElementById('capes-search-input');
+    if (!input) return;
+    input.value = term;
+    window.searchCapesTheses(true);
+};
+
+function getCnpqGroupCatalog(area) {
+    const catalog = window.OBSERVATORIO_DB?.pesquisa?.grupos_catalogo || {};
+    return Array.isArray(catalog[area]) ? catalog[area] : [];
+}
+
+window.closeCNPqModal = function() {
+    const modal = document.getElementById('cnpq-groups-modal');
+    if (modal) modal.remove();
+    document.body.classList.remove('obs-modal-open');
+};
+
+window.openCNPqModal = function(area) {
+    window.closeCNPqModal();
+    const db = window.OBSERVATORIO_DB.pesquisa;
+    const metric = db.grupos.find(group => group.area === area);
+    const groups = getCnpqGroupCatalog(area);
+    const officialUrl = 'https://lattes.cnpq.br/web/dgp';
+
+    const modal = document.createElement('div');
+    modal.id = 'cnpq-groups-modal';
+    modal.className = 'obs-modal-backdrop';
+    modal.innerHTML = `
+        <section class="obs-modal-panel" role="dialog" aria-modal="true" aria-labelledby="cnpq-modal-title">
+            <div class="obs-modal-header">
+                <div>
+                    <span class="obs-modal-kicker">Diretório dos Grupos de Pesquisa · CNPq</span>
+                    <h2 id="cnpq-modal-title">${obsEscapeHTML(area)}</h2>
+                    <p>${metric?.total ? `${obsEscapeHTML(groups.length)} links nominais validados de ${obsEscapeHTML(metric.total)} ocorrências registradas no levantamento do Observatório.` : 'Grupos relacionados ao tema.'}</p>
+                </div>
+                <button class="obs-modal-close" type="button" onclick="closeCNPqModal()" aria-label="Fechar lista de grupos"><span class="material-icons">close</span></button>
+            </div>
+            <div class="obs-cnpq-notice">
+                <span class="material-icons" aria-hidden="true">verified</span>
+                <div><strong>Links validados individualmente.</strong> A Base Corrente do DGP muda diariamente e não oferece uma API pública aberta para consulta nominal. Por isso, o AlterECO não inventa nomes para completar o número: exibe abaixo os grupos já validados e mantém acesso à busca oficial do CNPq.</div>
+            </div>
+            <div class="obs-modal-list">
+                ${groups.length ? groups.map(group => `
+                    <article class="obs-cnpq-group-card">
+                        <div>
+                            <h3>${obsEscapeHTML(group.nome)}</h3>
+                            <p>${obsEscapeHTML(group.instituicao || '')}${group.uf ? ` · ${obsEscapeHTML(group.uf)}` : ''}</p>
+                            ${group.lider ? `<span><strong>Liderança:</strong> ${obsEscapeHTML(group.lider)}</span>` : ''}
+                            ${group.fonte ? `<span><strong>Fonte:</strong> ${obsEscapeHTML(group.fonte)}</span>` : ''}
+                        </div>
+                        <a href="${obsEscapeHTML(obsSafeUrl(group.link) || officialUrl)}" target="_blank" rel="noopener noreferrer">Abrir grupo <span class="material-icons" aria-hidden="true">north_east</span></a>
+                    </article>
+                `).join('') : `
+                    <div class="obs-capes-empty"><span class="material-icons" aria-hidden="true">manage_search</span><strong>Lista nominal em validação.</strong><span>Use a consulta oficial do DGP enquanto novos vínculos são conferidos para este tema.</span></div>
+                `}
+            </div>
+            <div class="obs-modal-footer">
+                <a class="obs-primary-action" href="${officialUrl}" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">travel_explore</span> Buscar na Base Corrente do CNPq</a>
+                <button type="button" class="obs-secondary-action" onclick="closeCNPqModal()">Fechar</button>
+            </div>
+        </section>`;
+    modal.addEventListener('click', event => { if (event.target === modal) window.closeCNPqModal(); });
+    document.body.appendChild(modal);
+    document.body.classList.add('obs-modal-open');
+    modal.querySelector('.obs-modal-close')?.focus();
+};
+
+if (!window.__alterecoObsModalEscapeBound) {
+    window.__alterecoObsModalEscapeBound = true;
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && document.getElementById('cnpq-groups-modal')) window.closeCNPqModal();
+    });
+}
+
 function renderObsPesquisa(c) {
     const db = window.OBSERVATORIO_DB.pesquisa;
     c.innerHTML = `
-        <div style="background:var(--white); padding:4rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); margin-bottom:2rem;">
-            <h1 style="color:var(--primary-navy); font-size:2.8rem; font-weight:800; margin-bottom:3rem;">Pesquisa e Academia</h1>
-            
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:3rem;">
-                <div>
-                    <h3 style="color:var(--primary-navy); font-weight:800; margin-bottom:1.5rem;">Grupos de Pesquisa (CNPq)</h3>
-                    ${db.grupos.map(g => `
-                        <div style="display:flex; justify-content:space-between; padding:1.2rem 0; border-bottom:1px solid rgba(128,128,128,0.15);">
-                            <span style="font-weight:700;">${g.area}</span>
-                            <span style="font-weight:900; color:var(--primary-navy); font-size:1rem; cursor:pointer; border-bottom:2px dotted var(--accent-yellow); padding-bottom:2px;" onclick="openCNPqModal('${g.area}')" title="Ver grupos listados no CNPq">${g.total} grupos</span>
+        <div class="obs-research-shell">
+            <h1>Pesquisa e Academia</h1>
+            <p class="obs-research-intro">Explore grupos de pesquisa relacionados à questão animal e pesquise diretamente os microdados oficiais de teses e dissertações da CAPES.</p>
+
+            <div class="obs-research-top-grid">
+                <section class="obs-cnpq-panel">
+                    <div class="obs-section-heading-row">
+                        <div>
+                            <span class="obs-eyebrow">CNPq · Diretório de Grupos de Pesquisa</span>
+                            <h2>Grupos de Pesquisa</h2>
                         </div>
-                    `).join('')}
-                    <p style="font-size:0.8rem; color:var(--text-gray); margin-top:1rem;">Dados via Diretório de Grupos de Pesquisa do CNPq (2023).</p>
-                </div>
-                <div style="background:var(--primary-navy); color:white; padding:3rem; border-radius:30px;">
-                    <h3 style="color:var(--accent-yellow); margin-bottom:1rem; font-weight:800;">Produção Científica</h3>
-                    <div style="font-size:3rem; font-weight:900;">${db.publicacoes.tese_dissertacao}</div>
-                    <p style="opacity:0.8; font-size:1.25rem; margin-top:1rem;">Teses e dissertações defendidas no Brasil sobre "Bem-estar Animal" e "Bioética" na última década.</p>
-                    <a href="${db.publicacoes.link}" target="_blank" style="color:white; font-size:0.8rem; margin-top:1.5rem; display:inline-block; border:1px solid rgba(255,255,255,0.2) ; padding:5px 15px; border-radius:10px; text-decoration:none;">Banco de Teses CAPES →</a>
-                </div>
+                        <a href="https://lattes.cnpq.br/web/dgp" target="_blank" rel="noopener noreferrer">Base Corrente <span class="material-icons" aria-hidden="true">north_east</span></a>
+                    </div>
+                    <div class="obs-cnpq-metrics">
+                        ${db.grupos.map(g => `
+                            <button class="obs-cnpq-metric" type="button" onclick='openCNPqModal(${JSON.stringify(g.area)})'>
+                                <span>${obsEscapeHTML(g.area)}</span>
+                                <strong>${obsEscapeHTML(g.total)} <small>grupos</small></strong>
+                                <span class="material-icons" aria-hidden="true">arrow_forward</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                    <p class="obs-data-note"><strong>Nota metodológica:</strong> estes quantitativos pertencem ao levantamento que originou o Observatório. Como a Base Corrente do DGP é atualizada diariamente e não é disponibilizada via API pública, a lista nominal do modal é expandida somente com grupos que conseguimos validar.</p>
+                </section>
+
+                <aside class="obs-capes-hero-card">
+                    <span class="obs-eyebrow">CAPES · Dados Abertos</span>
+                    <h2>Produção Científica</h2>
+                    <strong id="capes-hero-number">2015–2024</strong>
+                    <p>Pesquisa ao vivo em dez anos de microdados do Catálogo de Teses e Dissertações. O número de resultados passa a ser calculado pela sua busca — não por uma estimativa fixa.</p>
+                    <a href="https://dadosabertos.capes.gov.br/group/catalogo-de-teses-e-dissertacoes-brasil" target="_blank" rel="noopener noreferrer">Abrir dados oficiais CAPES <span class="material-icons" aria-hidden="true">north_east</span></a>
+                </aside>
             </div>
+
+            <section class="obs-capes-browser" aria-labelledby="capes-browser-title">
+                <div class="obs-section-heading-row obs-capes-browser-heading">
+                    <div>
+                        <span class="obs-eyebrow">Microdados oficiais</span>
+                        <h2 id="capes-browser-title">Banco de Teses e Dissertações</h2>
+                        <p>Busca em título, resumo, palavras-chave, autoria, programa, instituição e demais campos disponibilizados pela CAPES.</p>
+                    </div>
+                </div>
+
+                <form class="obs-capes-search-form" onsubmit="event.preventDefault(); searchCapesTheses(true);">
+                    <label class="obs-capes-query">
+                        <span>Pesquisar</span>
+                        <div class="obs-capes-input-wrap">
+                            <span class="material-icons" aria-hidden="true">search</span>
+                            <input id="capes-search-input" type="search" value="bem-estar animal" placeholder="Ex.: bioética, senciência, métodos substitutivos…" autocomplete="off">
+                        </div>
+                    </label>
+                    <label>
+                        <span>Ano</span>
+                        <select id="capes-year-filter">
+                            <option value="all">2015–2024</option>
+                            ${[...CAPES_BTD_RESOURCES].reverse().map(r => `<option value="${r.year}">${r.year}</option>`).join('')}
+                        </select>
+                    </label>
+                    <label>
+                        <span>Tipo</span>
+                        <select id="capes-type-filter" onchange="updateCapesTypeFilter()">
+                            <option value="all">Todos</option>
+                            <option value="tese">Teses</option>
+                            <option value="dissertacao">Dissertações</option>
+                        </select>
+                    </label>
+                    <button id="capes-search-button" class="obs-capes-search-button" type="submit"><span class="material-icons" aria-hidden="true">database</span> Buscar nos microdados</button>
+                </form>
+
+                <div class="obs-capes-quick-searches" aria-label="Buscas sugeridas">
+                    ${['bem-estar animal', 'bioética', 'direito animal', 'senciência', 'ética animal', 'métodos substitutivos'].map(term => `<button type="button" onclick='setCapesQuickSearch(${JSON.stringify(term)})'>${obsEscapeHTML(term)}</button>`).join('')}
+                </div>
+
+                <div class="obs-capes-results-header">
+                    <div>
+                        <strong id="capes-results-total">Faça uma busca para consultar a produção.</strong>
+                        <span id="capes-search-status" class="obs-capes-status">Fonte: Catálogo de Teses e Dissertações · Dados Abertos CAPES.</span>
+                    </div>
+                    <a href="https://catalogodeteses.capes.gov.br/catalogo-teses/#!/" target="_blank" rel="noopener noreferrer">Catálogo CAPES <span class="material-icons" aria-hidden="true">north_east</span></a>
+                </div>
+                <div id="capes-results-list" class="obs-capes-results-list"></div>
+                <div class="obs-capes-load-more-wrap">
+                    <button id="capes-load-more" class="obs-secondary-action" type="button" onclick="loadMoreCapesTheses()" hidden><span class="material-icons" aria-hidden="true">expand_more</span> Carregar mais resultados</button>
+                </div>
+            </section>
         </div>
     `;
+
+    // A primeira busca já deixa a seção útil ao abrir.
+    window.setTimeout(() => window.searchCapesTheses(true), 80);
 }
 
 function renderObsEducacao(c) {
