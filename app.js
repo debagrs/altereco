@@ -734,10 +734,17 @@ function switchMateriaisTab(val, btn) {
     if (!grid) return;
     if (btn) { document.querySelectorAll('[data-tab-type="materiais"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
 
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('materiais').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url, tags: d.tags })) : [];
+    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('materiais').map(d => ({
+        name: d.title + (d.author ? ' (Por: ' + d.author + ')' : ''),
+        description: d.description,
+        url: d.url,
+        tags: d.tags,
+        image: d.image || d.image_url || null,
+        buttonLabel: 'Acessar'
+    })) : [];
     const allItems = [...list, ...dynamic];
     grid.innerHTML = allItems.map(item => {
-        const imageHTML = item.image ? `<div class="materiais-img-wrap"><img src="${item.image}" alt="${item.name}" class="materiais-img"></div>` : '';
+        const imageHTML = item.image ? `<div class="materiais-img-wrap"><img src="${item.image}" alt="${item.name}" class="materiais-img" loading="lazy" onerror="this.closest('.materiais-img-wrap')?.remove()"></div>` : '';
         const featuredHTML = item.featured ? `<div class="materiais-featured-badge">${item.featuredTitle}</div>` : '';
         const isEdu = (t) => ['Escolas', 'Ensino Médio', 'IES', 'Universidades', 'Educação Básica', 'Ensino Superior'].includes(t);
         const tagsHTML = (item.tags && item.tags.length > 0) ? `<div class="pills-row">${item.tags.map((t, i) => {
@@ -752,7 +759,7 @@ function switchMateriaisTab(val, btn) {
             <p class="materiais-card-desc">${item.description}</p>
             ${tagsHTML}
             <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
-                <a href="${item.url}" target="_blank" style="background:#2C2F33; color:white; border:none; padding:10px 22px; border-radius:8px; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px; text-decoration:none; cursor:pointer;">Acessar <i data-lucide="arrow-right" style="width:18px;"></i></a>
+                <a href="${item.url}" target="_blank" rel="noopener noreferrer" style="background:#2C2F33; color:white; border:none; padding:10px 22px; border-radius:8px; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px; text-decoration:none; cursor:pointer;">${item.buttonLabel || 'Acessar'} <i data-lucide="arrow-right" style="width:18px;"></i></a>
                 <button onclick="shareCard(this)" title="Compartilhar" style="background:none; border:none; cursor:pointer;"><i data-lucide="share-2" style="width:18px; color:var(--text-gray);"></i></button>
             </div>
         </div>`;
@@ -933,7 +940,7 @@ function switchLegisTab(val, btn) {
         <h3 class="legis-card-title">${item.name}</h3>
         <p class="legis-card-desc">${item.description}</p>
         <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
-            <a href="${item.url}" target="_blank" style="background:#2C2F33; color:white; border:none; padding:10px 22px; border-radius:8px; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px; text-decoration:none; cursor:pointer;">Acessar <i data-lucide="arrow-right" style="width:18px;"></i></a>
+            <a href="${item.url}" target="_blank" rel="noopener noreferrer" style="background:#2C2F33; color:white; border:none; padding:10px 22px; border-radius:8px; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px; text-decoration:none; cursor:pointer;">${item.buttonLabel || 'Acessar'} <i data-lucide="arrow-right" style="width:18px;"></i></a>
             <button onclick="shareCard(this)" title="Compartilhar" style="background:none; border:none; cursor:pointer;"><i data-lucide="share-2" style="width:18px; color:var(--text-gray);"></i></button>
         </div>
     </div>`).join('')}</div>`;
