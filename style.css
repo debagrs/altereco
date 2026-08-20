@@ -2245,3 +2245,562 @@ footer {
     border-color: var(--accent-yellow);
 }
 
+
+
+/* ══════════════════════════════════════════════════════
+   CURADORIA / PERFIS — layout responsivo
+══════════════════════════════════════════════════════ */
+
+.curators-list-section {
+    background: #EDF0F2;
+    padding: 2.5rem 1rem 4rem;
+}
+
+.curators-list {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.curator-card {
+    background: #E8ECEE;
+    border-radius: 18px;
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+    box-shadow: 0 8px 24px rgba(26, 26, 26, 0.05);
+}
+
+.curator-card-photo {
+    width: 112px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #D7DDE0;
+}
+
+.curator-card-photo img,
+.curator-profile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.curator-card-content {
+    min-width: 0;
+    border-left: 3px solid var(--accent-yellow);
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.curator-card-content h2 {
+    margin: 0 0 0.8rem;
+    color: var(--primary-navy);
+    font-size: 1.45rem;
+}
+
+.curator-card-content p {
+    margin: 0 0 1.15rem;
+    color: var(--text-gray);
+    line-height: 1.65;
+}
+
+.curator-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.curator-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0.42rem 0.9rem;
+    border-radius: 999px;
+    background: var(--mint-teal);
+    color: var(--on-teal);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.curator-tag--primary {
+    background: #545B62;
+    color: #FFFFFF;
+    border: 2px solid var(--accent-yellow);
+    font-weight: 700;
+}
+
+.curator-profile-link,
+.curator-back-link,
+.curator-project-link {
+    font-family: var(--font-ui);
+}
+
+.curator-profile-link {
+    margin-top: 1.25rem;
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: #55218B;
+    padding: 0.5rem 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.curator-profile-link svg,
+.curator-back-link svg,
+.curator-project-link svg {
+    width: 18px;
+    height: 18px;
+}
+
+.curator-profile-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/* Profile page */
+.curator-profile-page {
+    background: #EDF0F2;
+    min-height: 70vh;
+    padding-bottom: 4rem;
+}
+
+.curator-profile-actions {
+    width: min(calc(100% - 2rem), 1400px);
+    margin: 0 auto;
+    padding: 1rem 0 0;
+}
+
+.curator-back-link {
+    border: 0;
+    background: transparent;
+    color: var(--text-gray);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.65rem 0;
+    font-weight: 700;
+}
+
+.curator-profile-shell {
+    width: min(calc(100% - 2rem), 1400px);
+    margin: 0 auto;
+    padding: 0.5rem 0 1.5rem;
+}
+
+.curator-profile-card {
+    background: #E8ECEE;
+    border-radius: 18px;
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+    box-shadow: 0 8px 24px rgba(26, 26, 26, 0.05);
+}
+
+.curator-profile-photo {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #D7DDE0;
+    margin: 0 auto;
+}
+
+.curator-profile-main {
+    min-width: 0;
+    border-left: 3px solid var(--accent-yellow);
+    padding-left: 1.5rem;
+}
+
+.curator-profile-name {
+    color: var(--primary-navy);
+    margin: 0 0 1.1rem;
+    font-size: 1.8rem;
+}
+
+.curator-profile-main .curator-tags {
+    margin-bottom: 1.25rem;
+}
+
+.curator-profile-bio {
+    color: var(--text-gray);
+    font-size: 1.05rem;
+    line-height: 1.75;
+    max-width: 930px;
+}
+
+.curator-profile-categories {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+}
+
+.curator-category {
+    margin-top: 1rem;
+}
+
+.curator-category-heading {
+    border-bottom: 3px solid var(--accent-yellow);
+    padding: 0.9rem 1rem 0.8rem;
+    text-align: center;
+}
+
+.curator-category-heading h2 {
+    color: #666B6F;
+    margin: 0;
+    font-size: 1.7rem;
+}
+
+.curator-projects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem 1rem 0;
+}
+
+.curator-project-card {
+    overflow: hidden;
+    background: #FFFFFF;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(26, 26, 26, 0.06);
+}
+
+.curator-project-media {
+    height: 240px;
+    background: #70A3A4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.curator-project-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.curator-project-media > svg {
+    width: 110px;
+    height: 110px;
+    color: rgba(255,255,255,0.95);
+    stroke-width: 1.1 !important;
+}
+
+.curator-project-media--labchange {
+    background: #70A3A4;
+}
+
+.curator-project-media--florestar {
+    background: #6C9684;
+}
+
+.curator-project-media--befree {
+    background: #7C92A3;
+}
+
+.curator-project-banner {
+    min-height: 240px;
+    height: auto;
+    padding: 2.25rem;
+    flex-direction: column;
+    text-align: center;
+    background: var(--primary-navy);
+    color: white;
+}
+
+.curator-project-banner strong {
+    font-family: var(--font-heading);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    line-height: 1;
+}
+
+.curator-project-banner span {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+}
+
+.curator-project-banner em {
+    margin-top: 0.35rem;
+    opacity: 0.8;
+}
+
+.curator-project-body {
+    padding: 1.5rem;
+}
+
+.curator-project-body h3 {
+    margin: 0 0 1rem;
+    color: var(--primary-navy);
+}
+
+.curator-project-body > p {
+    border-left: 3px solid var(--accent-yellow);
+    padding-left: 1rem;
+    color: var(--text-gray);
+    line-height: 1.7;
+    margin-bottom: 1.25rem;
+}
+
+.curator-project-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    color: #55218B;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.curator-profile-coming-soon,
+.curator-profile-empty {
+    width: min(calc(100% - 2rem), 900px);
+    margin: 1.5rem auto 0;
+    background: #FFFFFF;
+    border-radius: 18px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.curator-profile-coming-soon > svg {
+    width: 34px;
+    height: 34px;
+    color: var(--primary-navy);
+    margin-bottom: 0.75rem;
+}
+
+/* Nome do perfil no header apenas no mobile */
+.profile-page-title {
+    display: none;
+    color: #FFFFFF;
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+    max-width: calc(100vw - 140px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (min-width: 760px) {
+    .curators-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .curator-projects-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .curators-list-section {
+        padding: 3rem 60px 5rem;
+    }
+
+    .curators-list {
+        width: 100%;
+        max-width: 1400px;
+    }
+
+    .curator-card {
+        grid-template-columns: 140px minmax(0, 1fr);
+        padding: 2rem;
+    }
+
+    .curator-card-photo {
+        width: 140px;
+    }
+
+    .curator-profile-actions,
+    .curator-profile-shell,
+    .curator-profile-categories {
+        width: calc(100% - 120px);
+        max-width: 1400px;
+    }
+
+    .curator-profile-card {
+        grid-template-columns: 170px minmax(0, 1fr);
+        padding: 2rem 2.25rem;
+    }
+
+    .curator-projects-grid {
+        padding-left: 0;
+        padding-right: 0;
+    }
+}
+
+@media (max-width: 1023px) {
+    #main-header.curator-profile-active #nav-logo {
+        display: none;
+    }
+
+    #main-header.curator-profile-active .profile-page-title {
+        display: block;
+    }
+}
+
+@media (max-width: 640px) {
+    .curators-list-section {
+        padding: 1.25rem 0.75rem 3rem;
+    }
+
+    .curators-list {
+        gap: 1rem;
+    }
+
+    .curator-card {
+        grid-template-columns: 84px minmax(0, 1fr);
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: 15px;
+    }
+
+    .curator-card-photo {
+        width: 84px;
+    }
+
+    .curator-card-content {
+        padding-left: 0.9rem;
+    }
+
+    .curator-card-content h2 {
+        font-size: 1.12rem !important;
+    }
+
+    .curator-card-content p {
+        font-size: 0.9rem !important;
+    }
+
+    .curator-tag {
+        min-height: 30px;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8rem !important;
+    }
+
+    .curator-profile-actions {
+        display: none;
+    }
+
+    .curator-profile-shell {
+        width: calc(100% - 1.5rem);
+        padding: 0.75rem 0 1rem;
+    }
+
+    .curator-profile-card {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 1.4rem 1.2rem 1.6rem;
+        border-radius: 0 0 16px 16px;
+        box-shadow: none;
+    }
+
+    .curator-profile-photo {
+        width: 108px;
+        height: 108px;
+        margin-bottom: 0.45rem;
+    }
+
+    .curator-profile-main {
+        border-left: 0;
+        padding-left: 0;
+    }
+
+    .curator-profile-name {
+        display: none;
+    }
+
+    .curator-profile-main .curator-tags {
+        justify-content: flex-start;
+        margin: 0 0 1.1rem;
+    }
+
+    .curator-profile-bio {
+        font-size: 0.92rem !important;
+        line-height: 1.6;
+    }
+
+    .curator-profile-categories {
+        width: 100%;
+    }
+
+    .curator-category {
+        margin-top: 0;
+    }
+
+    .curator-category-heading {
+        padding: 0.9rem 1rem 0.65rem;
+    }
+
+    .curator-category-heading h2 {
+        font-size: 1.45rem !important;
+    }
+
+    .curator-projects-grid {
+        padding: 1.25rem 0.9rem 0;
+    }
+
+    .curator-project-media {
+        height: 220px;
+    }
+
+    .curator-project-body {
+        padding: 1.25rem;
+    }
+}
+
+/* Dark mode — perfis */
+[data-theme="dark"] .curators-list-section,
+[data-theme="dark"] .curator-profile-page {
+    background: #17191F !important;
+}
+
+[data-theme="dark"] .curator-card,
+[data-theme="dark"] .curator-profile-card,
+[data-theme="dark"] .curator-project-card,
+[data-theme="dark"] .curator-profile-coming-soon,
+[data-theme="dark"] .curator-profile-empty {
+    background: #23252E !important;
+    border-color: rgba(255,255,255,0.07) !important;
+}
+
+[data-theme="dark"] .curator-card-content h2,
+[data-theme="dark"] .curator-profile-name,
+[data-theme="dark"] .curator-project-body h3 {
+    color: #F0F2F8 !important;
+}
+
+[data-theme="dark"] .curator-card-content p,
+[data-theme="dark"] .curator-profile-bio,
+[data-theme="dark"] .curator-project-body > p,
+[data-theme="dark"] .curator-back-link,
+[data-theme="dark"] .curator-profile-coming-soon p {
+    color: #C4CDD4 !important;
+}
+
+[data-theme="dark"] .curator-category-heading h2 {
+    color: #D9E0E5 !important;
+}
+
+[data-theme="dark"] .curator-profile-link,
+[data-theme="dark"] .curator-project-link {
+    color: var(--accent-yellow) !important;
+}
