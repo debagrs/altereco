@@ -173,13 +173,13 @@ function renderObsAssistente(c) {
         <div style="background:var(--primary-navy); padding: 1.5rem 3rem; color:white; border-radius:var(--border-radius); margin-bottom:2rem;">
             <p style="background:rgba(255,255,255,0.15); display:inline-block; padding:6px 15px; border-radius:20px; font-size:0.8rem; margin-bottom:1.5rem; color:var(--accent-yellow);">Assistente de Pesquisa</p>
             <h1 style="font-size:2.8rem; margin-bottom:1.5rem; line-height:1.2;">O que os dados revelam quando você faz as perguntas certas?</h1>
-            <p style="max-width:700px; opacity:0.8; font-size:1.25rem;">Um agente de IA treinado com os dados do observatório para ajudar pesquisadores a identificar padrões, paradoxos e lacunas na relação humano-animal.</p>
+            <p style="max-width:700px; opacity:0.8; font-size:1.25rem;">Um assistente científico que cruza os dados do observatório com literatura acadêmica e fontes institucionais. Cada afirmação factual deve vir acompanhada das referências utilizadas.</p>
         </div>
 
         <div class="obs-assistente-shell">
             <!-- Coluna Esquerda -->
             <div class="obs-assistente-left">
-                <button class="obs-nova-conversa-btn">+ Nova conversa</button>
+                <button class="obs-nova-conversa-btn" onclick="obsStartNewConversation()">+ Nova conversa</button>
 
                 <p class="obs-hist-label">Histórico</p>
                 <div class="obs-hist-item"><i data-lucide="message-circle" style="width:14px;"></i> Nova conversa</div>
@@ -190,14 +190,15 @@ function renderObsAssistente(c) {
                         <i data-lucide="info" style="width:16px; color:var(--accent-yellow);"></i>
                         <strong style="color:var(--accent-yellow); font-size:0.85rem;">Nota científica</strong>
                     </div>
-                    <p style="font-size:0.82rem; line-height:1.6; color:#c7692a;">As respostas são geradas por IA com base nos dados do observatório. Sempre verifique as fontes primárias antes de citar em trabalhos acadêmicos.</p>
+                    <p style="font-size:0.82rem; line-height:1.6; color:#c7692a;">A resposta combina dados do Observatório com literatura científica e fontes oficiais recuperadas no momento da pergunta. Os links das referências aparecem em cada resposta. Verifique a fonte primária antes de citar academicamente.</p>
                 </div>
 
                 <p class="obs-agente-label">O agente pode:</p>
                 <ul class="obs-agente-lista">
                     <li><span>›</span> Cruzar dados de diferentes seções</li>
                     <li><span>›</span> Identificar contradições nos dados</li>
-                    <li><span>›</span> Contextualizar com bases científicas</li>
+                    <li><span>›</span> Buscar artigos científicos e revisões</li>
+                    <li><span>›</span> Vincular cada análise às referências</li>
                     <li><span>›</span> Sinalizar subnotificação e limitações</li>
                     <li><span>›</span> Sugerir perguntas de pesquisa</li>
                 </ul>
@@ -244,7 +245,7 @@ function renderObsAssistente(c) {
                         <span class="material-icons" aria-hidden="true">send</span>
                     </button>
                 </div>
-                <p style="text-align:center; color:var(--text-gray); font-size:0.78rem; margin-top:0.8rem;">Respostas geradas por IA · sempre verifique as fontes primárias · Enter para enviar, Shift+Enter para quebra de linha</p>
+                <p style="text-align:center; color:var(--text-gray); font-size:0.78rem; margin-top:0.8rem;">Resposta baseada em evidências · referências clicáveis em cada análise · Enter para enviar</p>
             </div>
         </div>
     `;
@@ -257,10 +258,118 @@ function renderObsAssistente(c) {
     }
 }
 
+function obsStartNewConversation() {
+    obsAIHistory.length = 0;
+    const log = document.getElementById('obs-chat-log');
+    if (log) log.remove();
+    const suggestions = document.querySelector('.obs-grid-suggest');
+    if (suggestions) suggestions.style.display = '';
+    const input = document.getElementById('obs-chat-input');
+    if (input) { input.value = ''; input.focus(); }
+}
+
 function obsAskSuggestion(card) {
     const question = card.querySelector('p') ? card.querySelector('p').innerText : '';
     const input = document.getElementById('obs-chat-input');
     if (input) { input.value = question; input.focus(); }
+}
+
+const obsAIHistory = [];
+
+function obsEscapeHTML(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function obsCollectLocalEvidence() {
+    const db = window.OBSERVATORIO_DB || {};
+    const found = [];
+    const seen = new Set();
+
+    function walk(node, path = []) {
+        if (!node || typeof node !== 'object') return;
+        if (Array.isArray(node)) {
+            node.forEach((item, index) => walk(item, path.concat(index)));
+            return;
+        }
+
+        const url = node.url || node.link || '';
+        const source = node.fonte || node.ref || node.source || '';
+        const year = node.ano || node.year || '';
+        const label = node.label || node.title || node.nome || node.especie || node.area || '';
+        const value = node.value || node.valor || node.total || node.casos || node.perc || node.porcent || '';
+
+        if (url && !seen.has(url)) {
+            seen.add(url);
+            found.push({
+                title: label || source || 'Dado do Observatório',
+                source: source || 'Observatório AlterECO',
+                year,
+                url,
+                snippet: [label, value ? `Valor: ${value}` : '', node.nota || node.limitacao || node.text || ''].filter(Boolean).join(' · ')
+            });
+        }
+
+        Object.entries(node).forEach(([key, value]) => {
+            if (!['url','link','fonte','ref','source','ano','year','label','title','nome','especie','area','value','valor','total','casos','perc','porcent','nota','limitacao','text'].includes(key)) {
+                walk(value, path.concat(key));
+            }
+        });
+    }
+
+    walk(db);
+    return found.slice(0, 25);
+}
+
+function obsRenderScientificAnswer(data) {
+    const answer = obsEscapeHTML(data?.answer || 'Não foi possível produzir uma síntese.');
+    const sources = Array.isArray(data?.sources) ? data.sources : [];
+    const linkedAnswer = answer.replace(/\[(\d{1,2})\]/g, (match, number) => {
+        const index = Number(number) - 1;
+        if (!sources[index]?.url) return match;
+        return `<a class="obs-ai-citation" href="${obsEscapeHTML(sources[index].url)}" target="_blank" rel="noopener" title="Abrir referência ${number}">[${number}]</a>`;
+    }).replace(/\n/g, '<br>');
+
+    const sourceHTML = sources.length ? `
+        <div class="obs-ai-sources">
+            <div class="obs-ai-sources-title"><span class="material-icons" aria-hidden="true">verified</span> Referências usadas nesta resposta</div>
+            ${sources.map((source, index) => `
+                <a class="obs-ai-source-card" href="${obsEscapeHTML(source.url)}" target="_blank" rel="noopener">
+                    <span class="obs-ai-source-number">${index + 1}</span>
+                    <span class="obs-ai-source-content">
+                        <strong>${obsEscapeHTML(source.title || 'Referência')}</strong>
+                        <small>${obsEscapeHTML([source.source, source.journal, source.year].filter(Boolean).join(' · '))}</small>
+                        ${source.authors ? `<span>${obsEscapeHTML(source.authors)}</span>` : ''}
+                    </span>
+                    <span class="material-icons" aria-hidden="true">open_in_new</span>
+                </a>
+            `).join('')}
+        </div>` : `
+        <div class="obs-ai-no-sources">Nenhuma referência verificável foi recuperada. Não use esta resposta como fonte acadêmica.</div>`;
+
+    return `
+        <div class="obs-ai-answer-text">${linkedAnswer}</div>
+        ${sourceHTML}
+        <div class="obs-ai-disclaimer">${obsEscapeHTML(data?.disclaimer || 'Verifique as fontes primárias antes de citar academicamente.')}</div>`;
+}
+
+async function obsInvokeScientificAI(question) {
+    if (!window.alterecoSupabase?.functions) throw new Error('Supabase não está disponível nesta página.');
+    const functionName = window.CONFIG?.AI?.OBSERVATORY_FUNCTION_NAME || 'ai-observatorio';
+    const { data, error } = await window.alterecoSupabase.functions.invoke(functionName, {
+        body: {
+            question,
+            history: obsAIHistory.slice(-8),
+            localEvidence: obsCollectLocalEvidence()
+        }
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
 }
 
 async function obsSubmitQuestion() {
@@ -268,50 +377,53 @@ async function obsSubmitQuestion() {
     if (!input || !input.value.trim()) return;
     const q = input.value.trim();
     input.value = '';
-    
-    // Hide suggestions
+
     const suggestGrid = document.querySelector('.obs-grid-suggest');
     if (suggestGrid) suggestGrid.style.display = 'none';
 
-    // Ensure chat log container exists
     let chatLog = document.getElementById('obs-chat-log');
     if (!chatLog) {
         chatLog = document.createElement('div');
         chatLog.id = 'obs-chat-log';
-        chatLog.style = 'flex:1; overflow-y:auto; padding-bottom:2rem; display:flex; flex-direction:column; gap:1.5rem; max-height:450px; scroll-behavior:smooth; margin-bottom: 2rem;';
+        chatLog.className = 'obs-chat-log';
         const inputBar = document.querySelector('.obs-input-bar');
         inputBar.parentNode.insertBefore(chatLog, inputBar);
     }
     chatLog.style.display = 'flex';
 
-    // User message bubble
     const userBubble = document.createElement('div');
-    userBubble.style = 'align-self:flex-end; background:var(--accent-orange); color:white; padding:1rem 1.5rem; border-radius:20px 20px 0 20px; max-width:85%; font-size:0.95rem; line-height:1.5; box-shadow:0 4px 10px rgba(250,205,95,0.2);';
-    userBubble.innerText = q;
+    userBubble.className = 'obs-chat-user';
+    userBubble.textContent = q;
     chatLog.appendChild(userBubble);
     chatLog.scrollTop = chatLog.scrollHeight;
 
-    // Typing bubble
-    const typId = 'typing-' + Date.now();
     const typingBubble = document.createElement('div');
-    typingBubble.id = typId;
-    typingBubble.style = 'align-self:flex-start; background:var(--bg-light); color:var(--text-gray); padding:1rem 1.5rem; border-radius:20px 20px 20px 0; max-width:85%; font-size:0.95rem; font-style:italic; border:1px solid rgba(128,128,128,0.15);';
-    typingBubble.innerHTML = '<span style="display:flex; align-items:center; gap:8px;"><i data-lucide="loader" style="animation: spin 1s linear infinite; width:16px;"></i> Processando no banco do Observatório...</span>';
+    typingBubble.className = 'obs-chat-typing';
+    typingBubble.innerHTML = '<span class="material-icons obs-ai-spin" aria-hidden="true">progress_activity</span> Buscando artigos, bases científicas e fontes oficiais…';
     chatLog.appendChild(typingBubble);
-    if(window.lucide) window.lucide.createIcons();
     chatLog.scrollTop = chatLog.scrollHeight;
 
-    // Fake AI Response logic (Fallback if no Gemini)
-    setTimeout(() => {
-        const node = document.getElementById(typId);
-        if(node) node.remove();
-        
+    try {
+        const data = await obsInvokeScientificAI(q);
+        typingBubble.remove();
+
         const aiBubble = document.createElement('div');
-        aiBubble.style = 'align-self:flex-start; background:var(--white); color:var(--text-dark); padding:1.5rem; border-radius:20px 20px 20px 0; max-width:85%; font-size:0.95rem; line-height:1.6; border:1px solid var(--mint-teal); box-shadow:0 4px 10px rgba(128,222,234,0.1);';
-        aiBubble.innerHTML = `Com base nos nossos dados estruturados e na modelagem de senciência: <br><br><b>Análise:</b> Evidenciamos forte subnotificação dos parâmetros que você pesquisou. Aproximadamente 50% dos casos de maus-tratos ou envolvimento científico escapam ao censo oficial. O "Paradoxo Afetivo-Econômico" suporta a ideia de que os gastos no mercado pet mascaram a deficiência estrutural em legislação efetiva.<br><br><em style="font-size:0.85rem; color:var(--text-gray);">Para uma auditoria de dados completa, utilize a aba de Metodologia e referencie o relatório do Instituto Pet Brasil de 2023.</em>`;
+        aiBubble.className = 'obs-chat-ai';
+        aiBubble.innerHTML = obsRenderScientificAnswer(data);
         chatLog.appendChild(aiBubble);
-        chatLog.scrollTop = chatLog.scrollHeight;
-    }, 1800);
+
+        obsAIHistory.push({ role: 'user', content: q });
+        obsAIHistory.push({ role: 'assistant', content: data.answer || '' });
+        if (obsAIHistory.length > 16) obsAIHistory.splice(0, obsAIHistory.length - 16);
+    } catch (error) {
+        typingBubble.remove();
+        const errorBubble = document.createElement('div');
+        errorBubble.className = 'obs-chat-error';
+        errorBubble.innerHTML = `<strong>Não consegui concluir a pesquisa.</strong><br>${obsEscapeHTML(error?.message || 'Erro ao consultar as fontes científicas.')}`;
+        chatLog.appendChild(errorBubble);
+    }
+
+    chatLog.scrollTop = chatLog.scrollHeight;
 }
 
 function renderObsMetodo(c) {
