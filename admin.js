@@ -154,6 +154,20 @@ async function refreshApprovedContentCache() {
     }
 }
 
+function cleanApprovedPublicDescription(value) {
+    let text = String(value || '').trim();
+    if (!text) return '';
+
+    const editorialPatterns = [
+        /\s*Consulte a fonte original para revisar o conteúdo completo antes da publicação\.?/gi,
+        /\s*Revisar título, resumo, autoria, link e imagem antes de aprovar\.?/gi,
+        /\s*Aguardando aprovação[^.]*\.?/gi,
+        /\s*Conteúdo recuperado automaticamente de fonte externa\.?/gi
+    ];
+    editorialPatterns.forEach(pattern => { text = text.replace(pattern, ''); });
+    return text.replace(/\s{2,}/g, ' ').trim();
+}
+
 window.getDynamicPostsForArea = function(areaId) {
     const area = normalizeContentArea(areaId);
 
@@ -161,9 +175,12 @@ window.getDynamicPostsForArea = function(areaId) {
         refreshApprovedContentCache();
     }
 
-    return alterecoContentCache.approved.filter(
-        post => post.area === area
-    );
+    return alterecoContentCache.approved
+        .filter(post => post.area === area)
+        .map(post => ({
+            ...post,
+            description: cleanApprovedPublicDescription(post.description)
+        }));
 };
 
 /* ════════════ AUTHENTICATION — SUPABASE ════════════ */
