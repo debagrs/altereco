@@ -254,76 +254,84 @@ var MATERIAIS = {
         {
             name: "AiVets – Inteligência Artificial Veterinária",
             featured: true,
-            featuredTitle: "Inteligência Artificial Veterinária Especializada",
-            description: "AiVets é uma iniciativa brasileira que utiliza inteligência artificial (IA) para substituir o uso de animais em aulas práticas, diagnósticos simulados e treinamentos veterinários. A ferramenta foi desenvolvida para simular situações clínicas reais com respostas automáticas e interativas, permitindo que estudantes de Medicina Veterinária treinem raciocínio clínico, tomada de decisão e condutas terapêuticas sem precisar realizar testes em animais vivos ou cadáveres.",
-            tags: ["Veterinária", "IA", "Assistente"],
-            url: "#"
+            featuredTitle: "Tecnologia de apoio ao estudo e à prática veterinária",
+            description: "Plataforma brasileira de inteligência artificial especializada em Medicina Veterinária, voltada a estudantes e profissionais. Oferece apoio a raciocínio clínico, estudo, pesquisa científica conversacional e consulta a literatura veterinária. É uma tecnologia educacional e de apoio profissional; não é apresentada aqui como método substitutivo validado.",
+            tags: ["Veterinária", "IA", "Pesquisa científica"],
+            url: "https://aivets.com.br/",
+            buttonLabel: "Acessar AiVets"
         },
         {
             name: "Synthea™ – Pacientes Sintéticos para Pesquisa em Saúde",
             featured: false,
-            description: "Synthea™ é uma ferramenta de código aberto que gera dados clínicos realistas de pacientes sintéticos sem envolver animais.",
-            tags: ["Medicina", "Simulador", "Saúde Pública"],
-            url: "#"
+            description: "Simulador de população de pacientes da MITRE que gera prontuários e dados clínicos sintéticos, realistas e fictícios. Pode ser utilizado em ensino, pesquisa, desenvolvimento e testes de sistemas em saúde sem expor dados pessoais de pacientes reais.",
+            tags: ["Medicina", "Dados sintéticos", "Saúde Digital"],
+            url: "https://synthea.mitre.org/",
+            buttonLabel: "Acessar Synthea"
         },
         {
-            name: "Froggipedia",
+            name: "Froggipedia by Embibe",
             featured: false,
-            description: "Froggipedia é um aplicativo educacional premiado que permite a dissecção virtual de um sapo em realidade aumentada (RA) e 3D, substituindo totalmente o uso de animais reais em sala de aula.",
-            tags: ["Biologia", "RA", "3D", "Apple Design Award"],
-            url: "#",
-            image: "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=400&h=200&fit=crop"
+            description: "Aplicativo educacional de realidade aumentada que permite explorar o ciclo de vida, a anatomia e realizar uma dissecção virtual de sapos. Funciona como alternativa digital para atividades didáticas de anatomia que tradicionalmente podem envolver dissecção.",
+            tags: ["Biologia", "RA", "3D", "Dissecção virtual"],
+            url: "https://play.google.com/store/apps/details?id=com.embibe.froggipedia",
+            buttonLabel: "Abrir no Google Play",
+            image: "https://valianttechnosoft.com/wp-content/uploads/2020/02/ezgif-7-e517b359b04c.jpg"
         },
         {
-            name: "Organ-on-a-Chip (Microfluídica)",
-            description: "Dispositivos que mimetizam a fisiologia de órgãos humanos em microescala para testes de fármacos.",
-            tags: ["Fisiologia", "Microfluídica", "Inovação"],
-            url: "#",
-            image: "https://images.unsplash.com/photo-1579154235602-3c3756209581?auto=format&fit=crop&q=80&w=400"
+            name: "Human Organs-on-Chips – Wyss Institute",
+            description: "Dispositivos microfluídicos revestidos com células humanas vivas que reproduzem aspectos da estrutura e da função de órgãos humanos para modelagem de doenças, desenvolvimento de fármacos e pesquisa human-relevant.",
+            tags: ["Fisiologia", "Organ-on-chip", "Microfluídica", "NAMs"],
+            url: "https://wyss.harvard.edu/technology/human-organs-on-chips/",
+            buttonLabel: "Conhecer tecnologia",
+            image: "https://wyss-prod.imgix.net/app/uploads/2017/03/02152851/Human-Organs-on-Chips.jpg?auto=format%2Ccompress&crop=faces%2Centropy&fit=crop&q=50&s=8a3d0132e7e6d2eb5f454acda79f5f69&w=800"
         },
         {
-            name: "Modelos de Pele 3D Biopressa",
-            description: "Tecidos humanos produzidos via bioimpressão para testes de toxicidade e cosméticos.",
-            tags: ["Dermatologia", "Bioimpressão", "Toxicologia"],
-            url: "#",
-            image: "https://images.unsplash.com/photo-1581056771107-24ca5f033842?auto=format&fit=crop&q=80&w=400"
+            name: "EpiDerm™ – Epiderme Humana Reconstruída",
+            description: "Modelo 3D de epiderme humana reconstruída da MatTek/Sartorius utilizado em aplicações in vitro de toxicologia e avaliação de segurança. Possui ensaios aceitos em diretrizes OECD, incluindo irritação e corrosão cutânea.",
+            tags: ["Toxicologia", "Pele 3D", "OECD", "In vitro"],
+            url: "https://www.mattek.com/mattek-product/epiderm/",
+            buttonLabel: "Conhecer EpiDerm"
         },
         {
-            name: "Simulador de Paciente Humano (HPS)",
-            description: "Manequins de alta fidelidade que respondem a anestésicos e procedimentos clínicos reais.",
-            tags: ["Medicina", "Simulação Clínica", "Emergência"],
-            url: "#",
-            image: "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&q=80&w=400"
+            name: "SimMan® 3G PLUS – Simulação Clínica",
+            description: "Simulador de paciente de alta fidelidade da Laerdal para treinamento imersivo em medicina de emergência e cuidado clínico. Permite praticar tomada de decisão, comunicação em equipe e procedimentos em cenários simulados.",
+            tags: ["Medicina", "Simulação clínica", "Alta fidelidade"],
+            url: "https://laerdal.com/us/SimMan3G",
+            buttonLabel: "Conhecer simulador",
+            image: "https://laerdal.com/cdn-cgi/image/width%3D1200%2Cheight%3D630%2Cfit%3Dcrop%2Cquality%3D75%2Cformat%3Dauto/https%3A/laerdal.com/cdn-493721/globalassets/images--blocks/products/training-products/simman-3g-plus/simman-3g-plus-listing-image.jpg"
         }
     ],
     escolas: [
         {
-            name: "Eco-Quest: O Jogo do Meio Ambiente",
-            description: "Jogo educativo que ensina ecologia e ética animal através de gamificação.",
-            tags: ["Ecologia", "Gamificação", "Escolas"],
-            url: "#",
-            image: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&q=80&w=400"
+            name: "Eco Quest Game",
+            description: "Jogo digital criado por estudantes do 6º ano no Scratch a partir de conteúdos de Ciências sobre fauna, flora, impactos antrópicos e preservação de ecossistemas. O artigo descreve o processo de criação e uso do jogo como objeto de aprendizagem.",
+            tags: ["Ecologia", "Gamificação", "Educação Básica", "Scratch"],
+            url: "https://atenaeditora.com.br/catalogo/post/eco-quest-game",
+            buttonLabel: "Ver publicação",
+            image: "https://cdn.atenaeditora.com.br/atenaeditora/documentos/ebook_imagem/202012/cfdadc57e35099b5893c6ce8e42dc7ce331bfe95.PNG"
         },
         {
-            name: "Atlas Digital de Zoologia",
-            description: "Plataforma visual que permite explorar a anatomia comparada de forma interativa.",
-            tags: ["Zoologia", "Ensino Médio", "Visualização"],
-            url: "#",
-            image: "https://images.unsplash.com/photo-1532094349884-543bb117a44a?auto=format&fit=crop&q=80&w=400"
+            name: "LabXchange – 3D Virtual Frog Dissection Lab",
+            description: "Simulação 3D gratuita do LabXchange/Harvard para explorar anatomia de sapos, aprender técnicas de dissecção e relacionar estrutura e função sem a necessidade de um espécime animal real.",
+            tags: ["Biologia", "Dissecção virtual", "3D", "Educação Básica"],
+            url: "https://about.labxchange.org/sim-landing-page/3d-virtual-frog-dissection-lab",
+            buttonLabel: "Abrir simulação",
+            image: "https://cdn.prod.website-files.com/642c503cbd04708343968443/69cebdb4274ef6dcf1ef1379_Screenshot%202026-04-02%20at%202.45.57%E2%80%AFPM.png"
         },
         {
             name: "Podcast Biologia In Situ",
-            description: "Podcast de divulgação científica que aproxima o público da biologia e do processo científico.",
-            tags: ["Biologia", "Bioética", "PodCast"],
-            url: "#",
-            image: "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=400&h=200&fit=crop&q=80"
+            description: "Podcast brasileiro de divulgação científica em Biologia que aproxima o conhecimento científico do cotidiano e do público por meio de episódios, entrevistas e séries temáticas.",
+            tags: ["Biologia", "Divulgação científica", "Podcast"],
+            url: "https://biologiainsitu.com.br/",
+            buttonLabel: "Ouvir e acessar",
+            image: "https://i.scdn.co/image/ab6765630000ba8ac6659946fecb91e59f73d1f1"
         },
         {
             name: "AR3D Arthropoda",
-            description: "O AR3D é um aplicativo gratuito de realidade aumentada desenvolvido para o ensino de Biologia.",
+            description: "Aplicativo gratuito de realidade aumentada criado no ProfBio/UFPA para o ensino de artrópodes na Educação Básica. Combina modelos virtuais 3D de animais com o ambiente real em dispositivos Android.",
             tags: ["Artrópodes", "RA", "3D", "Biologia"],
-            url: "#",
-            image: "https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=400&h=200&fit=crop"
+            url: "https://ufpa.br/alunos-da-ufpa-sao-premiados-em-evento-nacional-de-ensino-de-biologia/",
+            buttonLabel: "Conhecer projeto"
         }
     ]
 };
