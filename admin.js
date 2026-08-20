@@ -1049,7 +1049,8 @@ function renderPendingCard(post) {
 const alterecoCuratorAIState = {
     runId: null,
     lastResearch: null,
-    lastDraft: null
+    lastDraft: null,
+    candidates: []
 };
 
 async function invokeAICurator(payload) {
@@ -1177,6 +1178,7 @@ window.runCuratorAIResearch = async function() {
         alterecoCuratorAIState.runId = data.runId;
         alterecoCuratorAIState.lastResearch = data;
         alterecoCuratorAIState.lastDraft = null;
+        alterecoCuratorAIState.candidates = [];
 
         if (statusEl) statusEl.textContent = `${data.model || 'Pesquisa direta'} · pesquisa concluída`;
         if (resultEl) {
@@ -1194,7 +1196,7 @@ window.runCuratorAIResearch = async function() {
                     ${Array.isArray(data.searchQueries) && data.searchQueries.length ? `<details style="margin-top:1rem;"><summary style="cursor:pointer; font-weight:700; color:var(--primary-navy);">Consultas que a IA realizou</summary><div style="padding:.8rem 0; color:var(--text-gray);">${data.searchQueries.map(q => `<div>• ${escapeHtml(q)}</div>`).join('')}</div></details>` : ''}
                     ${data.searchEntryPoint ? `<div class="gemini-search-entry" style="margin-top:1rem; overflow:auto;">${data.searchEntryPoint}</div>` : ''}
                     <div style="display:flex; gap:.7rem; flex-wrap:wrap; margin-top:1.4rem;">
-                        <button onclick="createCuratorAIDraft()" style="background:var(--accent-orange); color:var(--primary-navy); border:none; padding:.95rem 1.2rem; border-radius:12px; font-weight:800; cursor:pointer; display:inline-flex; gap:.45rem; align-items:center;"><i data-lucide="file-plus-2" style="width:18px;"></i> Criar conteúdo a partir desta pesquisa</button>
+                        <button onclick="prepareAllCuratorAIContent()" style="background:var(--accent-orange); color:var(--primary-navy); border:none; padding:.95rem 1.2rem; border-radius:12px; font-weight:800; cursor:pointer; display:inline-flex; gap:.45rem; align-items:center;"><i data-lucide="files" style="width:18px;"></i> Preparar todos os ${Array.isArray(data.sources) ? data.sources.length : 0} achados para publicação</button>
                         <button onclick="document.getElementById('curator-ai-query').focus()" style="background:white; color:var(--primary-navy); border:1px solid rgba(128,128,128,.2); padding:.95rem 1.2rem; border-radius:12px; font-weight:800; cursor:pointer;">Refinar busca</button>
                     </div>
                     <div id="curator-ai-draft" style="margin-top:1.3rem;"></div>
@@ -1213,63 +1215,146 @@ window.runCuratorAIResearch = async function() {
     }
 };
 
-window.createCuratorAIDraft = async function() {
+function renderCuratorAICandidate(candidate) {
+    const index = Number(candidate.source_index);
+    const url = normalizeExternalUrl(candidate.external_url);
+    const image = normalizeExternalUrl(candidate.image_url);
+    const existing = candidate.existing || null;
+    const disabled = Boolean(existing);
+    const statusLabel = existing
+        ? (existing.status === 'approved' ? 'JÁ PUBLICADO' : 'JÁ NA FILA')
+        : 'PRONTO PARA CURADORIA';
+
+    return `
+    <article class="curator-ai-candidate ${disabled ? 'is-existing' : ''}" data-source-index="${index}">
+        <div class="curator-ai-candidate-select">
+            <label>
+                <input class="curator-ai-source-check" type="checkbox" value="${index}" ${disabled ? 'disabled' : 'checked'} onchange="updateCuratorAISelectionCount()">
+                <span>${statusLabel}</span>
+            </label>
+        </div>
+        ${image ? `
+            <div class="curator-ai-candidate-image">
+                <img src="${escapeHtml(image)}" alt="" loading="lazy" onerror="this.parentElement.remove()">
+                <small>Imagem recuperada da própria fonte</small>
+            </div>` : ''}
+        <div class="curator-ai-candidate-body">
+            <div class="page-badge" style="background:var(--bg-light); color:var(--primary-navy); margin-bottom:.65rem;">${escapeHtml(candidate.area || 'publicacoes')}</div>
+            <h3>${escapeHtml(candidate.title || '')}</h3>
+            <p class="curator-ai-candidate-meta">${escapeHtml(candidate.author_name || '')}</p>
+            <p class="curator-ai-candidate-summary">${escapeHtml(candidate.description || '')}</p>
+            <div class="curator-ai-candidate-footer">
+                ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Abrir fonte ↗</a>` : '<span>Sem link verificável</span>'}
+                ${!disabled ? `<button type="button" onclick="submitCuratorAISources([${index}])">Enviar só este</button>` : `<span class="curator-ai-existing-note">${escapeHtml(existing?.title || '')}</span>`}
+            </div>
+        </div>
+    </article>`;
+}
+
+window.updateCuratorAISelectionCount = function() {
+    const checks = [...document.querySelectorAll('.curator-ai-source-check:not(:disabled)')];
+    const selected = checks.filter(check => check.checked).length;
+    const countEl = document.getElementById('curator-ai-selected-count');
+    if (countEl) countEl.textContent = `${selected} selecionado${selected === 1 ? '' : 's'}`;
+    const submitBtn = document.getElementById('curator-ai-submit-selected');
+    if (submitBtn) {
+        submitBtn.disabled = selected === 0;
+        submitBtn.textContent = selected ? `Enviar ${selected} para aprovação` : 'Selecione ao menos um';
+    }
+};
+
+window.toggleAllCuratorAICandidates = function(checked) {
+    document.querySelectorAll('.curator-ai-source-check:not(:disabled)').forEach(check => {
+        check.checked = Boolean(checked);
+    });
+    updateCuratorAISelectionCount();
+};
+
+window.prepareAllCuratorAIContent = async function() {
     const runId = alterecoCuratorAIState.runId;
     const draftEl = document.getElementById('curator-ai-draft');
     const statusEl = document.getElementById('curator-ai-status');
     if (!runId || !draftEl) return;
 
-    draftEl.innerHTML = `<div style="padding:1.2rem; border-radius:14px; background:white; border:1px solid rgba(128,128,128,.15); color:var(--text-gray);">Transformando a pesquisa em um candidato de conteúdo verificável...</div>`;
-    if (statusEl) statusEl.textContent = 'Criando rascunho editorial...';
+    draftEl.innerHTML = `<div style="padding:1.2rem; border-radius:14px; background:white; border:1px solid rgba(128,128,128,.15); color:var(--text-gray);"><strong>Preparando todos os achados.</strong><br>Cada fonte vai virar um candidato independente, com resumo, link e imagem apenas quando a própria fonte fornecer uma.</div>`;
+    if (statusEl) statusEl.textContent = 'Preparando todos os achados para curadoria...';
 
     try {
-        const data = await invokeAICurator({ action: 'draft', runId });
-        const draft = data.draft || {};
-        alterecoCuratorAIState.lastDraft = draft;
-        if (statusEl) statusEl.textContent = `${data.model || 'Gemini'} · rascunho pronto para revisão`;
+        const data = await invokeAICurator({ action: 'prepare_sources', runId });
+        const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+        alterecoCuratorAIState.candidates = candidates;
+        const available = candidates.filter(candidate => !candidate.existing).length;
+        const existing = candidates.length - available;
+        if (statusEl) statusEl.textContent = `${candidates.length} candidatos preparados · ${available} novos${existing ? ` · ${existing} já cadastrados` : ''}`;
 
         draftEl.innerHTML = `
-            <div style="padding:1.4rem; border-radius:16px; background:white; border:2px solid rgba(250,205,95,.7);">
-                <div class="page-badge" style="background:var(--accent-orange); color:var(--primary-navy); margin-bottom:.7rem;">RASCUNHO · NÃO PUBLICADO</div>
-                <h3 style="color:var(--primary-navy); margin-bottom:.5rem;">${escapeHtml(draft.title || '')}</h3>
-                <p style="color:var(--text-gray); line-height:1.65;">${escapeHtml(draft.description || '')}</p>
-                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.7rem; margin-top:1rem; font-size:.9rem; color:var(--text-gray);">
-                    <div><strong>Autor/instituição:</strong><br>${escapeHtml(draft.author_name || '')}</div>
-                    <div><strong>Área:</strong><br>${escapeHtml(draft.area || '')}</div>
-                    <div><strong>Tags:</strong><br>${escapeHtml(Array.isArray(draft.tags) ? draft.tags.join(', ') : '')}</div>
+            <section class="curator-ai-bulk-panel">
+                <div class="curator-ai-bulk-head">
+                    <div>
+                        <div class="page-badge" style="background:var(--accent-orange); color:var(--primary-navy); margin-bottom:.55rem;">TODOS OS ACHADOS · NÃO PUBLICADOS</div>
+                        <h3>${candidates.length} possibilidades de conteúdo</h3>
+                        <p>Cada resultado é independente. Você pode enviar todos, desmarcar os irrelevantes ou mandar um por vez. Nenhuma imagem é inventada: só aparece imagem recuperada da fonte original.</p>
+                    </div>
+                    <div class="curator-ai-bulk-actions">
+                        <label><input type="checkbox" checked onchange="toggleAllCuratorAICandidates(this.checked)"> Selecionar todos os novos</label>
+                        <strong id="curator-ai-selected-count">${available} selecionados</strong>
+                    </div>
                 </div>
-                <div style="margin-top:1rem; padding:1rem; border-radius:12px; background:var(--bg-light); color:var(--text-gray); line-height:1.6;"><strong>Texto expandido</strong><br>${escapeHtml(draft.long_description || '')}</div>
-                <div style="margin-top:1rem; font-size:.88rem; color:var(--text-gray);"><strong>Por que esta fonte:</strong> ${escapeHtml(draft.why_this_source || '')}</div>
-                <div style="margin-top:.5rem; font-size:.88rem; color:var(--text-gray);"><strong>Checagem:</strong> ${escapeHtml(draft.verification_note || '')}</div>
-                ${normalizeExternalUrl(draft.external_url) ? `<a href="${escapeHtml(normalizeExternalUrl(draft.external_url))}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:1rem; color:var(--accent-purple); font-weight:800;">Abrir fonte principal ↗</a>` : ''}
-                <div style="display:flex; gap:.7rem; flex-wrap:wrap; margin-top:1.2rem;">
-                    <button onclick="submitCuratorDraftForApproval()" style="background:var(--accent-orange); color:var(--primary-navy); border:none; padding:.95rem 1.15rem; border-radius:12px; font-weight:800; cursor:pointer;">Enviar para fila de aprovação</button>
-                    <button onclick="useCuratorDraftInNewContent()" style="background:var(--primary-navy); color:white; border:none; padding:.95rem 1.15rem; border-radius:12px; font-weight:800; cursor:pointer;">Editar antes de enviar</button>
-                    <button onclick="createCuratorAIDraft()" style="background:var(--bg-light); color:var(--primary-navy); border:1px solid rgba(128,128,128,.2); padding:.95rem 1.15rem; border-radius:12px; font-weight:800; cursor:pointer;">Gerar outra versão</button>
+
+                <div class="curator-ai-candidates-grid">
+                    ${candidates.map(renderCuratorAICandidate).join('')}
                 </div>
-            </div>`;
+
+                <div class="curator-ai-submit-bar">
+                    <div>
+                        <strong>Próxima etapa: sua curadoria.</strong>
+                        <span>Os selecionados entram como “pendentes”; só vão ao site quando você aprovar.</span>
+                    </div>
+                    <button id="curator-ai-submit-selected" type="button" onclick="submitCuratorAISources()" ${available ? '' : 'disabled'}>Enviar ${available} para aprovação</button>
+                </div>
+            </section>`;
+        updateCuratorAISelectionCount();
+        if (window.lucide) window.lucide.createIcons();
     } catch (error) {
         console.error(error);
-        if (statusEl) statusEl.textContent = 'ECO Curadoria · erro no rascunho';
+        if (statusEl) statusEl.textContent = 'ECO Curadoria · erro ao preparar achados';
         draftEl.innerHTML = `<div style="padding:1rem; border-radius:12px; background:#FFF0F0; color:#A22727;">${escapeHtml(error.message)}</div>`;
     }
 };
 
-
-window.submitCuratorDraftForApproval = async function() {
+window.submitCuratorAISources = async function(sourceIndexes = null) {
     const runId = alterecoCuratorAIState.runId;
     if (!runId) return;
-    if (!confirm('Enviar este rascunho para a fila de aprovação? Ele NÃO será publicado ainda.')) return;
+
+    let indexes = sourceIndexes;
+    if (!Array.isArray(indexes)) {
+        indexes = [...document.querySelectorAll('.curator-ai-source-check:checked:not(:disabled)')]
+            .map(check => Number(check.value))
+            .filter(Number.isInteger);
+    }
+    if (!indexes.length) {
+        alert('Selecione pelo menos um achado.');
+        return;
+    }
+
+    const label = indexes.length === 1 ? 'este conteúdo' : `estes ${indexes.length} conteúdos`;
+    if (!confirm(`Enviar ${label} para a fila de aprovação? Eles NÃO serão publicados automaticamente.`)) return;
 
     const statusEl = document.getElementById('curator-ai-status');
     try {
-        if (statusEl) statusEl.textContent = 'Enviando rascunho para aprovação...';
-        const data = await invokeAICurator({ action: 'submit_draft', runId });
-        if (statusEl) statusEl.textContent = 'Rascunho enviado · aguardando aprovação humana';
-        alert(data.alreadySubmitted
-            ? 'Este conteúdo já estava na fila de aprovação.'
-            : 'Conteúdo enviado para Curadoria. Ele só aparecerá no site depois que você clicar em Aprovar.');
-        await renderAdminDashboard('pending');
+        if (statusEl) statusEl.textContent = `Enviando ${indexes.length} conteúdo${indexes.length === 1 ? '' : 's'} para aprovação...`;
+        const data = await invokeAICurator({ action: 'submit_sources', runId, sourceIndexes: indexes });
+        const created = Array.isArray(data.created) ? data.created : [];
+        const skipped = Array.isArray(data.skipped) ? data.skipped : [];
+        if (statusEl) statusEl.textContent = `${created.length} enviado${created.length === 1 ? '' : 's'} · aguardando aprovação humana`;
+
+        const skippedText = skipped.length
+            ? `\n\n${skipped.length} não foram duplicados porque já estavam cadastrados ou apresentaram impedimento.`
+            : '';
+        alert(`${created.length} conteúdo${created.length === 1 ? '' : 's'} enviado${created.length === 1 ? '' : 's'} para a Curadoria.${skippedText}\n\nAgora você pode revisar resumo, link e imagem e então clicar em Aprovar.`);
+
+        if (created.length) await renderAdminDashboard('pending');
+        else await prepareAllCuratorAIContent();
     } catch (error) {
         console.error(error);
         if (statusEl) statusEl.textContent = 'ECO Curadoria · erro ao enviar';
@@ -1277,28 +1362,9 @@ window.submitCuratorDraftForApproval = async function() {
     }
 };
 
-window.useCuratorDraftInNewContent = async function() {
-    const draft = alterecoCuratorAIState.lastDraft;
-    if (!draft) return;
+// Compatibilidade com pesquisas salvas da versão anterior.
+window.createCuratorAIDraft = window.prepareAllCuratorAIContent;
 
-    await renderAdminDashboard('new');
-
-    const fill = (id, value) => {
-        const el = document.getElementById(id);
-        if (el) el.value = value || '';
-    };
-
-    fill('man-title', draft.title);
-    fill('man-author', draft.author_name);
-    fill('man-area', normalizeContentArea(draft.area));
-    fill('man-tags', Array.isArray(draft.tags) ? draft.tags.join(', ') : '');
-    fill('man-desc', draft.description);
-    fill('man-long-desc', draft.long_description);
-    fill('man-link', normalizeExternalUrl(draft.external_url) || '');
-
-    const form = document.getElementById('man-title');
-    form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-};
 
 window.loadCuratorAIHistory = async function() {
     const historyEl = document.getElementById('curator-ai-history');
@@ -1345,6 +1411,7 @@ window.restoreCuratorAIRun = function(id) {
     alterecoCuratorAIState.runId = run.id;
     alterecoCuratorAIState.lastResearch = run;
     alterecoCuratorAIState.lastDraft = run.draft || null;
+    alterecoCuratorAIState.candidates = [];
 
     if (resultEl) {
         resultEl.innerHTML = `
@@ -1352,7 +1419,7 @@ window.restoreCuratorAIRun = function(id) {
                 <h3 style="color:var(--primary-navy); margin-bottom:1rem;">Pesquisa recuperada</h3>
                 <div style="line-height:1.7; color:var(--text-gray);">${formatCuratorAIText(run.answer || '')}</div>
                 <div style="margin-top:1.2rem;"><h4 style="color:var(--primary-navy);">Fontes</h4>${renderCuratorSources(run.sources)}</div>
-                <button onclick="createCuratorAIDraft()" style="margin-top:1rem; background:var(--accent-orange); color:var(--primary-navy); border:none; padding:.9rem 1.1rem; border-radius:12px; font-weight:800; cursor:pointer;">Criar novo rascunho desta pesquisa</button>
+                <button onclick="prepareAllCuratorAIContent()" style="margin-top:1rem; background:var(--accent-orange); color:var(--primary-navy); border:none; padding:.9rem 1.1rem; border-radius:12px; font-weight:800; cursor:pointer;">Preparar todos os achados desta pesquisa</button>
                 <div id="curator-ai-draft" style="margin-top:1rem;"></div>
             </article>`;
     }
