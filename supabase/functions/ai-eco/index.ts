@@ -63,6 +63,7 @@ type CuratorSource = {
   authors?: string;
   doi?: string;
   type?: string;
+  image_url?: string | null;
 };
 
 function json(data: unknown, status = 200) {
@@ -158,12 +159,85 @@ async function fetchTextSafe(url: string) {
   try {
     const response = await fetch(url, {
       headers: { "Accept": "text/html,application/xhtml+xml", "User-Agent": "Mozilla/5.0 AlterECO-Curadoria/1.0" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(6500),
     });
     if (!response.ok) return "";
     return await response.text();
   } catch (_) {
     return "";
   }
+}
+
+function abstractFromInvertedIndex(index: Record<string, number[]> | null | undefined) {
+  if (!index || typeof index !== "object") return "";
+  const words: Array<{ word: string; pos: number }> = [];
+  for (const [word, positions] of Object.entries(index)) {
+    if (!Array.isArray(positions)) continue;
+    for (const pos of positions) words.push({ word, pos: Number(pos) });
+  }
+  return words
+    .filter((item) => Number.isFinite(item.pos))
+    .sort((a, b) => a.pos - b.pos)
+    .map((item) => item.word)
+    .join(" ")
+    .slice(0, 1100);
+}
+
+function getMetaContent(html: string, keys: string[]) {
+  for (const key of keys) {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const patterns = [
+      new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]+content=["']([^"']+)["']`, "i"),
+      new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${escaped}["']`, "i"),
+    ];
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match?.[1]) return stripHtml(match[1]);
+    }
+  }
+  return "";
+}
+
+function normalizeImageUrl(value: string, pageUrl: string) {
+  if (!value) return null;
+  try {
+    const resolved = new URL(value, pageUrl).toString();
+    if (!/^https?:\/\//i.test(resolved)) return null;
+    const lower = resolved.toLowerCase();
+    if (/placeholder|spacer|sprite|favicon|logo(?:[._-]|$)|avatar/.test(lower)) return null;
+    return resolved;
+  } catch (_) {
+    return null;
+  }
+}
+
+function extractPageMeta(html: string, pageUrl: string) {
+  if (!html) return { description: "", image_url: null as string | null };
+  const description = getMetaContent(html, ["description", "og:description", "twitter:description"]);
+  const imageRaw = getMetaContent(html, ["og:image", "og:image:url", "twitter:image", "twitter:image:src"]);
+  return {
+    description: description.slice(0, 1100),
+    image_url: normalizeImageUrl(imageRaw, pageUrl),
+  };
+}
+
+async function enrichSource(source: CuratorSource): Promise<CuratorSource> {
+  const hasGoodSnippet = String(source.snippet || "").trim().length >= 120;
+  if (hasGoodSnippet && source.image_url) return source;
+  const html = await fetchTextSafe(source.url);
+  if (!html) return source;
+  const meta = extractPageMeta(html, source.url);
+  return {
+    ...source,
+    snippet: hasGoodSnippet ? source.snippet : (meta.description || source.snippet || ""),
+    image_url: source.image_url || meta.image_url,
+  };
+}
+
+async function enrichSources(sources: CuratorSource[]) {
+  const enriched = await Promise.allSettled(sources.map(enrichSource));
+  return enriched.map((result, index) => result.status === "fulfilled" ? result.value : sources[index]);
 }
 
 async function searchOpenAlex(query: string): Promise<CuratorSource[]> {
@@ -185,7 +259,7 @@ async function searchOpenAlex(query: string): Promise<CuratorSource[]> {
       authors,
       doi,
       type: item.type || "article",
-      snippet: [item?.primary_location?.source?.display_name, item.publication_year].filter(Boolean).join(" · "),
+      snippet: abstractFromInvertedIndex(item.abstract_inverted_index) || [item?.primary_location?.source?.display_name, item.publication_year].filter(Boolean).join(" · "),
     };
   }).filter((s: CuratorSource) => s.url && s.title);
 }
@@ -231,7 +305,7 @@ async function searchCrossref(query: string): Promise<CuratorSource[]> {
       authors,
       doi,
       type: item.type || "article",
-      snippet: [Array.isArray(item["container-title"]) ? item["container-title"][0] : "", item.publisher].filter(Boolean).join(" · "),
+      snippet: stripHtml(String(item.abstract || "")) || [Array.isArray(item["container-title"]) ? item["container-title"][0] : "", item.publisher].filter(Boolean).join(" · "),
     };
   }).filter((s: CuratorSource) => s.url && s.title);
 }
@@ -301,7 +375,8 @@ async function collectTrustedSources(query: string, focus: string) {
   if (["geral", "interniche"].includes(focus)) tasks.push(searchInterniche(query));
   const settled = await Promise.allSettled(tasks);
   const merged = settled.flatMap((result) => result.status === "fulfilled" ? result.value : []);
-  return dedupeSources(merged).slice(0, 24);
+  const deduped = dedupeSources(merged).slice(0, 24);
+  return await enrichSources(deduped);
 }
 
 function extractText(payload: any) {
@@ -386,7 +461,7 @@ async function research(userId: string, query: string, focus: string) {
         { googleSearch: true },
       );
       const grounding = extractGrounding(grounded.payload);
-      sources = dedupeSources([...grounding.sources, ...directSources]).slice(0, 24);
+      sources = await enrichSources(dedupeSources([...grounding.sources, ...directSources]).slice(0, 24));
       answer = grounded.text;
       model = grounded.model;
       searchQueries = grounding.searchQueries;
@@ -432,20 +507,170 @@ function cleanJsonText(text: string) {
   return text.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
 }
 
+function areaForSource(run: any, source: CuratorSource) {
+  const hay = normalizeText(`${source.title} ${source.source} ${source.type || ""} ${source.url}`);
+  if (source.type === "database" || /database|base de dados|repositorio|repository/.test(hay)) return "bases-dados";
+  if (/resolu|legisla|norma|portaria|decreto|lei |regulat|test guideline|guideline|tg \d/.test(hay)) return "legislacao";
+  if (/inter­niche|interniche/.test(hay)) return source.type === "database" ? "bases-dados" : "materiais";
+  if (run.focus === "metodos" && /method|metodo|nam|organ-on|organoid|in vitro|in silico|replacement/.test(hay)) return "metodos";
+  if (["article", "journal-article", "book", "book-chapter", "review", "posted-content", "proceedings-article"].includes(String(source.type || "").toLowerCase())) return "publicacoes";
+  if (run.focus === "legislacao" || run.focus === "concea") return "legislacao";
+  if (run.focus === "interniche") return "materiais";
+  return "publicacoes";
+}
+
+function cleanSummary(source: CuratorSource, run: any) {
+  const raw = stripHtml(String(source.snippet || "")).replace(/\s+/g, " ").trim();
+  if (raw.length >= 45) return raw.slice(0, 760);
+  const meta = [source.source, source.year, source.authors].filter(Boolean).join(" · ");
+  return `Registro localizado na pesquisa “${run.query}”${meta ? ` em ${meta}` : ""}. Abra a fonte original para conferir o conteúdo completo e os metadados antes da aprovação.`;
+}
+
+function sourceToDraft(run: any, source: CuratorSource, sourceIndex = 0) {
+  const description = cleanSummary(source, run);
+  const tags = [
+    run.focus,
+    source.source,
+    source.year ? String(source.year) : "",
+    source.type || "",
+  ].filter(Boolean).map(String).map((tag) => tag.trim()).filter(Boolean).slice(0, 10);
+
+  return {
+    source_index: sourceIndex,
+    title: String(source.title || `Achado ${sourceIndex + 1}`).trim(),
+    author_name: String(source.authors || source.source || "Fonte institucional/científica").trim(),
+    area: areaForSource(run, source),
+    tags,
+    description,
+    long_description: description,
+    external_url: String(source.url || "").trim(),
+    image_url: source.image_url || null,
+    why_this_source: `Fonte recuperada diretamente de ${source.source || "repositório científico/institucional"}, com link verificável.`,
+    verification_note: source.snippet
+      ? "Resumo baseado em metadados/descrição recuperados da própria fonte. Conferir o documento original antes de aprovar."
+      : "A fonte foi localizada, mas não forneceu resumo estruturado. Conferir o documento original e complementar a descrição antes de aprovar.",
+    source: {
+      source: source.source,
+      year: source.year || null,
+      authors: source.authors || "",
+      doi: source.doi || "",
+      type: source.type || "",
+      image_url: source.image_url || null,
+    },
+  };
+}
+
 function fallbackDraftFromSource(run: any) {
   const source = Array.isArray(run.sources) ? run.sources[0] : null;
   if (!source) throw new Error("Não há fonte recuperada para criar um rascunho.");
-  return {
-    title: source.title,
-    author_name: source.authors || source.source || "Fonte institucional/científica",
-    area: run.focus === "legislacao" || run.focus === "concea" ? "legislacao" : run.focus === "interniche" ? "materiais" : run.focus === "metodos" ? "metodos" : "publicacoes",
-    tags: [run.focus, source.source].filter(Boolean),
-    description: source.snippet ? source.snippet.slice(0, 700) : `Conteúdo recuperado de ${source.source} para revisão curatorial no AlterECO.`,
-    long_description: source.snippet || `Registro localizado durante a pesquisa “${run.query}”. A curadoria deve abrir a fonte original e complementar a contextualização antes da aprovação.`,
-    external_url: source.url,
-    why_this_source: `Fonte recuperada diretamente de ${source.source}, com link verificável.`,
-    verification_note: "Rascunho automático sem síntese Gemini. Conferir autoria, data, escopo e aderência antes de aprovar.",
-  };
+  return sourceToDraft(run, source, 0);
+}
+
+async function prepareSources(userId: string, runId: string) {
+  const { data: run, error } = await admin
+    .from("curator_ai_runs")
+    .select("id, user_id, query, focus, sources")
+    .eq("id", runId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!run || run.user_id !== userId) throw new Error("Pesquisa da curadoria não encontrada.");
+
+  const sources: CuratorSource[] = Array.isArray(run.sources) ? run.sources : [];
+  if (!sources.length) throw new Error("Esta pesquisa não possui fontes para preparar.");
+
+  const urls = sources.map((source) => String(source.url || "")).filter(Boolean);
+  let existing: any[] = [];
+  if (urls.length) {
+    const { data, error: existingError } = await admin
+      .from("content_items")
+      .select("id, title, status, external_url")
+      .in("external_url", urls)
+      .in("status", ["pending", "approved"]);
+    if (existingError) throw existingError;
+    existing = data || [];
+  }
+  const existingMap = new Map(existing.map((item: any) => [String(item.external_url), item]));
+  const candidates = sources.map((source, index) => ({
+    ...sourceToDraft(run, source, index),
+    existing: existingMap.get(String(source.url || "")) || null,
+  }));
+
+  return { runId, candidates };
+}
+
+async function submitSources(userId: string, runId: string, requestedIndexes: unknown) {
+  const { data: run, error } = await admin
+    .from("curator_ai_runs")
+    .select("id, user_id, query, focus, sources, model")
+    .eq("id", runId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!run || run.user_id !== userId) throw new Error("Pesquisa da curadoria não encontrada.");
+
+  const sources: CuratorSource[] = Array.isArray(run.sources) ? run.sources : [];
+  const indexes = Array.isArray(requestedIndexes)
+    ? [...new Set(requestedIndexes.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0 && value < sources.length))]
+    : sources.map((_, index) => index);
+  if (!indexes.length) throw new Error("Selecione pelo menos um achado para enviar à curadoria.");
+
+  const selected = indexes.map((index) => ({ index, source: sources[index] })).filter((item) => item.source?.url);
+  const urls = selected.map((item) => String(item.source.url));
+  const { data: existing, error: duplicateError } = await admin
+    .from("content_items")
+    .select("id, title, status, external_url")
+    .in("external_url", urls)
+    .in("status", ["pending", "approved"]);
+  if (duplicateError) throw duplicateError;
+  const existingMap = new Map<string, any>((existing || []).map((item: any) => [String(item.external_url), item]));
+
+  const created: any[] = [];
+  const skipped: any[] = [];
+
+  for (const { index, source } of selected) {
+    const duplicate = existingMap.get(String(source.url));
+    if (duplicate) {
+      skipped.push({ sourceIndex: index, title: source.title, reason: duplicate.status === "approved" ? "já publicado" : "já na fila de aprovação", contentId: duplicate.id });
+      continue;
+    }
+
+    const draft = sourceToDraft(run, source, index);
+    const payload = {
+      title: draft.title,
+      author_name: draft.author_name,
+      area: draft.area,
+      tags: draft.tags,
+      description: draft.description,
+      long_description: draft.long_description || null,
+      external_url: draft.external_url,
+      image_url: draft.image_url || null,
+      status: "pending",
+      submitted_by: userId,
+      curator_ai_run_id: runId,
+      source_type: "ai_curator",
+      source_metadata: {
+        query: run.query,
+        focus: run.focus,
+        model: run.model,
+        source_index: index,
+        source: draft.source,
+        why_this_source: draft.why_this_source,
+      },
+      verification_note: draft.verification_note,
+    };
+
+    const { data: item, error: insertError } = await admin
+      .from("content_items")
+      .insert(payload)
+      .select("id, title, external_url, status")
+      .single();
+    if (insertError) {
+      skipped.push({ sourceIndex: index, title: source.title, reason: insertError.message });
+      continue;
+    }
+    created.push({ ...item, sourceIndex: index });
+  }
+
+  return { runId, created, skipped, requested: indexes.length };
 }
 
 async function createDraft(userId: string, runId: string, extraInstruction = "") {
@@ -507,7 +732,7 @@ async function submitDraft(userId: string, runId: string) {
     description: String(draft.description || "").trim(),
     long_description: String(draft.long_description || "").trim() || null,
     external_url: externalUrl,
-    image_url: null,
+    image_url: draft.image_url || null,
     status: "pending",
     submitted_by: userId,
     curator_ai_run_id: runId,
@@ -555,6 +780,16 @@ Deno.serve(async (req) => {
       const runId = String(body?.runId || "").trim();
       if (!runId) return json({ error: "runId obrigatório." }, 400);
       return json(await createDraft(user.id, runId, String(body?.instruction || "").trim().slice(0, 1200)));
+    }
+    if (action === "prepare_sources") {
+      const runId = String(body?.runId || "").trim();
+      if (!runId) return json({ error: "runId obrigatório." }, 400);
+      return json(await prepareSources(user.id, runId));
+    }
+    if (action === "submit_sources") {
+      const runId = String(body?.runId || "").trim();
+      if (!runId) return json({ error: "runId obrigatório." }, 400);
+      return json(await submitSources(user.id, runId, body?.sourceIndexes));
     }
     if (action === "submit_draft") {
       const runId = String(body?.runId || "").trim();
