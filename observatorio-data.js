@@ -108,11 +108,105 @@ window.OBSERVATORIO_DB = {
 
     pesquisa: {
         grupos: [
-            { area: "Bem-estar Animal", total: 47, fonte: "CNPq/DGP 2023" },
-            { area: "Direito Animal", total: 22, fonte: "CNPq/DGP 2023" },
-            { area: "Ética e Senciência", total: 20, fonte: "CNPq/DGP 2023" }
+            { area: "Bem-estar Animal", total: 47, fonte: "levantamento AlterECO a partir do DGP/CNPq 2023" },
+            { area: "Direito Animal", total: 22, fonte: "levantamento AlterECO a partir do DGP/CNPq 2023" },
+            { area: "Ética e Senciência", total: 20, fonte: "levantamento AlterECO a partir do DGP/CNPq 2023" }
         ],
-        publicacoes: { tese_dissertacao: "~1.2k", periodo: "2013-2023", fonte: "CAPES/Banco de Teses", link: "https://catalogodeteses.capes.gov.br/" }
+        grupos_catalogo: {
+            "Bem-estar Animal": [
+                {
+                    nome: "Laboratório de Bem-estar Animal (LABEA)",
+                    instituicao: "Universidade Federal do Paraná (UFPR)",
+                    uf: "PR",
+                    fonte: "Página institucional do LABEA / consulta CNPq",
+                    link: "http://dgp.cnpq.br/buscaoperacional/detalhepesq.jsp?pesq=0305722196403558"
+                },
+                {
+                    nome: "Laboratório de Etologia Aplicada e Bem-Estar Animal (LETA)",
+                    instituicao: "Universidade Federal de Santa Catarina (UFSC)",
+                    uf: "SC",
+                    fonte: "Associação Brasileira de Zootecnistas / DGP-CNPq",
+                    link: "https://abz.org.br/grupos-pesquisa-zootecnia/"
+                },
+                {
+                    nome: "Saúde, diagnóstico e bem-estar animal na Fronteira Sul (SADBEM)",
+                    instituicao: "Universidade Federal da Fronteira Sul (UFFS)",
+                    uf: "SC",
+                    lider: "Vanessa Silva Retuci",
+                    fonte: "UFFS · grupos cadastrados no DGP/CNPq",
+                    link: "https://www.uffs.edu.br/uffs/grupos-de-pesquisa/grupos-de-pesquisa-cadastrados-no-diretorio-do-cnpq"
+                },
+                {
+                    nome: "Grupo de Pesquisa em Produção e Bem-Estar Animal",
+                    instituicao: "Universidade Regional do Noroeste do Estado do Rio Grande do Sul (UNIJUÍ)",
+                    uf: "RS",
+                    fonte: "UNIJUÍ",
+                    link: "https://www.unijui.edu.br/comunica/pesquisa?start=20"
+                },
+                {
+                    nome: "Instalações, Ambiência e Bem-Estar Animal (BAIA)",
+                    instituicao: "Universidade Estadual Paulista (UNESP)",
+                    uf: "SP",
+                    fonte: "Associação Brasileira de Zootecnistas / DGP-CNPq",
+                    link: "https://abz.org.br/grupos-pesquisa-zootecnia/"
+                }
+            ],
+            "Direito Animal": [
+                {
+                    nome: "Grupo de Pesquisa em Direitos Animais (GPDA)",
+                    instituicao: "Universidade Federal de Santa Maria (UFSM)",
+                    uf: "RS",
+                    lider: "Nina Trícia Disconzi Rodrigues",
+                    fonte: "PPGD/UFSM · grupo certificado pelo CNPq",
+                    link: "https://www.ufsm.br/cursos/pos-graduacao/santa-maria/ppgd/grupos-de-pesquisa"
+                },
+                {
+                    nome: "Núcleo Interdisciplinar de Pesquisa e Extensão em Direito Ambiental e Direito Animal (NIPEDA)",
+                    instituicao: "Universidade Federal da Bahia (UFBA)",
+                    uf: "BA",
+                    lider: "Heron José de Santana Gordilho",
+                    fonte: "PPGD/UFBA",
+                    link: "https://ppgd.direito.ufba.br/pt-br/linhas-e-grupos-de-pesquisa"
+                },
+                {
+                    nome: "Núcleo Interdisciplinar de Ensino, Pesquisa e Extensão em Direitos dos Animais, Meio Ambiente e Pós-Humanismo",
+                    instituicao: "Universidade Federal da Bahia (UFBA)",
+                    uf: "BA",
+                    lider: "Tagore Trajano de Almeida Silva",
+                    fonte: "PPGD/UFBA",
+                    link: "https://ppgd.direito.ufba.br/pt-br/linhas-e-grupos-de-pesquisa"
+                }
+            ],
+            "Ética e Senciência": [
+                {
+                    nome: "Laboratório de Etologia Aplicada e Bem-Estar Animal (LETA)",
+                    instituicao: "Universidade Federal de Santa Catarina (UFSC)",
+                    uf: "SC",
+                    fonte: "Associação Brasileira de Zootecnistas / DGP-CNPq",
+                    link: "https://abz.org.br/grupos-pesquisa-zootecnia/"
+                },
+                {
+                    nome: "Laboratório de Bem-estar Animal (LABEA)",
+                    instituicao: "Universidade Federal do Paraná (UFPR)",
+                    uf: "PR",
+                    fonte: "Página institucional do LABEA / consulta CNPq",
+                    link: "http://dgp.cnpq.br/buscaoperacional/detalhepesq.jsp?pesq=0305722196403558"
+                },
+                {
+                    nome: "Grupo de Pesquisa em Direitos Animais (GPDA)",
+                    instituicao: "Universidade Federal de Santa Maria (UFSM)",
+                    uf: "RS",
+                    lider: "Nina Trícia Disconzi Rodrigues",
+                    fonte: "PPGD/UFSM · grupo certificado pelo CNPq",
+                    link: "https://www.ufsm.br/cursos/pos-graduacao/santa-maria/ppgd/grupos-de-pesquisa"
+                }
+            ]
+        },
+        publicacoes: {
+            periodo: "2015-2024",
+            fonte: "CAPES/Dados Abertos · Catálogo de Teses e Dissertações",
+            link: "https://dadosabertos.capes.gov.br/group/catalogo-de-teses-e-dissertacoes-brasil"
+        }
     },
 
     educacao: {
