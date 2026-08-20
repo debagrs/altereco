@@ -405,7 +405,7 @@ function renderSobrePage(c) {
 
 function renderMetodosPage(c) {
     const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('metodos') : [];
-    const allMetodos = [...METODOS, ...dynamic.map(d => ({ name: d.title + (d.author ? ' (Por: ' + d.author + ')' : ''), description: d.description, url: d.url }))];
+    const allMetodos = [...METODOS, ...dynamic.map(d => ({ name: d.title, description: d.description, url: d.url }))];
     const metodosHTML = allMetodos.map(m => `
     <div class="metodo-card">
         <h3 class="metodo-title">${m.name}</h3>
@@ -468,7 +468,7 @@ function switchMateriaisTab(val, btn) {
     if (!grid) return;
     if (btn) { document.querySelectorAll('[data-tab-type="materiais"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
 
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('materiais').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url, tags: d.tags })) : [];
+    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('materiais').map(d => ({ name: d.title, description: d.description, url: d.url, tags: d.tags })) : [];
     const allItems = [...list, ...dynamic];
     grid.innerHTML = allItems.map(item => {
         const imageHTML = item.image ? `<div class="materiais-img-wrap"><img src="${item.image}" alt="${item.name}" class="materiais-img"></div>` : '';
@@ -579,7 +579,7 @@ function switchPublicacoesTab(val, btn) {
                 <div class="pub-book-content">
                     <h3 class="pub-book-title">${item.title}</h3>
                     <div class="pub-book-author">${item.author || 'Autor Desconhecido'}</div>
-                    <p class="pub-book-desc">${item.desc || 'Um resumo sobre esta publicação está sendo preparado pela nossa curadoria inteligente...'}</p>
+                    <p class="pub-book-desc">${item.desc || 'Acesse a fonte original para consultar os detalhes desta publicação.'}</p>
                     
                     <div class="pub-book-footer">
                         <a href="${item.url}" target="_blank" class="acessar-btn">Acessar <i data-lucide="arrow-right"></i></a>
@@ -619,7 +619,7 @@ function switchDatabaseTab(val, btn) {
     const grid = document.getElementById('db-content');
     if (!grid) return;
     if (btn) { document.querySelectorAll('[data-tab-type="db"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('bases').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url })) : [];
+    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('bases').map(d => ({ name: d.title, description: d.description, url: d.url })) : [];
     const allItems = [...list, ...dynamic];
     grid.innerHTML = allItems.map(db => `
     <div class="db-card">
@@ -659,7 +659,7 @@ function switchLegisTab(val, btn) {
 
     const introHTML = val === 'br' ? `<p class="legis-intro">${LEGISLACAO_INTRO}</p>` : '';
 
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('legislacao').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url })) : [];
+    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('legislacao').map(d => ({ name: d.title, description: d.description, url: d.url })) : [];
     const allItems = [...list, ...dynamic];
 
     grid.innerHTML = introHTML + `<div class="cards-grid-4">${allItems.map(item => `
