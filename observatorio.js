@@ -1012,6 +1012,14 @@ function getCnpqGroupCatalog(area) {
     return Array.isArray(catalog[area]) ? catalog[area] : [];
 }
 
+window.filterCNPqModalGroups = function(value) {
+    const query = String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    document.querySelectorAll('#cnpq-groups-modal .obs-cnpq-group-card').forEach(card => {
+        const haystack = String(card.dataset.search || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        card.hidden = Boolean(query) && !haystack.includes(query);
+    });
+};
+
 window.closeCNPqModal = function() {
     const modal = document.getElementById('cnpq-groups-modal');
     if (modal) modal.remove();
@@ -1040,11 +1048,16 @@ window.openCNPqModal = function(area) {
             </div>
             <div class="obs-cnpq-notice">
                 <span class="material-icons" aria-hidden="true">verified</span>
-                <div><strong>Links validados individualmente.</strong> A Base Corrente do DGP muda diariamente e não oferece uma API pública aberta para consulta nominal. Por isso, o AlterECO não inventa nomes para completar o número: exibe abaixo os grupos já validados e mantém acesso à busca oficial do CNPq.</div>
+                <div><strong>Grupos com fonte identificada.</strong> Cada item abaixo leva ao registro do grupo ou à página institucional que o identifica como grupo de pesquisa. A Base Corrente do DGP é dinâmica; o botão ao final abre também a consulta oficial do CNPq.</div>
             </div>
+            ${groups.length > 1 ? `
+                <label class="obs-modal-search">
+                    <span class="material-icons" aria-hidden="true">search</span>
+                    <input type="search" placeholder="Buscar grupo, instituição, UF ou liderança…" oninput="filterCNPqModalGroups(this.value)" aria-label="Buscar nesta lista de grupos">
+                </label>` : ''}
             <div class="obs-modal-list">
                 ${groups.length ? groups.map(group => `
-                    <article class="obs-cnpq-group-card">
+                    <article class="obs-cnpq-group-card" data-search="${obsEscapeHTML([group.nome, group.instituicao, group.uf, group.lider].filter(Boolean).join(' '))}">
                         <div>
                             <h3>${obsEscapeHTML(group.nome)}</h3>
                             <p>${obsEscapeHTML(group.instituicao || '')}${group.uf ? ` · ${obsEscapeHTML(group.uf)}` : ''}</p>
@@ -1092,10 +1105,10 @@ function renderObsPesquisa(c) {
                         <a href="https://lattes.cnpq.br/web/dgp" target="_blank" rel="noopener noreferrer">Base Corrente <span class="material-icons" aria-hidden="true">north_east</span></a>
                     </div>
                     <div class="obs-cnpq-metrics">
-                        ${db.grupos.map(g => `
-                            <button class="obs-cnpq-metric" type="button" onclick='openCNPqModal(${JSON.stringify(g.area)})'>
+                        ${db.grupos.map((g, index) => `
+                            <button class="obs-cnpq-metric" type="button" data-cnpq-index="${index}" aria-label="Ver grupos de pesquisa em ${obsEscapeHTML(g.area)}">
                                 <span>${obsEscapeHTML(g.area)}</span>
-                                <strong>${obsEscapeHTML(g.total)} <small>grupos</small></strong>
+                                <strong title="Abrir lista">${obsEscapeHTML(g.total)} <small>grupos</small></strong>
                                 <span class="material-icons" aria-hidden="true">arrow_forward</span>
                             </button>
                         `).join('')}
@@ -1165,6 +1178,14 @@ function renderObsPesquisa(c) {
             </section>
         </div>
     `;
+
+    c.querySelectorAll('[data-cnpq-index]').forEach(button => {
+        button.addEventListener('click', () => {
+            const index = Number(button.dataset.cnpqIndex);
+            const group = db.grupos[index];
+            if (group) window.openCNPqModal(group.area);
+        });
+    });
 
     // A primeira busca já deixa a seção útil ao abrir.
     window.setTimeout(() => window.searchCapesTheses(true), 80);
