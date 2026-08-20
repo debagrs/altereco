@@ -95,7 +95,11 @@ function mapContentItemToLegacyPost(item) {
         submitted_by: item.submitted_by,
         submitted_at: item.submitted_at,
         reviewed_at: item.reviewed_at,
-        rejection_reason: item.rejection_reason || ''
+        rejection_reason: item.rejection_reason || '',
+        curator_ai_run_id: item.curator_ai_run_id || null,
+        source_type: item.source_type || '',
+        source_metadata: item.source_metadata || {},
+        verification_note: item.verification_note || ''
     };
 }
 
@@ -121,6 +125,10 @@ async function fetchContentItemsByStatus(status) {
             reviewed_at,
             published_at,
             rejection_reason,
+            curator_ai_run_id,
+            source_type,
+            source_metadata,
+            verification_note,
             created_at,
             updated_at
         `)
@@ -1005,6 +1013,12 @@ function renderPendingCard(post) {
             </div>
         </div>
 
+        ${post.source_type === 'ai_curator' ? `
+            <div style="margin-bottom:1rem; padding:1rem 1.1rem; border-radius:12px; background:#FFF8DD; border:1px solid rgba(250,205,95,.75); color:var(--primary-navy);">
+                <strong>Origem: ECO Curadoria · pesquisa assistida</strong><br>
+                <span style="font-size:.88rem; color:var(--text-gray);">Este item foi criado a partir de fontes recuperadas e ainda depende da sua revisão humana.</span>
+                ${post.verification_note ? `<div style="margin-top:.55rem; font-size:.88rem;"><strong>Checagem:</strong> ${escapeHtml(post.verification_note)}</div>` : ''}
+            </div>` : ''}
         <p style="color:var(--text-gray); margin-bottom:.8rem; font-size:1.02rem; line-height:1.7; background:var(--bg-light); padding:1.5rem; border-radius:8px;">${escapeHtml(post.description)}</p>
 
         <div style="font-size:.88rem; color:var(--text-gray); margin-bottom:1.5rem; padding-left:1rem; border-left:2px solid rgba(128,128,128,.2);">
@@ -1102,7 +1116,7 @@ window.renderAICuratorWorkspace = function() {
                         <p style="color:var(--text-gray); margin:.35rem 0 0; line-height:1.5;">Pesquisa a web em tempo real, encontra fontes verificáveis e prepara rascunhos para o acervo. Ela é separada da ECO que atende o público.</p>
                     </div>
                 </div>
-                <div id="curator-ai-status" style="font-size:.78rem; color:#2F7F76; font-weight:700; padding:.55rem .8rem; background:white; border-radius:999px; border:1px solid rgba(77,182,172,.35);">Gemini + Google Search</div>
+                <div id="curator-ai-status" style="font-size:.78rem; color:#2F7F76; font-weight:700; padding:.55rem .8rem; background:white; border-radius:999px; border:1px solid rgba(77,182,172,.35);">Busca científica + institucional · Gemini opcional</div>
             </div>
         </div>
 
@@ -1149,7 +1163,7 @@ window.runCuratorAIResearch = async function() {
         btn.disabled = true;
         btn.innerHTML = '<i data-lucide="loader-circle" style="width:18px;"></i> Pesquisando fontes reais...';
     }
-    if (statusEl) statusEl.textContent = 'Pesquisando Google + fontes científicas...';
+    if (statusEl) statusEl.textContent = 'Pesquisando bases científicas + fontes institucionais...';
     if (resultEl) resultEl.innerHTML = `<div style="padding:2rem; border-radius:16px; background:var(--bg-light); color:var(--text-gray);"><strong>Pesquisa em andamento.</strong><br>A ECO está procurando fontes institucionais, artigos e repositórios antes de sintetizar os achados.</div>`;
     if (window.lucide) window.lucide.createIcons();
 
@@ -1164,7 +1178,7 @@ window.runCuratorAIResearch = async function() {
         alterecoCuratorAIState.lastResearch = data;
         alterecoCuratorAIState.lastDraft = null;
 
-        if (statusEl) statusEl.textContent = `${data.model || 'Gemini'} · pesquisa web concluída`;
+        if (statusEl) statusEl.textContent = `${data.model || 'Pesquisa direta'} · pesquisa concluída`;
         if (resultEl) {
             resultEl.innerHTML = `
                 <article style="border:1px solid rgba(128,128,128,.15); border-radius:18px; padding:clamp(1.2rem,2.5vw,2rem); background:var(--bg-light);">
@@ -1229,7 +1243,8 @@ window.createCuratorAIDraft = async function() {
                 <div style="margin-top:.5rem; font-size:.88rem; color:var(--text-gray);"><strong>Checagem:</strong> ${escapeHtml(draft.verification_note || '')}</div>
                 ${normalizeExternalUrl(draft.external_url) ? `<a href="${escapeHtml(normalizeExternalUrl(draft.external_url))}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:1rem; color:var(--accent-purple); font-weight:800;">Abrir fonte principal ↗</a>` : ''}
                 <div style="display:flex; gap:.7rem; flex-wrap:wrap; margin-top:1.2rem;">
-                    <button onclick="useCuratorDraftInNewContent()" style="background:var(--primary-navy); color:white; border:none; padding:.95rem 1.15rem; border-radius:12px; font-weight:800; cursor:pointer;">Revisar no formulário de cadastro</button>
+                    <button onclick="submitCuratorDraftForApproval()" style="background:var(--accent-orange); color:var(--primary-navy); border:none; padding:.95rem 1.15rem; border-radius:12px; font-weight:800; cursor:pointer;">Enviar para fila de aprovação</button>
+                    <button onclick="useCuratorDraftInNewContent()" style="background:var(--primary-navy); color:white; border:none; padding:.95rem 1.15rem; border-radius:12px; font-weight:800; cursor:pointer;">Editar antes de enviar</button>
                     <button onclick="createCuratorAIDraft()" style="background:var(--bg-light); color:var(--primary-navy); border:1px solid rgba(128,128,128,.2); padding:.95rem 1.15rem; border-radius:12px; font-weight:800; cursor:pointer;">Gerar outra versão</button>
                 </div>
             </div>`;
@@ -1237,6 +1252,28 @@ window.createCuratorAIDraft = async function() {
         console.error(error);
         if (statusEl) statusEl.textContent = 'ECO Curadoria · erro no rascunho';
         draftEl.innerHTML = `<div style="padding:1rem; border-radius:12px; background:#FFF0F0; color:#A22727;">${escapeHtml(error.message)}</div>`;
+    }
+};
+
+
+window.submitCuratorDraftForApproval = async function() {
+    const runId = alterecoCuratorAIState.runId;
+    if (!runId) return;
+    if (!confirm('Enviar este rascunho para a fila de aprovação? Ele NÃO será publicado ainda.')) return;
+
+    const statusEl = document.getElementById('curator-ai-status');
+    try {
+        if (statusEl) statusEl.textContent = 'Enviando rascunho para aprovação...';
+        const data = await invokeAICurator({ action: 'submit_draft', runId });
+        if (statusEl) statusEl.textContent = 'Rascunho enviado · aguardando aprovação humana';
+        alert(data.alreadySubmitted
+            ? 'Este conteúdo já estava na fila de aprovação.'
+            : 'Conteúdo enviado para Curadoria. Ele só aparecerá no site depois que você clicar em Aprovar.');
+        await renderAdminDashboard('pending');
+    } catch (error) {
+        console.error(error);
+        if (statusEl) statusEl.textContent = 'ECO Curadoria · erro ao enviar';
+        alert(`Não foi possível enviar para aprovação.\n\n${error.message}`);
     }
 };
 
