@@ -1215,6 +1215,96 @@ window.runCuratorAIResearch = async function() {
     }
 };
 
+function inferCuratorSourceArea(source = {}) {
+    const haystack = `${source.title || ''} ${source.url || ''} ${source.source || ''} ${source.type || ''}`.toLowerCase();
+    if (/resolu[cç][aã]o|norma|legisla|lei\b|decreto|conselho nacional de controle|concea|gov\.br\/mcti.*resolu/.test(haystack)) return 'legislacao';
+    if (/database|base de dados|reposit[oó]rio|repository|pubmed|openalex|europe pmc|scielo|interniche.*studies|interniche.*alternatives/.test(haystack)) return 'bases-dados';
+    if (/oecd.*(?:tg|test guideline)|test guideline|ecvam|nam\b|non-animal|replacement|m[eé]todo|method|in vitro|organoid|organ-on-chip/.test(haystack)) return 'metodos';
+    if (/material did[aá]tico|teaching resource|education resource|simulator|simulador|atlas|software|app\b|video|vídeo/.test(haystack)) return 'materiais';
+    if (/event|congress|conference|seminar|workshop|congresso|semin[aá]rio/.test(haystack)) return 'eventos';
+    return 'publicacoes';
+}
+
+function curatorSourceHost(url) {
+    try {
+        return new URL(url).hostname.replace(/^www\./, '');
+    } catch (_) {
+        return '';
+    }
+}
+
+function curatorSourceTags(source = {}, run = {}) {
+    const raw = [
+        source.source,
+        source.type,
+        run.focus,
+        ...(String(run.query || '').split(/[^\p{L}\p{N}-]+/u).filter(word => word.length >= 5).slice(0, 6))
+    ];
+    return normalizeTags(raw.filter(Boolean)).slice(0, 12);
+}
+
+function buildCuratorCandidate(source = {}, sourceIndex = 0, run = {}) {
+    const url = normalizeExternalUrl(source.url || source.external_url);
+    const imageUrl = normalizeExternalUrl(source.image_url);
+    const host = curatorSourceHost(url);
+    const author = String(source.authors || source.author_name || source.source || host || 'Fonte verificada').trim();
+    const snippet = String(source.snippet || source.description || '').replace(/\s+/g, ' ').trim();
+    const year = source.year ? String(source.year) : '';
+    const sourceLabel = String(source.source || host || 'fonte original').trim();
+    const description = snippet
+        ? snippet.slice(0, 700)
+        : `Conteúdo localizado pela ECO Curadoria em ${sourceLabel}${year ? ` (${year})` : ''}. Consulte a fonte original para revisar o conteúdo completo antes da publicação.`;
+
+    return {
+        source_index: sourceIndex,
+        title: String(source.title || `Fonte ${sourceIndex + 1}`).trim(),
+        author_name: author,
+        area: inferCuratorSourceArea(source),
+        tags: curatorSourceTags(source, run),
+        description,
+        long_description: snippet && snippet.length > 700 ? snippet.slice(0, 2200) : '',
+        external_url: url,
+        image_url: imageUrl,
+        source: sourceLabel,
+        year,
+        doi: source.doi || '',
+        verification_note: 'Conteúdo recuperado automaticamente de fonte externa. Revisar título, resumo, autoria, link e imagem antes de aprovar.',
+        existing: null
+    };
+}
+
+async function prepareCuratorCandidatesLocally() {
+    const run = alterecoCuratorAIState.lastResearch || {};
+    const sources = Array.isArray(run.sources) ? run.sources : [];
+    if (!sources.length) throw new Error('Esta pesquisa não possui fontes recuperadas para preparar.');
+
+    const candidates = sources
+        .map((source, index) => buildCuratorCandidate(source, index, run))
+        .filter(candidate => candidate.external_url);
+
+    if (!candidates.length) throw new Error('Nenhuma das fontes possui link verificável.');
+
+    const client = getSupabaseClient();
+    const urls = [...new Set(candidates.map(candidate => candidate.external_url).filter(Boolean))];
+    let existing = [];
+    if (urls.length) {
+        const { data, error } = await client
+            .from('content_items')
+            .select('id, title, status, external_url')
+            .in('external_url', urls)
+            .in('status', ['pending', 'approved']);
+        if (error) throw error;
+        existing = data || [];
+    }
+
+    const existingMap = new Map(existing.map(item => [String(item.external_url), item]));
+    candidates.forEach(candidate => {
+        candidate.existing = existingMap.get(candidate.external_url) || null;
+    });
+
+    return candidates;
+}
+
 function renderCuratorAICandidate(candidate) {
     const index = Number(candidate.source_index);
     const url = normalizeExternalUrl(candidate.external_url);
@@ -1241,7 +1331,7 @@ function renderCuratorAICandidate(candidate) {
         <div class="curator-ai-candidate-body">
             <div class="page-badge" style="background:var(--bg-light); color:var(--primary-navy); margin-bottom:.65rem;">${escapeHtml(candidate.area || 'publicacoes')}</div>
             <h3>${escapeHtml(candidate.title || '')}</h3>
-            <p class="curator-ai-candidate-meta">${escapeHtml(candidate.author_name || '')}</p>
+            <p class="curator-ai-candidate-meta">${escapeHtml(candidate.author_name || '')}${candidate.year ? ` · ${escapeHtml(candidate.year)}` : ''}</p>
             <p class="curator-ai-candidate-summary">${escapeHtml(candidate.description || '')}</p>
             <div class="curator-ai-candidate-footer">
                 ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Abrir fonte ↗</a>` : '<span>Sem link verificável</span>'}
@@ -1276,12 +1366,13 @@ window.prepareAllCuratorAIContent = async function() {
     const statusEl = document.getElementById('curator-ai-status');
     if (!runId || !draftEl) return;
 
-    draftEl.innerHTML = `<div style="padding:1.2rem; border-radius:14px; background:white; border:1px solid rgba(128,128,128,.15); color:var(--text-gray);"><strong>Preparando todos os achados.</strong><br>Cada fonte vai virar um candidato independente, com resumo, link e imagem apenas quando a própria fonte fornecer uma.</div>`;
+    draftEl.innerHTML = `<div style="padding:1.2rem; border-radius:14px; background:white; border:1px solid rgba(128,128,128,.15); color:var(--text-gray);"><strong>Preparando todos os achados.</strong><br>Cada fonte vai virar um candidato independente, com resumo, link e imagem somente quando a fonte original fornecer uma.</div>`;
     if (statusEl) statusEl.textContent = 'Preparando todos os achados para curadoria...';
 
     try {
-        const data = await invokeAICurator({ action: 'prepare_sources', runId });
-        const candidates = Array.isArray(data.candidates) ? data.candidates : [];
+        // IMPORTANTE: esta etapa é local de propósito. Assim não depende de uma
+        // versão específica da Edge Function e evita o erro “Ação inválida”.
+        const candidates = await prepareCuratorCandidatesLocally();
         alterecoCuratorAIState.candidates = candidates;
         const available = candidates.filter(candidate => !candidate.existing).length;
         const existing = candidates.length - available;
@@ -1293,7 +1384,7 @@ window.prepareAllCuratorAIContent = async function() {
                     <div>
                         <div class="page-badge" style="background:var(--accent-orange); color:var(--primary-navy); margin-bottom:.55rem;">TODOS OS ACHADOS · NÃO PUBLICADOS</div>
                         <h3>${candidates.length} possibilidades de conteúdo</h3>
-                        <p>Cada resultado é independente. Você pode enviar todos, desmarcar os irrelevantes ou mandar um por vez. Nenhuma imagem é inventada: só aparece imagem recuperada da fonte original.</p>
+                        <p>Cada resultado é independente. Você pode enviar todos, desmarcar os irrelevantes ou mandar um por vez. Imagem só aparece quando veio da fonte original — nunca usamos imagem genérica inventada.</p>
                     </div>
                     <div class="curator-ai-bulk-actions">
                         <label><input type="checkbox" checked onchange="toggleAllCuratorAICandidates(this.checked)"> Selecionar todos os novos</label>
@@ -1337,21 +1428,87 @@ window.submitCuratorAISources = async function(sourceIndexes = null) {
         return;
     }
 
-    const label = indexes.length === 1 ? 'este conteúdo' : `estes ${indexes.length} conteúdos`;
+    const selectedCandidates = (alterecoCuratorAIState.candidates || [])
+        .filter(candidate => indexes.includes(Number(candidate.source_index)) && !candidate.existing && candidate.external_url);
+    if (!selectedCandidates.length) {
+        alert('Os achados selecionados já estão cadastrados ou não possuem link verificável.');
+        return;
+    }
+
+    const label = selectedCandidates.length === 1 ? 'este conteúdo' : `estes ${selectedCandidates.length} conteúdos`;
     if (!confirm(`Enviar ${label} para a fila de aprovação? Eles NÃO serão publicados automaticamente.`)) return;
 
     const statusEl = document.getElementById('curator-ai-status');
     try {
-        if (statusEl) statusEl.textContent = `Enviando ${indexes.length} conteúdo${indexes.length === 1 ? '' : 's'} para aprovação...`;
-        const data = await invokeAICurator({ action: 'submit_sources', runId, sourceIndexes: indexes });
-        const created = Array.isArray(data.created) ? data.created : [];
-        const skipped = Array.isArray(data.skipped) ? data.skipped : [];
-        if (statusEl) statusEl.textContent = `${created.length} enviado${created.length === 1 ? '' : 's'} · aguardando aprovação humana`;
+        if (statusEl) statusEl.textContent = `Enviando ${selectedCandidates.length} conteúdo${selectedCandidates.length === 1 ? '' : 's'} para aprovação...`;
 
+        const adminSession = await getVerifiedAccess('admin');
+        if (!adminSession?.id) throw new Error('Sessão administrativa não encontrada.');
+        const client = getSupabaseClient();
+        const run = alterecoCuratorAIState.lastResearch || {};
+
+        // Checagem final de duplicados imediatamente antes do insert.
+        const urls = selectedCandidates.map(candidate => candidate.external_url);
+        const { data: duplicates, error: duplicateError } = await client
+            .from('content_items')
+            .select('id, title, status, external_url')
+            .in('external_url', urls)
+            .in('status', ['pending', 'approved']);
+        if (duplicateError) throw duplicateError;
+        const duplicateMap = new Map((duplicates || []).map(item => [String(item.external_url), item]));
+
+        const created = [];
+        const skipped = [];
+
+        for (const candidate of selectedCandidates) {
+            const duplicate = duplicateMap.get(candidate.external_url);
+            if (duplicate) {
+                skipped.push({ title: candidate.title, reason: duplicate.status === 'approved' ? 'já publicado' : 'já na fila de aprovação' });
+                continue;
+            }
+
+            const payload = {
+                title: candidate.title,
+                author_name: candidate.author_name || 'Fonte verificada',
+                area: normalizeContentArea(candidate.area),
+                tags: normalizeTags(candidate.tags),
+                description: candidate.description,
+                long_description: candidate.long_description || null,
+                external_url: candidate.external_url,
+                image_url: candidate.image_url || null,
+                status: 'pending',
+                submitted_by: adminSession.id,
+                curator_ai_run_id: runId,
+                source_type: 'ai_curator',
+                source_metadata: {
+                    query: run.query || '',
+                    focus: run.focus || 'geral',
+                    source_index: Number(candidate.source_index),
+                    source: candidate.source || '',
+                    doi: candidate.doi || '',
+                    year: candidate.year || ''
+                },
+                verification_note: candidate.verification_note || 'Revisar a fonte antes da aprovação.'
+            };
+
+            const { data: item, error: insertError } = await client
+                .from('content_items')
+                .insert(payload)
+                .select('id, title, external_url, status')
+                .single();
+
+            if (insertError) {
+                skipped.push({ title: candidate.title, reason: insertError.message });
+                continue;
+            }
+            created.push(item);
+        }
+
+        if (statusEl) statusEl.textContent = `${created.length} enviado${created.length === 1 ? '' : 's'} · aguardando aprovação humana`;
         const skippedText = skipped.length
-            ? `\n\n${skipped.length} não foram duplicados porque já estavam cadastrados ou apresentaram impedimento.`
+            ? `\n\n${skipped.length} não foram enviados porque já estavam cadastrados ou apresentaram impedimento.`
             : '';
-        alert(`${created.length} conteúdo${created.length === 1 ? '' : 's'} enviado${created.length === 1 ? '' : 's'} para a Curadoria.${skippedText}\n\nAgora você pode revisar resumo, link e imagem e então clicar em Aprovar.`);
+        alert(`${created.length} conteúdo${created.length === 1 ? '' : 's'} enviado${created.length === 1 ? '' : 's'} para a Curadoria.${skippedText}\n\nAgora revise resumo, link e imagem e então clique em Aprovar.`);
 
         if (created.length) await renderAdminDashboard('pending');
         else await prepareAllCuratorAIContent();
