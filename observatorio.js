@@ -1012,12 +1012,28 @@ function getCnpqGroupCatalog(area) {
     return Array.isArray(catalog[area]) ? catalog[area] : [];
 }
 
-window.filterCNPqModalGroups = function(value) {
-    const query = String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function normalizeCnpqSearch(value) {
+    return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+window.filterCNPqModalGroups = function() {
+    const input = document.getElementById('cnpq-modal-search');
+    const ufSelect = document.getElementById('cnpq-modal-uf');
+    const query = normalizeCnpqSearch(input?.value || '');
+    const uf = String(ufSelect?.value || 'all');
+    let visible = 0;
+
     document.querySelectorAll('#cnpq-groups-modal .obs-cnpq-group-card').forEach(card => {
-        const haystack = String(card.dataset.search || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        card.hidden = Boolean(query) && !haystack.includes(query);
+        const haystack = normalizeCnpqSearch(card.dataset.search || '');
+        const matchesQuery = !query || haystack.includes(query);
+        const matchesUf = uf === 'all' || card.dataset.uf === uf;
+        const show = matchesQuery && matchesUf;
+        card.hidden = !show;
+        if (show) visible += 1;
     });
+
+    const counter = document.getElementById('cnpq-modal-visible-count');
+    if (counter) counter.textContent = `${visible} grupo${visible === 1 ? '' : 's'} exibido${visible === 1 ? '' : 's'}`;
 };
 
 window.closeCNPqModal = function() {
@@ -1031,7 +1047,10 @@ window.openCNPqModal = function(area) {
     const db = window.OBSERVATORIO_DB.pesquisa;
     const metric = db.grupos.find(group => group.area === area);
     const groups = getCnpqGroupCatalog(area);
-    const officialUrl = 'https://lattes.cnpq.br/web/dgp';
+    const meta = db.dgp_meta || window.ALTERECO_DGP_2023?.meta || {};
+    const officialUrl = meta.consulta_corrente_url || 'https://dgp.cnpq.br/dgp/faces/consulta/consulta_parametrizada.jsf';
+    const censusUrl = meta.fonte_censo_url || 'https://lattes.cnpq.br/web/dgp/censos2';
+    const ufs = [...new Set(groups.map(group => group.uf).filter(Boolean))].sort();
 
     const modal = document.createElement('div');
     modal.id = 'cnpq-groups-modal';
@@ -1040,45 +1059,72 @@ window.openCNPqModal = function(area) {
         <section class="obs-modal-panel" role="dialog" aria-modal="true" aria-labelledby="cnpq-modal-title">
             <div class="obs-modal-header">
                 <div>
-                    <span class="obs-modal-kicker">Diretório dos Grupos de Pesquisa · CNPq</span>
+                    <span class="obs-modal-kicker">Base nominal temática · DGP/CNPq · referência ${obsEscapeHTML(meta.ano_referencia || 2023)}</span>
                     <h2 id="cnpq-modal-title">${obsEscapeHTML(area)}</h2>
-                    <p>${metric?.total ? `${obsEscapeHTML(groups.length)} links nominais validados de ${obsEscapeHTML(metric.total)} ocorrências registradas no levantamento do Observatório.` : 'Grupos relacionados ao tema.'}</p>
+                    <p><strong>${obsEscapeHTML(groups.length)} grupos nominais catalogados</strong>. O total é calculado automaticamente a partir da base verificável do AlterECO.</p>
                 </div>
                 <button class="obs-modal-close" type="button" onclick="closeCNPqModal()" aria-label="Fechar lista de grupos"><span class="material-icons">close</span></button>
             </div>
+
+            <div class="obs-cnpq-context-grid">
+                <div><strong>${obsEscapeHTML(meta.total_grupos_brasil || '42.852')}</strong><span>grupos no Brasil no Censo DGP 2023</span></div>
+                <div><strong>${obsEscapeHTML(meta.total_instituicoes_brasil || '587')}</strong><span>instituições no Censo DGP 2023</span></div>
+                <div><strong>${obsEscapeHTML(groups.length)}</strong><span>grupos desta seleção temática nominal</span></div>
+            </div>
+
             <div class="obs-cnpq-notice">
                 <span class="material-icons" aria-hidden="true">verified</span>
-                <div><strong>Grupos com fonte identificada.</strong> Cada item abaixo leva ao registro do grupo ou à página institucional que o identifica como grupo de pesquisa. A Base Corrente do DGP é dinâmica; o botão ao final abre também a consulta oficial do CNPq.</div>
+                <div><strong>Base nominal, não estimativa.</strong> Os itens abaixo têm fonte identificável no DGP/CNPq ou em página institucional/científica que identifica o grupo. Um mesmo grupo pode aparecer em mais de uma categoria quando sua atuação é interdisciplinar.</div>
             </div>
-            ${groups.length > 1 ? `
+
+            <div class="obs-modal-tools">
                 <label class="obs-modal-search">
                     <span class="material-icons" aria-hidden="true">search</span>
-                    <input type="search" placeholder="Buscar grupo, instituição, UF ou liderança…" oninput="filterCNPqModalGroups(this.value)" aria-label="Buscar nesta lista de grupos">
-                </label>` : ''}
+                    <input id="cnpq-modal-search" type="search" placeholder="Buscar grupo, instituição, liderança ou tema…" oninput="filterCNPqModalGroups()" aria-label="Buscar nesta lista de grupos">
+                </label>
+                <label class="obs-modal-uf-filter">
+                    <span>UF</span>
+                    <select id="cnpq-modal-uf" onchange="filterCNPqModalGroups()">
+                        <option value="all">Todas</option>
+                        ${ufs.map(uf => `<option value="${obsEscapeHTML(uf)}">${obsEscapeHTML(uf)}</option>`).join('')}
+                    </select>
+                </label>
+            </div>
+            <div class="obs-modal-results-meta"><span id="cnpq-modal-visible-count">${groups.length} grupos exibidos</span></div>
+
             <div class="obs-modal-list">
-                ${groups.length ? groups.map(group => `
-                    <article class="obs-cnpq-group-card" data-search="${obsEscapeHTML([group.nome, group.instituicao, group.uf, group.lider].filter(Boolean).join(' '))}">
-                        <div>
+                ${groups.length ? groups.map(group => {
+                    const searchData = [group.nome, group.instituicao, group.uf, group.lider, ...(group.temas || [])].filter(Boolean).join(' ');
+                    const sourceHref = obsSafeUrl(group.fonte_url) || '';
+                    return `
+                    <article class="obs-cnpq-group-card" data-uf="${obsEscapeHTML(group.uf || '')}" data-search="${obsEscapeHTML(searchData)}">
+                        <div class="obs-cnpq-group-main">
+                            <div class="obs-cnpq-group-tags">
+                                ${group.aderencia ? `<span>${obsEscapeHTML(group.aderencia)}</span>` : ''}
+                                ${group.uf ? `<span>${obsEscapeHTML(group.uf)}</span>` : ''}
+                            </div>
                             <h3>${obsEscapeHTML(group.nome)}</h3>
-                            <p>${obsEscapeHTML(group.instituicao || '')}${group.uf ? ` · ${obsEscapeHTML(group.uf)}` : ''}</p>
+                            <p>${obsEscapeHTML(group.instituicao || '')}</p>
                             ${group.lider ? `<span><strong>Liderança:</strong> ${obsEscapeHTML(group.lider)}</span>` : ''}
-                            ${group.fonte ? `<span><strong>Fonte:</strong> ${obsEscapeHTML(group.fonte)}</span>` : ''}
+                            ${Array.isArray(group.temas) && group.temas.length ? `<div class="obs-cnpq-topic-list">${group.temas.slice(0, 5).map(topic => `<span>${obsEscapeHTML(topic)}</span>`).join('')}</div>` : ''}
+                            ${group.fonte ? `<span class="obs-cnpq-source"><strong>Fonte:</strong> ${sourceHref ? `<a href="${obsEscapeHTML(sourceHref)}" target="_blank" rel="noopener noreferrer">${obsEscapeHTML(group.fonte)}</a>` : obsEscapeHTML(group.fonte)}</span>` : ''}
                         </div>
-                        <a href="${obsEscapeHTML(obsSafeUrl(group.link) || officialUrl)}" target="_blank" rel="noopener noreferrer">Abrir grupo <span class="material-icons" aria-hidden="true">north_east</span></a>
-                    </article>
-                `).join('') : `
-                    <div class="obs-capes-empty"><span class="material-icons" aria-hidden="true">manage_search</span><strong>Lista nominal em validação.</strong><span>Use a consulta oficial do DGP enquanto novos vínculos são conferidos para este tema.</span></div>
+                        <a class="obs-cnpq-open-group" href="${obsEscapeHTML(obsSafeUrl(group.link) || officialUrl)}" target="_blank" rel="noopener noreferrer">Abrir grupo <span class="material-icons" aria-hidden="true">north_east</span></a>
+                    </article>`;
+                }).join('') : `
+                    <div class="obs-capes-empty"><span class="material-icons" aria-hidden="true">manage_search</span><strong>Lista nominal em expansão.</strong><span>Use a consulta oficial do DGP enquanto novos vínculos são conferidos.</span></div>
                 `}
             </div>
             <div class="obs-modal-footer">
-                <a class="obs-primary-action" href="${officialUrl}" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">travel_explore</span> Buscar na Base Corrente do CNPq</a>
+                <a class="obs-primary-action" href="${obsEscapeHTML(officialUrl)}" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">travel_explore</span> Buscar na Base Corrente</a>
+                <a class="obs-secondary-action" href="${obsEscapeHTML(censusUrl)}" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">database</span> Censo DGP 2023</a>
                 <button type="button" class="obs-secondary-action" onclick="closeCNPqModal()">Fechar</button>
             </div>
         </section>`;
     modal.addEventListener('click', event => { if (event.target === modal) window.closeCNPqModal(); });
     document.body.appendChild(modal);
     document.body.classList.add('obs-modal-open');
-    modal.querySelector('.obs-modal-close')?.focus();
+    modal.querySelector('#cnpq-modal-search')?.focus();
 };
 
 if (!window.__alterecoObsModalEscapeBound) {
@@ -1104,16 +1150,20 @@ function renderObsPesquisa(c) {
                         </div>
                         <a href="https://lattes.cnpq.br/web/dgp" target="_blank" rel="noopener noreferrer">Base Corrente <span class="material-icons" aria-hidden="true">north_east</span></a>
                     </div>
+                    <div class="obs-cnpq-summary">
+                        <span><strong>${obsEscapeHTML(db.dgp_meta?.total_grupos_brasil || '42.852')}</strong> grupos no Brasil · Censo DGP ${obsEscapeHTML(db.dgp_meta?.ano_referencia || 2023)}</span>
+                        <span><strong>${obsEscapeHTML(window.ALTERECO_DGP_2023?.grupos?.length || 0)}</strong> grupos únicos na base nominal temática AlterECO</span>
+                    </div>
                     <div class="obs-cnpq-metrics">
                         ${db.grupos.map((g, index) => `
-                            <button class="obs-cnpq-metric" type="button" data-cnpq-index="${index}" aria-label="Ver grupos de pesquisa em ${obsEscapeHTML(g.area)}">
+                            <button class="obs-cnpq-metric" type="button" data-cnpq-index="${index}" aria-label="Ver ${obsEscapeHTML(g.total)} grupos catalogados em ${obsEscapeHTML(g.area)}">
                                 <span>${obsEscapeHTML(g.area)}</span>
-                                <strong title="Abrir lista">${obsEscapeHTML(g.total)} <small>grupos</small></strong>
+                                <strong>${obsEscapeHTML(g.total)} <small>grupos catalogados</small></strong>
                                 <span class="material-icons" aria-hidden="true">arrow_forward</span>
                             </button>
                         `).join('')}
                     </div>
-                    <p class="obs-data-note"><strong>Nota metodológica:</strong> estes quantitativos pertencem ao levantamento que originou o Observatório. Como a Base Corrente do DGP é atualizada diariamente e não é disponibilizada via API pública, a lista nominal do modal é expandida somente com grupos que conseguimos validar.</p>
+                    <p class="obs-data-note"><strong>Nota metodológica:</strong> os números acima correspondem à base nominal temática efetivamente listada no modal — não a estimativas. A referência nacional é o Censo DGP 2023. A base temática é expansível e deriva de uma única lista verificável, portanto o contador se atualiza automaticamente quando um grupo é acrescentado.</p>
                 </section>
 
                 <aside class="obs-capes-hero-card">
@@ -1182,8 +1232,8 @@ function renderObsPesquisa(c) {
     c.querySelectorAll('[data-cnpq-index]').forEach(button => {
         button.addEventListener('click', () => {
             const index = Number(button.dataset.cnpqIndex);
-            const group = db.grupos[index];
-            if (group) window.openCNPqModal(group.area);
+            const groupMetric = db.grupos[index];
+            if (groupMetric) window.openCNPqModal(groupMetric.area);
         });
     });
 
