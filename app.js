@@ -138,13 +138,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('input', (e) => {
-        const ids = ['main-search', 'search-input', 'metodos-search', 'materiais-search', 'pub-search'];
+        if (e.target.id === 'main-search') {
+            runGlobalSearch(e.target.value);
+            return;
+        }
+
+        const ids = ['search-input', 'metodos-search', 'materiais-search', 'pub-search'];
         if (!ids.includes(e.target.id)) return;
-        const query = e.target.value.toLowerCase();
-        const container = document.getElementById('content-area');
-        if (!container) return;
-        container.querySelectorAll('.mockup-section,.db-card,.legis-card,.materiais-card,.metodo-card,.pub-card,.sub-section')
-            .forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query) ? '' : 'none'; });
+        const query = normalizeSearchText(e.target.value);
+        const content = document.getElementById('content-area');
+        if (!content) return;
+        content.querySelectorAll('.mockup-section,.db-card,.legis-card,.materiais-card,.metodo-card,.pub-card,.sub-section')
+            .forEach(item => {
+                item.style.display = normalizeSearchText(item.innerText).includes(query) ? '' : 'none';
+            });
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.target.id !== 'main-search' || e.key !== 'Enter') return;
+        const firstResult = document.querySelector('#global-search-results [data-global-search-page]');
+        if (firstResult) {
+            e.preventDefault();
+            openGlobalSearchResult(firstResult.dataset.globalSearchPage, e.target.value);
+        }
+    });
+
+    // Conteúdos aprovados chegam do Supabase de forma assíncrona. Se a pessoa já
+    // estiver pesquisando, atualizamos os resultados assim que o cache terminar.
+    window.addEventListener('altereco:content-updated', () => {
+        const input = document.getElementById('main-search');
+        if (input && input.value.trim()) runGlobalSearch(input.value);
     });
 });
 
@@ -153,10 +176,252 @@ document.addEventListener('DOMContentLoaded', () => {
 function getSearchHTML(placeholder, id = 'main-search') {
     return `<div class="search-section" style="padding-bottom:1.5rem;">
         <div class="search-bar-wrapper">
-            <input type="text" id="${id}" placeholder="${placeholder}">
+            <input type="search" id="${id}" placeholder="${placeholder}" autocomplete="off" aria-label="Pesquisar na plataforma AlterECO">
             <i data-lucide="search" class="search-icon"></i>
         </div>
+        ${id === 'main-search' ? '<div id="global-search-results" class="global-search-results" aria-live="polite"></div>' : ''}
     </div>`;
+}
+
+function normalizeSearchText(value = '') {
+    return String(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function searchResultText(item) {
+    return normalizeSearchText([
+        item.title,
+        item.description,
+        item.author,
+        item.category,
+        item.subjectArea,
+        item.year,
+        ...(item.tags || [])
+    ].filter(Boolean).join(' '));
+}
+
+function flattenGlobalSearchIndex() {
+    const results = [];
+    const push = (item) => {
+        if (!item || !item.title) return;
+        results.push({
+            page: item.page || 'home',
+            title: String(item.title),
+            description: String(item.description || ''),
+            author: String(item.author || ''),
+            category: String(item.category || ''),
+            subjectArea: String(item.subjectArea || ''),
+            year: item.year ? String(item.year) : '',
+            tags: Array.isArray(item.tags) ? item.tags : [],
+            url: item.url && item.url !== '#' ? String(item.url) : ''
+        });
+    };
+
+    (typeof METODOS !== 'undefined' ? METODOS : []).forEach(item => push({
+        page: 'metodos',
+        category: 'Métodos',
+        title: item.name,
+        description: [item.description, item.howToUse, item.purpose, item.source, item.oecd].filter(Boolean).join(' '),
+        tags: [item.oecd].filter(Boolean),
+        url: item.url
+    }));
+
+    Object.values(typeof MATERIAIS !== 'undefined' ? MATERIAIS : {}).flat().forEach(item => push({
+        page: 'materiais',
+        category: 'Materiais',
+        title: item.name,
+        description: item.description,
+        tags: item.tags || [],
+        url: item.url
+    }));
+
+    Object.values(typeof PUBLICACOES !== 'undefined' ? PUBLICACOES : {}).flat().forEach(item => push({
+        page: 'publicacoes',
+        category: 'Publicações',
+        title: item.name || item.title,
+        description: item.description,
+        author: item.author,
+        tags: item.tags || [],
+        year: item.year,
+        url: item.url
+    }));
+
+    Object.values(typeof LEGISLACAO !== 'undefined' ? LEGISLACAO : {}).flat().forEach(item => push({
+        page: 'legislacao',
+        category: 'Legislação',
+        title: item.name,
+        description: item.description,
+        tags: [item.country, item.year].filter(Boolean),
+        year: item.year,
+        url: item.url
+    }));
+
+    Object.values(typeof BASES_DADOS !== 'undefined' ? BASES_DADOS : {}).flat().forEach(item => push({
+        page: 'bases-dados',
+        category: 'Bases de Dados',
+        title: item.name,
+        description: item.description,
+        tags: [item.tag].filter(Boolean),
+        url: item.url
+    }));
+
+    // Conteúdo aprovado e persistido no Supabase.
+    if (window.getDynamicPostsForArea) {
+        const areaConfig = [
+            ['metodos', 'Métodos'],
+            ['materiais', 'Materiais'],
+            ['publicacoes', 'Publicações'],
+            ['legislacao', 'Legislação'],
+            ['bases-dados', 'Bases de Dados'],
+            ['eventos', 'Eventos']
+        ];
+        areaConfig.forEach(([area, label]) => {
+            (window.getDynamicPostsForArea(area) || []).forEach(item => push({
+                page: area,
+                category: label,
+                title: item.title,
+                description: [item.description, item.long_description].filter(Boolean).join(' '),
+                author: item.author,
+                tags: item.tags || [],
+                subjectArea: item.subject_area || item.source_metadata?.subject_area || '',
+                year: item.publication_year || item.source_metadata?.year || '',
+                url: item.url
+            }));
+        });
+    }
+
+    // Remove duplicatas por página + título + URL.
+    const seen = new Set();
+    return results.filter(item => {
+        const key = `${item.page}|${normalizeSearchText(item.title)}|${item.url}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function highlightSearchExcerpt(text, query) {
+    const raw = String(text || '').trim();
+    if (!raw) return '';
+    const words = normalizeSearchText(query).split(' ').filter(Boolean);
+    const normalized = normalizeSearchText(raw);
+    let index = -1;
+    for (const word of words) {
+        index = normalized.indexOf(word);
+        if (index >= 0) break;
+    }
+    const start = index > 70 ? index - 55 : 0;
+    const excerpt = raw.slice(start, start + 190);
+    return `${start ? '…' : ''}${excerpt}${raw.length > start + 190 ? '…' : ''}`;
+}
+
+window.runGlobalSearch = function(value) {
+    const host = document.getElementById('global-search-results');
+    if (!host) return;
+
+    const query = normalizeSearchText(value);
+    if (query.length < 2) {
+        host.innerHTML = '';
+        host.classList.remove('is-open');
+        return;
+    }
+
+    const terms = query.split(' ').filter(Boolean);
+    const matches = flattenGlobalSearchIndex()
+        .map(item => {
+            const haystack = searchResultText(item);
+            let score = terms.reduce((sum, term) => sum + (haystack.includes(term) ? 1 : 0), 0);
+            if (normalizeSearchText(item.title).includes(query)) score += 4;
+            if (normalizeSearchText(item.tags.join(' ')).includes(query)) score += 2;
+            return { ...item, score };
+        })
+        .filter(item => item.score > 0 && terms.every(term => searchResultText(item).includes(term)))
+        .sort((a, b) => b.score - a.score || a.title.localeCompare(b.title, 'pt-BR'))
+        .slice(0, 18);
+
+    host.classList.add('is-open');
+
+    if (!matches.length) {
+        host.innerHTML = `
+            <div class="global-search-empty">
+                <strong>Nenhum resultado para “${escapeHtmlSearch(value)}”.</strong>
+                <span>Tente outro termo, por exemplo: coelho, organ-on-chip, CONCEA, bioética ou legislação.</span>
+            </div>`;
+        return;
+    }
+
+    host.innerHTML = `
+        <div class="global-search-header">
+            <strong>${matches.length} ${matches.length === 1 ? 'resultado' : 'resultados'}</strong>
+            <span>em toda a plataforma</span>
+        </div>
+        <div class="global-search-list">
+            ${matches.map(item => `
+                <button type="button" class="global-search-item"
+                    data-global-search-page="${escapeHtmlSearch(item.page)}"
+                    onclick="openGlobalSearchResult('${escapeJsSearch(item.page)}','${escapeJsSearch(value)}')">
+                    <span class="global-search-item-top">
+                        <span class="global-search-category">${escapeHtmlSearch(item.category || 'AlterECO')}</span>
+                        ${item.year ? `<span class="global-search-year">${escapeHtmlSearch(item.year)}</span>` : ''}
+                    </span>
+                    <strong>${escapeHtmlSearch(item.title)}</strong>
+                    <span class="global-search-excerpt">${escapeHtmlSearch(highlightSearchExcerpt(item.description || item.author || item.tags.join(' · '), value))}</span>
+                    <span class="global-search-go">Ver em ${escapeHtmlSearch(item.category || 'AlterECO')} <i data-lucide="arrow-right" aria-hidden="true"></i></span>
+                </button>`).join('')}
+        </div>`;
+
+    if (window.lucide) window.lucide.createIcons();
+};
+
+function escapeHtmlSearch(value = '') {
+    return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function escapeJsSearch(value = '') {
+    return String(value)
+        .replaceAll('\\', '\\\\')
+        .replaceAll("'", "\\'")
+        .replaceAll('\n', ' ')
+        .replaceAll('\r', ' ');
+}
+
+window.openGlobalSearchResult = function(page, query) {
+    sessionStorage.setItem('altereco_pending_search', JSON.stringify({ page, query }));
+    handleNavigation(page);
+};
+
+function applyPendingSearch(pageId) {
+    let pending = null;
+    try {
+        pending = JSON.parse(sessionStorage.getItem('altereco_pending_search') || 'null');
+    } catch (_) {
+        pending = null;
+    }
+    if (!pending || pending.page !== pageId || !pending.query) return;
+
+    sessionStorage.removeItem('altereco_pending_search');
+    const inputMap = {
+        metodos: 'metodos-search',
+        materiais: 'materiais-search',
+        publicacoes: 'pub-search',
+        legislacao: 'search-input',
+        'bases-dados': 'search-input',
+        eventos: 'search-input'
+    };
+    const input = document.getElementById(inputMap[pageId] || 'search-input');
+    if (!input) return;
+    input.value = pending.query;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.focus({ preventScroll: true });
 }
 
 function getFilterDropdownHTML(id = 'filter-areas') {
@@ -300,6 +565,7 @@ function renderPage(pageId) {
     }
 
     if (window.lucide) window.lucide.createIcons();
+    applyPendingSearch(pageId);
     window.scrollTo(0, 0);
 }
 
@@ -405,7 +671,7 @@ function renderSobrePage(c) {
 
 function renderMetodosPage(c) {
     const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('metodos') : [];
-    const allMetodos = [...METODOS, ...dynamic.map(d => ({ name: d.title, description: d.description, url: d.url }))];
+    const allMetodos = [...METODOS, ...dynamic.map(d => ({ name: d.title + (d.author ? ' (Por: ' + d.author + ')' : ''), description: d.description, url: d.url }))];
     const metodosHTML = allMetodos.map(m => `
     <div class="metodo-card">
         <h3 class="metodo-title">${m.name}</h3>
@@ -468,7 +734,7 @@ function switchMateriaisTab(val, btn) {
     if (!grid) return;
     if (btn) { document.querySelectorAll('[data-tab-type="materiais"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
 
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('materiais').map(d => ({ name: d.title, description: d.description, url: d.url, tags: d.tags })) : [];
+    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('materiais').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url, tags: d.tags })) : [];
     const allItems = [...list, ...dynamic];
     grid.innerHTML = allItems.map(item => {
         const imageHTML = item.image ? `<div class="materiais-img-wrap"><img src="${item.image}" alt="${item.name}" class="materiais-img"></div>` : '';
@@ -579,7 +845,7 @@ function switchPublicacoesTab(val, btn) {
                 <div class="pub-book-content">
                     <h3 class="pub-book-title">${item.title}</h3>
                     <div class="pub-book-author">${item.author || 'Autor Desconhecido'}</div>
-                    <p class="pub-book-desc">${item.desc || 'Acesse a fonte original para consultar os detalhes desta publicação.'}</p>
+                    <p class="pub-book-desc">${item.desc || 'Um resumo sobre esta publicação está sendo preparado pela nossa curadoria inteligente...'}</p>
                     
                     <div class="pub-book-footer">
                         <a href="${item.url}" target="_blank" class="acessar-btn">Acessar <i data-lucide="arrow-right"></i></a>
@@ -619,7 +885,7 @@ function switchDatabaseTab(val, btn) {
     const grid = document.getElementById('db-content');
     if (!grid) return;
     if (btn) { document.querySelectorAll('[data-tab-type="db"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('bases').map(d => ({ name: d.title, description: d.description, url: d.url })) : [];
+    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('bases').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url })) : [];
     const allItems = [...list, ...dynamic];
     grid.innerHTML = allItems.map(db => `
     <div class="db-card">
@@ -659,7 +925,7 @@ function switchLegisTab(val, btn) {
 
     const introHTML = val === 'br' ? `<p class="legis-intro">${LEGISLACAO_INTRO}</p>` : '';
 
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('legislacao').map(d => ({ name: d.title, description: d.description, url: d.url })) : [];
+    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('legislacao').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url })) : [];
     const allItems = [...list, ...dynamic];
 
     grid.innerHTML = introHTML + `<div class="cards-grid-4">${allItems.map(item => `
