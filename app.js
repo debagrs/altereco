@@ -546,7 +546,7 @@ function switchPublicacoesTab(val, btn) {
             author: d.author,
             desc: d.description,
             url: d.url || '#',
-            image: d.image || 'https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?auto=format&fit=crop&q=80&w=400',
+            image: d.image || '',
             tags: d.tags
         });
     });
@@ -571,10 +571,11 @@ function switchPublicacoesTab(val, btn) {
     grid.innerHTML = `
         <div class="pub-cards-container">
             ${allItems.map(item => `
-            <div class="pub-book-card">
+            <div class="pub-book-card ${item.image ? '' : 'pub-book-card--no-image'}">
+                ${item.image ? `
                 <div class="pub-book-img-wrapper">
-                    <img src="${item.image || 'https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?auto=format&fit=crop&q=80&w=400'}" alt="${item.title}" class="pub-book-img">
-                </div>
+                    <img src="${item.image}" alt="" class="pub-book-img" loading="lazy" onerror="this.parentElement.remove(); this.closest('.pub-book-card')?.classList.add('pub-book-card--no-image');">
+                </div>` : ''}
                 <div class="pub-book-content">
                     <h3 class="pub-book-title">${item.title}</h3>
                     <div class="pub-book-author">${item.author || 'Autor Desconhecido'}</div>
