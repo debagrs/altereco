@@ -251,3 +251,43 @@ window.OBSERVATORIO_DB = {
         }
     ]
 };
+
+/* ═══════════════════════════════════════════════════════════════
+   DGP/CNPq 2023 · sincronização da base nominal temática
+   A fonte única é dgp-2023-grupos.js. Totais e listas são derivados
+   automaticamente, evitando divergência entre o número e o modal.
+═══════════════════════════════════════════════════════════════ */
+(function syncAlterEcoDgp2023() {
+    const source = window.ALTERECO_DGP_2023;
+    const db = window.OBSERVATORIO_DB;
+    if (!source || !db?.pesquisa || !Array.isArray(source.grupos)) return;
+
+    const areas = Array.isArray(source.areas) && source.areas.length
+        ? source.areas
+        : ["Bem-estar Animal", "Direito Animal", "Ética e Senciência"];
+
+    const byArea = {};
+    areas.forEach(area => {
+        byArea[area] = source.grupos
+            .filter(group => Array.isArray(group.areas) && group.areas.includes(area))
+            .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'));
+    });
+
+    db.pesquisa.grupos_catalogo = byArea;
+    db.pesquisa.grupos = areas.map(area => ({
+        area,
+        total: byArea[area].length,
+        fonte: `Base nominal temática AlterECO · referência Censo DGP ${source.meta?.ano_referencia || 2023}`,
+        tipo_total: "nominal_catalogado"
+    }));
+    db.pesquisa.dgp_meta = source.meta || {};
+
+    const uniqueCount = new Set(source.grupos.map(group => group.id || group.nome)).size;
+    const kpi = db.visao_geral?.kpis?.find(item => item.label === 'Grupos de Pesquisa');
+    if (kpi) {
+        kpi.value = String(uniqueCount);
+        kpi.fonte = 'Base nominal AlterECO / DGP-CNPq';
+        kpi.ano = source.meta?.ano_referencia || 2023;
+        kpi.url = 'lattes.cnpq.br/web/dgp/censos2';
+    }
+})();
