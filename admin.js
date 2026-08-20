@@ -1029,6 +1029,307 @@ function renderPendingCard(post) {
     </article>`;
 }
 
+
+/* ════════════ ECO CURADORIA — IA INTERNA COM PESQUISA WEB ════════════ */
+
+const alterecoCuratorAIState = {
+    runId: null,
+    lastResearch: null,
+    lastDraft: null
+};
+
+async function invokeAICurator(payload) {
+    const session = await getVerifiedAccess('admin');
+    if (!session) throw new Error('Sessão administrativa não encontrada.');
+
+    const client = getSupabaseClient();
+    const functionName = window.CONFIG?.AI?.CURATOR_FUNCTION_NAME || 'ai-curator';
+    const { data, error } = await client.functions.invoke(functionName, {
+        body: payload
+    });
+
+    if (error) {
+        let message = error.message || 'Falha ao chamar a ECO Curadoria.';
+        try {
+            if (error.context && typeof error.context.json === 'function') {
+                const details = await error.context.json();
+                if (details?.error) message = details.error;
+            }
+        } catch (_) {}
+        throw new Error(message);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+}
+
+function formatCuratorAIText(text = '') {
+    let safe = escapeHtml(String(text));
+    safe = safe
+        .replace(/^###\s+(.+)$/gm, '<h4 style="margin:1.2rem 0 .5rem; color:var(--primary-navy); font-size:1.05rem;">$1</h4>')
+        .replace(/^##\s+(.+)$/gm, '<h3 style="margin:1.4rem 0 .6rem; color:var(--primary-navy); font-size:1.2rem;">$1</h3>')
+        .replace(/^#\s+(.+)$/gm, '<h3 style="margin:1.4rem 0 .6rem; color:var(--primary-navy); font-size:1.25rem;">$1</h3>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^[-•]\s+(.+)$/gm, '<div style="margin:.35rem 0; padding-left:1rem;">• $1</div>')
+        .replace(/\n\n/g, '</p><p style="margin:.8rem 0;">')
+        .replace(/\n/g, '<br>');
+    return `<p style="margin:0;">${safe}</p>`;
+}
+
+function renderCuratorSources(sources = []) {
+    if (!Array.isArray(sources) || !sources.length) {
+        return '<p style="color:var(--text-gray);">Nenhuma fonte estruturada retornada. Não publique sem checagem manual.</p>';
+    }
+
+    return sources.map((source, index) => {
+        const url = normalizeExternalUrl(source?.url);
+        const title = escapeHtml(source?.title || `Fonte ${index + 1}`);
+        return url
+            ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="display:block; padding:.75rem .9rem; margin:.45rem 0; border:1px solid rgba(128,128,128,.18); border-radius:12px; color:var(--primary-navy); text-decoration:none; background:var(--white);"><strong>${index + 1}.</strong> ${title}<br><small style="color:var(--text-gray); overflow-wrap:anywhere;">${escapeHtml(url)}</small></a>`
+            : `<div style="padding:.75rem .9rem; margin:.45rem 0; border:1px solid rgba(128,128,128,.18); border-radius:12px;">${index + 1}. ${title}</div>`;
+    }).join('');
+}
+
+window.renderAICuratorWorkspace = function() {
+    return `
+    <section id="ai-curator-workspace" style="background:var(--white); border-radius:22px; border:1px solid rgba(128,128,128,.15); box-shadow:var(--shadow); overflow:hidden;">
+        <div style="padding:clamp(1.4rem,3vw,2.2rem); border-bottom:1px solid rgba(128,128,128,.14); background:linear-gradient(135deg, rgba(250,205,95,.15), rgba(64,248,226,.08));">
+            <div style="display:flex; gap:1rem; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;">
+                <div style="display:flex; gap:1rem; align-items:center;">
+                    <img src="assets/eco.png" alt="" style="width:52px; height:52px; border-radius:50%; object-fit:cover; background:white; border:2px solid var(--accent-orange);">
+                    <div>
+                        <div class="page-badge" style="margin-bottom:.45rem; background:var(--primary-navy); color:white;">IA INTERNA · ADMIN</div>
+                        <h3 style="font-size:1.45rem; color:var(--primary-navy); margin:0;">ECO Curadoria</h3>
+                        <p style="color:var(--text-gray); margin:.35rem 0 0; line-height:1.5;">Pesquisa a web em tempo real, encontra fontes verificáveis e prepara rascunhos para o acervo. Ela é separada da ECO que atende o público.</p>
+                    </div>
+                </div>
+                <div id="curator-ai-status" style="font-size:.78rem; color:#2F7F76; font-weight:700; padding:.55rem .8rem; background:white; border-radius:999px; border:1px solid rgba(77,182,172,.35);">Gemini + Google Search</div>
+            </div>
+        </div>
+
+        <div style="padding:clamp(1.4rem,3vw,2.2rem);">
+            <label for="curator-ai-focus" style="display:block; font-weight:800; margin-bottom:.55rem; color:var(--primary-navy);">Onde a ECO deve priorizar a busca?</label>
+            <select id="curator-ai-focus" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.22); border-radius:12px; background:var(--bg-light); color:var(--primary-navy); font:inherit; margin-bottom:1rem;">
+                <option value="geral">Web científica e institucional — busca ampla</option>
+                <option value="concea">CONCEA · MCTI · RENAMA · ANVISA · fontes oficiais brasileiras</option>
+                <option value="interniche">InterNICHE · educação humanitária · recursos de ensino</option>
+                <option value="cientifico">PubMed · SciELO · periódicos · pesquisas científicas</option>
+                <option value="metodos">NAMs · métodos substitutivos · OECD · EURL ECVAM · NC3Rs</option>
+                <option value="legislacao">Legislação · normas · guias · validação regulatória</option>
+            </select>
+
+            <label for="curator-ai-query" style="display:block; font-weight:800; margin-bottom:.55rem; color:var(--primary-navy);">O que você quer encontrar?</label>
+            <textarea id="curator-ai-query" rows="4" maxlength="1600" placeholder="Ex.: encontre novos métodos substitutivos validados para ensino de fisiologia; procure materiais do InterNICHE; busque atualizações recentes do CONCEA; encontre artigos sobre organ-on-chip..." style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.22); border-radius:14px; font:inherit; resize:vertical; line-height:1.5;"></textarea>
+
+            <div style="display:flex; gap:.7rem; flex-wrap:wrap; margin-top:1rem;">
+                <button id="curator-ai-search-btn" onclick="runCuratorAIResearch()" style="background:var(--primary-navy); color:white; border:none; padding:.95rem 1.25rem; border-radius:12px; font-weight:800; cursor:pointer; display:inline-flex; gap:.5rem; align-items:center;"><i data-lucide="search" style="width:18px;"></i> Pesquisar na web</button>
+                <button onclick="loadCuratorAIHistory()" style="background:var(--bg-light); color:var(--primary-navy); border:1px solid rgba(128,128,128,.18); padding:.95rem 1.25rem; border-radius:12px; font-weight:800; cursor:pointer; display:inline-flex; gap:.5rem; align-items:center;"><i data-lucide="history" style="width:18px;"></i> Pesquisas recentes</button>
+            </div>
+
+            <div id="curator-ai-result" style="margin-top:1.5rem;"></div>
+            <div id="curator-ai-history" style="margin-top:1.2rem;"></div>
+        </div>
+    </section>`;
+};
+
+window.runCuratorAIResearch = async function() {
+    const queryEl = document.getElementById('curator-ai-query');
+    const focusEl = document.getElementById('curator-ai-focus');
+    const resultEl = document.getElementById('curator-ai-result');
+    const statusEl = document.getElementById('curator-ai-status');
+    const btn = document.getElementById('curator-ai-search-btn');
+    const query = queryEl?.value?.trim();
+
+    if (!query || query.length < 3) {
+        alert('Digite o tema que a ECO Curadoria deve pesquisar.');
+        queryEl?.focus();
+        return;
+    }
+
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-circle" style="width:18px;"></i> Pesquisando fontes reais...';
+    }
+    if (statusEl) statusEl.textContent = 'Pesquisando Google + fontes científicas...';
+    if (resultEl) resultEl.innerHTML = `<div style="padding:2rem; border-radius:16px; background:var(--bg-light); color:var(--text-gray);"><strong>Pesquisa em andamento.</strong><br>A ECO está procurando fontes institucionais, artigos e repositórios antes de sintetizar os achados.</div>`;
+    if (window.lucide) window.lucide.createIcons();
+
+    try {
+        const data = await invokeAICurator({
+            action: 'research',
+            query,
+            focus: focusEl?.value || 'geral'
+        });
+
+        alterecoCuratorAIState.runId = data.runId;
+        alterecoCuratorAIState.lastResearch = data;
+        alterecoCuratorAIState.lastDraft = null;
+
+        if (statusEl) statusEl.textContent = `${data.model || 'Gemini'} · pesquisa web concluída`;
+        if (resultEl) {
+            resultEl.innerHTML = `
+                <article style="border:1px solid rgba(128,128,128,.15); border-radius:18px; padding:clamp(1.2rem,2.5vw,2rem); background:var(--bg-light);">
+                    <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:center; margin-bottom:1rem;">
+                        <h3 style="color:var(--primary-navy); margin:0;">Resultado da pesquisa</h3>
+                        <span style="font-size:.78rem; color:var(--text-gray);">${Array.isArray(data.sources) ? data.sources.length : 0} fontes recuperadas</span>
+                    </div>
+                    <div style="line-height:1.7; color:var(--text-gray);">${formatCuratorAIText(data.answer)}</div>
+                    <div style="margin-top:1.5rem;">
+                        <h4 style="color:var(--primary-navy); margin-bottom:.7rem;">Fontes encontradas</h4>
+                        ${renderCuratorSources(data.sources)}
+                    </div>
+                    ${Array.isArray(data.searchQueries) && data.searchQueries.length ? `<details style="margin-top:1rem;"><summary style="cursor:pointer; font-weight:700; color:var(--primary-navy);">Consultas que a IA realizou</summary><div style="padding:.8rem 0; color:var(--text-gray);">${data.searchQueries.map(q => `<div>• ${escapeHtml(q)}</div>`).join('')}</div></details>` : ''}
+                    ${data.searchEntryPoint ? `<div class="gemini-search-entry" style="margin-top:1rem; overflow:auto;">${data.searchEntryPoint}</div>` : ''}
+                    <div style="display:flex; gap:.7rem; flex-wrap:wrap; margin-top:1.4rem;">
+                        <button onclick="createCuratorAIDraft()" style="background:var(--accent-orange); color:var(--primary-navy); border:none; padding:.95rem 1.2rem; border-radius:12px; font-weight:800; cursor:pointer; display:inline-flex; gap:.45rem; align-items:center;"><i data-lucide="file-plus-2" style="width:18px;"></i> Criar conteúdo a partir desta pesquisa</button>
+                        <button onclick="document.getElementById('curator-ai-query').focus()" style="background:white; color:var(--primary-navy); border:1px solid rgba(128,128,128,.2); padding:.95rem 1.2rem; border-radius:12px; font-weight:800; cursor:pointer;">Refinar busca</button>
+                    </div>
+                    <div id="curator-ai-draft" style="margin-top:1.3rem;"></div>
+                </article>`;
+        }
+    } catch (error) {
+        console.error('Erro ECO Curadoria:', error);
+        if (statusEl) statusEl.textContent = 'ECO Curadoria · erro';
+        if (resultEl) resultEl.innerHTML = `<div style="padding:1.2rem; border-radius:14px; background:#FFF0F0; color:#A22727;"><strong>Não foi possível pesquisar.</strong><br>${escapeHtml(error.message)}</div>`;
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="search" style="width:18px;"></i> Pesquisar na web';
+        }
+        if (window.lucide) window.lucide.createIcons();
+    }
+};
+
+window.createCuratorAIDraft = async function() {
+    const runId = alterecoCuratorAIState.runId;
+    const draftEl = document.getElementById('curator-ai-draft');
+    const statusEl = document.getElementById('curator-ai-status');
+    if (!runId || !draftEl) return;
+
+    draftEl.innerHTML = `<div style="padding:1.2rem; border-radius:14px; background:white; border:1px solid rgba(128,128,128,.15); color:var(--text-gray);">Transformando a pesquisa em um candidato de conteúdo verificável...</div>`;
+    if (statusEl) statusEl.textContent = 'Criando rascunho editorial...';
+
+    try {
+        const data = await invokeAICurator({ action: 'draft', runId });
+        const draft = data.draft || {};
+        alterecoCuratorAIState.lastDraft = draft;
+        if (statusEl) statusEl.textContent = `${data.model || 'Gemini'} · rascunho pronto para revisão`;
+
+        draftEl.innerHTML = `
+            <div style="padding:1.4rem; border-radius:16px; background:white; border:2px solid rgba(250,205,95,.7);">
+                <div class="page-badge" style="background:var(--accent-orange); color:var(--primary-navy); margin-bottom:.7rem;">RASCUNHO · NÃO PUBLICADO</div>
+                <h3 style="color:var(--primary-navy); margin-bottom:.5rem;">${escapeHtml(draft.title || '')}</h3>
+                <p style="color:var(--text-gray); line-height:1.65;">${escapeHtml(draft.description || '')}</p>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.7rem; margin-top:1rem; font-size:.9rem; color:var(--text-gray);">
+                    <div><strong>Autor/instituição:</strong><br>${escapeHtml(draft.author_name || '')}</div>
+                    <div><strong>Área:</strong><br>${escapeHtml(draft.area || '')}</div>
+                    <div><strong>Tags:</strong><br>${escapeHtml(Array.isArray(draft.tags) ? draft.tags.join(', ') : '')}</div>
+                </div>
+                <div style="margin-top:1rem; padding:1rem; border-radius:12px; background:var(--bg-light); color:var(--text-gray); line-height:1.6;"><strong>Texto expandido</strong><br>${escapeHtml(draft.long_description || '')}</div>
+                <div style="margin-top:1rem; font-size:.88rem; color:var(--text-gray);"><strong>Por que esta fonte:</strong> ${escapeHtml(draft.why_this_source || '')}</div>
+                <div style="margin-top:.5rem; font-size:.88rem; color:var(--text-gray);"><strong>Checagem:</strong> ${escapeHtml(draft.verification_note || '')}</div>
+                ${normalizeExternalUrl(draft.external_url) ? `<a href="${escapeHtml(normalizeExternalUrl(draft.external_url))}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:1rem; color:var(--accent-purple); font-weight:800;">Abrir fonte principal ↗</a>` : ''}
+                <div style="display:flex; gap:.7rem; flex-wrap:wrap; margin-top:1.2rem;">
+                    <button onclick="useCuratorDraftInNewContent()" style="background:var(--primary-navy); color:white; border:none; padding:.95rem 1.15rem; border-radius:12px; font-weight:800; cursor:pointer;">Revisar no formulário de cadastro</button>
+                    <button onclick="createCuratorAIDraft()" style="background:var(--bg-light); color:var(--primary-navy); border:1px solid rgba(128,128,128,.2); padding:.95rem 1.15rem; border-radius:12px; font-weight:800; cursor:pointer;">Gerar outra versão</button>
+                </div>
+            </div>`;
+    } catch (error) {
+        console.error(error);
+        if (statusEl) statusEl.textContent = 'ECO Curadoria · erro no rascunho';
+        draftEl.innerHTML = `<div style="padding:1rem; border-radius:12px; background:#FFF0F0; color:#A22727;">${escapeHtml(error.message)}</div>`;
+    }
+};
+
+window.useCuratorDraftInNewContent = async function() {
+    const draft = alterecoCuratorAIState.lastDraft;
+    if (!draft) return;
+
+    await renderAdminDashboard('new');
+
+    const fill = (id, value) => {
+        const el = document.getElementById(id);
+        if (el) el.value = value || '';
+    };
+
+    fill('man-title', draft.title);
+    fill('man-author', draft.author_name);
+    fill('man-area', normalizeContentArea(draft.area));
+    fill('man-tags', Array.isArray(draft.tags) ? draft.tags.join(', ') : '');
+    fill('man-desc', draft.description);
+    fill('man-long-desc', draft.long_description);
+    fill('man-link', normalizeExternalUrl(draft.external_url) || '');
+
+    const form = document.getElementById('man-title');
+    form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+
+window.loadCuratorAIHistory = async function() {
+    const historyEl = document.getElementById('curator-ai-history');
+    if (!historyEl) return;
+    historyEl.innerHTML = '<div style="color:var(--text-gray);">Carregando pesquisas...</div>';
+
+    try {
+        const data = await invokeAICurator({ action: 'history' });
+        const runs = Array.isArray(data.runs) ? data.runs : [];
+        if (!runs.length) {
+            historyEl.innerHTML = '<div style="color:var(--text-gray); padding:1rem 0;">Ainda não há pesquisas salvas.</div>';
+            return;
+        }
+
+        historyEl.innerHTML = `
+            <details open style="border-top:1px solid rgba(128,128,128,.14); padding-top:1rem;">
+                <summary style="cursor:pointer; font-weight:800; color:var(--primary-navy);">Pesquisas recentes (${runs.length})</summary>
+                <div style="display:grid; gap:.7rem; margin-top:.8rem;">
+                    ${runs.map(run => `
+                        <button onclick="restoreCuratorAIRun('${escapeHtml(run.id)}')" data-run='${escapeHtml(JSON.stringify(run).replaceAll("'", "&#39;"))}' style="text-align:left; width:100%; background:var(--bg-light); border:1px solid rgba(128,128,128,.14); border-radius:12px; padding:.85rem 1rem; cursor:pointer; color:var(--primary-navy);">
+                            <strong>${escapeHtml(run.query)}</strong><br>
+                            <small style="color:var(--text-gray);">${escapeHtml(run.focus || 'geral')} · ${escapeHtml(formatContentDate(run.created_at))}</small>
+                        </button>`).join('')}
+                </div>
+            </details>`;
+
+        window.__alterecoCuratorHistory = runs;
+    } catch (error) {
+        historyEl.innerHTML = `<div style="color:#A22727;">${escapeHtml(error.message)}</div>`;
+    }
+};
+
+window.restoreCuratorAIRun = function(id) {
+    const runs = window.__alterecoCuratorHistory || [];
+    const run = runs.find(item => item.id === id);
+    if (!run) return;
+
+    const queryEl = document.getElementById('curator-ai-query');
+    const focusEl = document.getElementById('curator-ai-focus');
+    const resultEl = document.getElementById('curator-ai-result');
+    if (queryEl) queryEl.value = run.query || '';
+    if (focusEl) focusEl.value = run.focus || 'geral';
+
+    alterecoCuratorAIState.runId = run.id;
+    alterecoCuratorAIState.lastResearch = run;
+    alterecoCuratorAIState.lastDraft = run.draft || null;
+
+    if (resultEl) {
+        resultEl.innerHTML = `
+            <article style="border:1px solid rgba(128,128,128,.15); border-radius:18px; padding:clamp(1.2rem,2.5vw,2rem); background:var(--bg-light);">
+                <h3 style="color:var(--primary-navy); margin-bottom:1rem;">Pesquisa recuperada</h3>
+                <div style="line-height:1.7; color:var(--text-gray);">${formatCuratorAIText(run.answer || '')}</div>
+                <div style="margin-top:1.2rem;"><h4 style="color:var(--primary-navy);">Fontes</h4>${renderCuratorSources(run.sources)}</div>
+                <button onclick="createCuratorAIDraft()" style="margin-top:1rem; background:var(--accent-orange); color:var(--primary-navy); border:none; padding:.9rem 1.1rem; border-radius:12px; font-weight:800; cursor:pointer;">Criar novo rascunho desta pesquisa</button>
+                <div id="curator-ai-draft" style="margin-top:1rem;"></div>
+            </article>`;
+    }
+    document.getElementById('curator-ai-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+window.sendCommandToCurator = async function() {
+    await renderAdminDashboard('ai-curator');
+};
+
+window.triggerAICuratorChat = function() {
+    window.sendCommandToCurator();
+};
+
 window.renderAdminDashboard = async function(tab = 'pending') {
     let session;
 
@@ -1100,6 +1401,7 @@ window.renderAdminDashboard = async function(tab = 'pending') {
             <button onclick="renderAdminDashboard('pending')" style="border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold; ${tab === 'pending' ? 'background:var(--primary-navy); color:white;' : 'background:var(--bg-light); color:var(--text-gray);'}">Curadoria (${pending.length})</button>
             <button onclick="renderAdminDashboard('approved')" style="border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold; ${tab === 'approved' ? 'background:var(--primary-navy); color:white;' : 'background:var(--bg-light); color:var(--text-gray);'}">Publicados (${approved.length})</button>
             <button onclick="renderAdminDashboard('new')" style="background:var(--accent-orange); color:white; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Novo conteúdo</button>
+            <button onclick="renderAdminDashboard('ai-curator')" style="${tab === 'ai-curator' ? 'background:#DDF9F4; color:#176A61;' : 'background:var(--bg-light); color:var(--text-gray);'} border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">IA Curadoria</button>
             <button onclick="renderAdminDashboard('forum')" style="background:var(--bg-light); color:var(--text-gray); border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Fórum</button>
             <button onclick="renderAdminSettings()" style="background:var(--bg-light); color:var(--text-gray); border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Segurança</button>
             <button onclick="logout()" style="background:#FFF0F0; color:#D32F2F; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Sair</button>
@@ -1109,14 +1411,16 @@ window.renderAdminDashboard = async function(tab = 'pending') {
     <div style="max-width:1400px; margin:0 auto; padding:2rem; display:grid; grid-template-columns:minmax(0,2fr) minmax(300px,1fr); gap:2rem; align-items:start;">
         <main>
             <h2 style="font-size:1.8rem; color:var(--primary-navy); margin-bottom:2rem;">
-                ${tab === 'pending' ? 'Aprovação de conteúdos' : tab === 'approved' ? 'Conteúdos publicados' : tab === 'new' ? 'Novo conteúdo' : 'Moderação do fórum'}
+                ${tab === 'pending' ? 'Aprovação de conteúdos' : tab === 'approved' ? 'Conteúdos publicados' : tab === 'new' ? 'Novo conteúdo' : tab === 'ai-curator' ? 'Pesquisa e curadoria assistida por IA' : 'Moderação do fórum'}
             </h2>
             <div id="admin-main-list">
                 ${tab === 'forum'
                     ? forumHTML
                     : tab === 'new'
                         ? renderManualEntryForm()
-                        : contentHTML}
+                        : tab === 'ai-curator'
+                            ? renderAICuratorWorkspace()
+                            : contentHTML}
             </div>
         </main>
 
@@ -1125,12 +1429,12 @@ window.renderAdminDashboard = async function(tab = 'pending') {
                 <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
                     <img src="assets/eco.png" alt="" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
                     <div>
-                        <h3 style="font-size:1.1rem; color:var(--primary-navy);">ECO IA CURADORA</h3>
-                        <span style="font-size:.75rem; color:#4DB6AC;">Gemini 3.5 Flash · Edge Function protegida</span>
+                        <h3 style="font-size:1.1rem; color:var(--primary-navy);">ECO CURADORIA</h3>
+                        <span style="font-size:.75rem; color:#4DB6AC;">Gemini · Google Search · uso interno</span>
                     </div>
                 </div>
-                <p style="color:var(--text-gray); line-height:1.6; font-size:.9rem;">A chave Gemini fica apenas no Supabase. Use a ECO para revisar conteúdo sem expor credenciais no navegador.</p>
-                <button onclick="sendCommandToCurator()" style="width:100%; margin-top:1rem; background:var(--primary-navy); color:white; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:bold;">Abrir ECO IA</button>
+                <p style="color:var(--text-gray); line-height:1.6; font-size:.9rem;">Este robô é exclusivo da administração: pesquisa CONCEA, InterNICHE, artigos, repositórios e web; depois prepara um rascunho com fontes para sua revisão.</p>
+                <button onclick="sendCommandToCurator()" style="width:100%; margin-top:1rem; background:var(--primary-navy); color:white; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:bold;">Abrir pesquisa da curadoria</button>
             </div>
         </aside>
     </div>`;
@@ -1236,15 +1540,6 @@ window.changePostUrl = async function(id) {
 
 window.changePostDate = function() {
     alert('As datas agora são registradas automaticamente pelo Supabase e não podem ser alteradas manualmente.');
-};
-
-window.sendCommandToCurator = async function() {
-    window.location.hash = 'ai-eco';
-    if (window.renderPage) window.renderPage('ai-eco');
-};
-
-window.triggerAICuratorChat = function() {
-    window.sendCommandToCurator();
 };
 
 window.shareCard = function(btn) {
