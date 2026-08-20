@@ -2804,3 +2804,220 @@ footer {
 [data-theme="dark"] .curator-project-link {
     color: var(--accent-yellow) !important;
 }
+
+/* ══════════════════════════════════════════════════════
+   MOBILE REFINEMENT — cards + ECO flutuante
+   20/08/2026
+══════════════════════════════════════════════════════ */
+
+/* Ações dos cards de métodos: classes reais em vez de estilos inline. */
+.metodo-actions {
+    margin-top: auto;
+    padding-top: 0.35rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.metodo-access-btn {
+    min-height: 44px;
+    padding: 0.7rem 1.25rem;
+    border-radius: 10px;
+    background: #2C2F33;
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.metodo-access-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(44, 44, 51, 0.18);
+}
+
+.metodo-access-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.metodo-share-btn {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border: 1px solid rgba(44, 44, 51, 0.12);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-gray);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.metodo-share-btn svg {
+    width: 19px;
+    height: 19px;
+}
+
+/* A ECO não precisa aparecer flutuando quando a própria página da ECO está aberta. */
+.fixed-icons {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fixed-icons.fixed-icons--hidden {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+    pointer-events: none;
+}
+
+@media (max-width: 640px) {
+    html,
+    body,
+    #app,
+    #content-area,
+    .page-container {
+        max-width: 100%;
+        overflow-x: clip;
+    }
+
+    /* Usa de fato a largura útil do celular. Antes havia 4rem de padding
+       na seção + 1.5rem na grade, deixando os cards excessivamente estreitos. */
+    .content-white-section {
+        padding: 1.35rem 0.85rem 4.5rem;
+    }
+
+    .content-white-section .search-filter-bar {
+        margin-bottom: 1.25rem;
+    }
+
+    .home-cards-grid,
+    .global-cards-grid,
+    .charts-grid-2,
+    .cards-grid-4 {
+        width: 100%;
+        padding: 0;
+        margin-left: 0;
+        margin-right: 0;
+        gap: 1rem;
+    }
+
+    .metodo-card {
+        width: 100%;
+        min-width: 0;
+        padding: 1.35rem 1.2rem 1.25rem;
+        border-radius: 20px;
+        border-top-width: 5px;
+        box-shadow: 0 8px 24px rgba(27, 31, 38, 0.07);
+    }
+
+    .metodo-title {
+        font-size: 1.35rem !important;
+        line-height: 1.25;
+        margin-bottom: 0.5rem;
+        overflow-wrap: anywhere;
+    }
+
+    .metodo-oecd {
+        font-size: 1rem !important;
+        line-height: 1.45;
+        margin-bottom: 1rem;
+    }
+
+    .metodo-desc,
+    .metodo-field,
+    .metodo-source {
+        font-size: 1rem !important;
+        line-height: 1.6;
+    }
+
+    .metodo-desc {
+        margin-bottom: 1rem;
+    }
+
+    .metodo-field {
+        margin-bottom: 0.7rem;
+    }
+
+    .metodo-source {
+        margin-bottom: 1.15rem;
+    }
+
+    .metodo-actions {
+        gap: 0.65rem;
+    }
+
+    .metodo-access-btn {
+        min-height: 48px;
+        flex: 1 1 auto;
+        padding: 0.8rem 1rem;
+        font-size: 1rem !important;
+        border-radius: 12px;
+    }
+
+    .metodo-share-btn {
+        width: 48px;
+        height: 48px;
+        flex-basis: 48px;
+        border-radius: 12px;
+    }
+
+    /* Assistente flutuante: menor, dentro da safe area e sem invadir o card. */
+    .fixed-icons {
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        z-index: 1650;
+    }
+
+    .fixed-icon-btn {
+        width: 52px;
+        height: 52px;
+        padding: 7px;
+        border-radius: 16px;
+        border: 1px solid rgba(163, 216, 244, 0.95);
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow:
+            0 0 0 2px rgba(250, 205, 95, 0.9),
+            0 7px 20px rgba(24, 28, 35, 0.18);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .fixed-icon-btn:hover,
+    .fixed-icon-btn:active {
+        transform: translateY(-2px) scale(1.02);
+    }
+
+    .fixed-icon-btn img {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Espaço inferior para o botão não cobrir o último conteúdo da página. */
+    #content-area {
+        padding-bottom: 16px;
+    }
+}
+
+@media (max-width: 380px) {
+    .content-white-section {
+        padding-left: 0.65rem;
+        padding-right: 0.65rem;
+    }
+
+    .metodo-card {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .fixed-icons {
+        right: 10px;
+    }
+}
+
