@@ -1,4 +1,4 @@
-﻿/* ══════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════
    ALTERECO — ADMINISTRAÇÃO E CURADORIA
    Supabase Auth + content_items + RLS
 ══════════════════════════════════════════════════════ */
@@ -171,6 +171,52 @@ function getSupabaseClient() {
         throw new Error('A conexão com o Supabase não foi carregada.');
     }
     return window.alterecoSupabase;
+}
+
+
+window.getCurrentAlterEcoSession = async function() {
+    try {
+        return await getVerifiedAccess();
+    } catch (error) {
+        console.warn('Sessão AlterECO não disponível:', error.message);
+        return null;
+    }
+};
+
+async function uploadContentImage(file, userId) {
+    if (!file) return null;
+
+    const allowed = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    if (!allowed.has(file.type)) {
+        throw new Error('Use uma imagem JPG, PNG, WEBP ou GIF.');
+    }
+    if (file.size > 8 * 1024 * 1024) {
+        throw new Error('A imagem deve ter no máximo 8 MB.');
+    }
+
+    const extension = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const path = `${userId}/${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.${extension}`;
+    const client = getSupabaseClient();
+
+    const { error: uploadError } = await client.storage
+        .from('altereco-content')
+        .upload(path, file, {
+            cacheControl: '3600',
+            upsert: false,
+            contentType: file.type
+        });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = client.storage
+        .from('altereco-content')
+        .getPublicUrl(path);
+
+    if (!data?.publicUrl) {
+        throw new Error('Upload concluído, mas não foi possível gerar a URL pública.');
+    }
+
+    return data.publicUrl;
 }
 
 function saveVerifiedSession(user, profile) {
@@ -681,6 +727,11 @@ window.submitCuratorPost = async function(event) {
         const session = await getVerifiedAccess('curator');
         if (!session) throw new Error('Sessão de curadoria não encontrada.');
 
+        const uploadedImage = await uploadContentImage(
+            document.getElementById('cur-image-file')?.files?.[0],
+            session.id
+        );
+
         const payload = {
             title: document.getElementById('cur-title').value.trim(),
             author_name: session.name,
@@ -694,7 +745,7 @@ window.submitCuratorPost = async function(event) {
             external_url: normalizeExternalUrl(
                 document.getElementById('cur-link').value
             ),
-            image_url: normalizeExternalUrl(
+            image_url: uploadedImage || normalizeExternalUrl(
                 document.getElementById('cur-image')?.value
             ),
             status: 'pending',
@@ -835,9 +886,10 @@ window.renderCuradorDashboard = async function() {
                 </div>
 
                 <div>
-                    <label for="cur-image" style="display:block; font-weight:600; margin-bottom:.5rem;">URL de imagem, opcional</label>
-                    <input type="url" id="cur-image" placeholder="https://" style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:8px;">
-                    <p style="font-size:.8rem; color:var(--text-gray); margin-top:.45rem;">O envio direto de arquivos será conectado ao Supabase Storage na próxima etapa.</p>
+                    <label for="cur-image-file" style="display:block; font-weight:600; margin-bottom:.5rem;">Imagem, opcional</label>
+                    <input type="file" id="cur-image-file" accept="image/jpeg,image/png,image/webp,image/gif" style="width:100%; padding:.8rem; border:1px dashed rgba(128,128,128,.35); border-radius:8px; background:var(--bg-light);">
+                    <p style="font-size:.8rem; color:var(--text-gray); margin:.45rem 0;">JPG, PNG, WEBP ou GIF · até 8 MB · salvo no Supabase Storage.</p>
+                    <input type="url" id="cur-image" placeholder="ou cole uma URL https://" style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:8px;">
                 </div>
 
                 <button type="submit" style="background:var(--primary-navy); color:white; padding:1.2rem; border:none; border-radius:8px; font-weight:bold; font-size:1rem; cursor:pointer;">
@@ -1005,6 +1057,11 @@ window.renderAdminDashboard = async function(tab = 'pending') {
     }
 
     let contentHTML = '';
+    let forumHTML = '';
+
+    if (tab === 'forum') {
+        forumHTML = await renderForumModerationList();
+    }
 
     if (tab === 'pending') {
         contentHTML = pending.length
@@ -1056,7 +1113,7 @@ window.renderAdminDashboard = async function(tab = 'pending') {
             </h2>
             <div id="admin-main-list">
                 ${tab === 'forum'
-                    ? renderForumModerationList()
+                    ? forumHTML
                     : tab === 'new'
                         ? renderManualEntryForm()
                         : contentHTML}
@@ -1069,11 +1126,11 @@ window.renderAdminDashboard = async function(tab = 'pending') {
                     <img src="assets/eco.png" alt="" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
                     <div>
                         <h3 style="font-size:1.1rem; color:var(--primary-navy);">ECO IA CURADORA</h3>
-                        <span style="font-size:.75rem; color:#4DB6AC;">Integração protegida será a próxima etapa</span>
+                        <span style="font-size:.75rem; color:#4DB6AC;">Gemini 3.5 Flash · Edge Function protegida</span>
                     </div>
                 </div>
-                <p style="color:var(--text-gray); line-height:1.6; font-size:.9rem;">A IA permanece desativada para não expor a chave Gemini no navegador.</p>
-                <button onclick="sendCommandToCurator()" style="width:100%; margin-top:1rem; background:var(--primary-navy); color:white; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:bold;">Sobre a integração da IA</button>
+                <p style="color:var(--text-gray); line-height:1.6; font-size:.9rem;">A chave Gemini fica apenas no Supabase. Use a ECO para revisar conteúdo sem expor credenciais no navegador.</p>
+                <button onclick="sendCommandToCurator()" style="width:100%; margin-top:1rem; background:var(--primary-navy); color:white; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:bold;">Abrir ECO IA</button>
             </div>
         </aside>
     </div>`;
@@ -1156,7 +1213,7 @@ window.changePostImage = async function(id) {
 };
 
 window.handleLocalImageUpload = function() {
-    alert('O upload de arquivos será conectado ao Supabase Storage na próxima etapa. Por enquanto, use uma URL HTTPS.');
+    alert('O upload direto já está disponível nos formulários de nova submissão e novo conteúdo.');
 };
 
 window.changePostUrl = async function(id) {
@@ -1182,7 +1239,8 @@ window.changePostDate = function() {
 };
 
 window.sendCommandToCurator = async function() {
-    alert('A IA curadora está temporariamente desativada. Ela será ligada por uma Edge Function do Supabase, sem expor a chave Gemini.');
+    window.location.hash = 'ai-eco';
+    if (window.renderPage) window.renderPage('ai-eco');
 };
 
 window.triggerAICuratorChat = function() {
@@ -1378,40 +1436,70 @@ window.updateAdminCredentials = async function(event) {
     }
 };
 
-window.renderForumModerationList = function() {
-    const forumPosts = JSON.parse(localStorage.getItem('altereco_forum_posts')) || [];
-    const pending = forumPosts.filter(p => p.status === 'pending');
+window.renderForumModerationList = async function() {
+    try {
+        await getVerifiedAccess('admin');
+        const { data: pending, error } = await getSupabaseClient()
+            .from('forum_topics')
+            .select('id, author_name, title, body, created_at')
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
 
-    if(pending.length === 0) return `<div style="text-align:center; padding:5rem; color:#bbb;">Nenhum tópico pendente de moderação.</div>`;
+        if (error) throw error;
+        if (!pending?.length) {
+            return '<div style="text-align:center; padding:5rem; color:#888; background:var(--white); border-radius:16px;">Nenhum tópico pendente de moderação.</div>';
+        }
 
-    return pending.map(post => `
-        <div style="background:var(--white); border-radius:15px; padding:2rem; margin-bottom:1.5rem; border:1px solid rgba(128,128,128,0.2); box-shadow:0 5px 15px rgba(0,0,0,0.02);">
-            <div style="display:flex; justify-content:space-between; margin-bottom:1rem;">
-                <h3 style="margin:0; color:var(--primary-navy);">${post.title}</h3>
-                <span style="font-size:0.8rem; color:var(--text-gray);">Autor: <strong>${post.author}</strong></span>
+        return pending.map(post => `
+            <div style="background:var(--white); border-radius:15px; padding:2rem; margin-bottom:1.5rem; border:1px solid rgba(128,128,128,.2); box-shadow:0 5px 15px rgba(0,0,0,.02);">
+                <div style="display:flex; justify-content:space-between; gap:1rem; margin-bottom:1rem; flex-wrap:wrap;">
+                    <h3 style="margin:0; color:var(--primary-navy);">${escapeHtml(post.title)}</h3>
+                    <span style="font-size:.8rem; color:var(--text-gray);">Autor: <strong>${escapeHtml(post.author_name || 'Participante')}</strong></span>
+                </div>
+                <p style="color:var(--text-gray); font-size:.95rem; line-height:1.5; margin-bottom:1.5rem; white-space:pre-line;">${escapeHtml(post.body)}</p>
+                <div style="display:flex; gap:1rem; border-top:1px solid rgba(128,128,128,.15); padding-top:1.5rem; flex-wrap:wrap;">
+                    <button onclick="moderateForumPost('${post.id}', 'approved')" style="background:var(--mint-teal); color:#154d46; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">Aprovar tópico</button>
+                    <button onclick="moderateForumPost('${post.id}', 'delete')" style="background:#FFF0F0; color:#D32F2F; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">Excluir</button>
+                </div>
             </div>
-            <p style="color:var(--text-gray); font-size:0.95rem; line-height:1.5; margin-bottom:1.5rem;">${post.body}</p>
-            <div style="display:flex; gap:1rem; border-top:1px solid rgba(128,128,128,0.15); padding-top:1.5rem;">
-                <button onclick="moderateForumPost('${post.id}', 'approved')" style="background:var(--mint-teal); color:#005555; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">Aprovar Tópico</button>
-                <button onclick="moderateForumPost('${post.id}', 'delete')" style="background:#FFF0F0; color:#D32F2F; border:none; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer;">Excluir</button>
-            </div>
-        </div>
-    `).join('');
+        `).join('');
+    } catch (error) {
+        console.error(error);
+        return `<div style="background:#fff1f1; color:#8b2e2e; padding:1.5rem; border-radius:12px;">Não foi possível carregar a moderação: ${escapeHtml(error.message)}</div>`;
+    }
 };
 
-window.moderateForumPost = function(id, action) {
-    let posts = JSON.parse(localStorage.getItem('altereco_forum_posts')) || [];
-    const idx = posts.findIndex(p => p.id === id);
-    if(idx > -1){
-        if(action === 'approved') {
-            posts[idx].status = 'approved';
-            alert('✅ Tópico aprovado e publicado no fórum!');
+window.moderateForumPost = async function(id, action) {
+    try {
+        const session = await getVerifiedAccess('admin');
+        if (!session) throw new Error('Sessão administrativa não encontrada.');
+        const client = getSupabaseClient();
+
+        if (action === 'approved') {
+            const { error } = await client
+                .from('forum_topics')
+                .update({
+                    status: 'approved',
+                    reviewed_by: session.id,
+                    reviewed_at: new Date().toISOString()
+                })
+                .eq('id', id);
+            if (error) throw error;
+            alert('Tópico aprovado e publicado.');
         } else {
-            posts.splice(idx, 1);
-            alert('🗑️ Tópico removido definitivamente.');
+            if (!confirm('Excluir este tópico definitivamente?')) return;
+            const { error } = await client
+                .from('forum_topics')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            alert('Tópico excluído.');
         }
-        localStorage.setItem('altereco_forum_posts', JSON.stringify(posts));
-        renderAdminDashboard('forum');
+
+        await renderAdminDashboard('forum');
+    } catch (error) {
+        console.error(error);
+        alert(`Não foi possível moderar o tópico.\n\n${error.message}`);
     }
 };
 
@@ -1467,8 +1555,9 @@ window.renderManualEntryForm = function() {
                     <input type="url" id="man-link" placeholder="https://" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px;">
                 </div>
                 <div>
-                    <label for="man-image" style="display:block; font-weight:700; margin-bottom:.5rem;">URL da imagem</label>
-                    <input type="url" id="man-image" placeholder="https://" style="width:100%; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px;">
+                    <label for="man-image-file" style="display:block; font-weight:700; margin-bottom:.5rem;">Imagem</label>
+                    <input type="file" id="man-image-file" accept="image/jpeg,image/png,image/webp,image/gif" style="width:100%; padding:.8rem; border:1px dashed rgba(128,128,128,.35); border-radius:12px; background:var(--bg-light);">
+                    <input type="url" id="man-image" placeholder="ou URL https://" style="width:100%; margin-top:.6rem; padding:1rem; border:1px solid rgba(128,128,128,.2); border-radius:12px;">
                 </div>
             </div>
 
@@ -1496,6 +1585,11 @@ window.processManualAdminPost = async function(event) {
         const session = await getVerifiedAccess('admin');
         if (!session) throw new Error('Sessão administrativa não encontrada.');
 
+        const uploadedImage = await uploadContentImage(
+            document.getElementById('man-image-file')?.files?.[0],
+            session.id
+        );
+
         const payload = {
             title: document.getElementById('man-title').value.trim(),
             author_name: document.getElementById('man-author').value.trim(),
@@ -1504,7 +1598,7 @@ window.processManualAdminPost = async function(event) {
             description: document.getElementById('man-desc').value.trim(),
             long_description: document.getElementById('man-long-desc').value.trim() || null,
             external_url: normalizeExternalUrl(document.getElementById('man-link').value),
-            image_url: normalizeExternalUrl(document.getElementById('man-image').value),
+            image_url: uploadedImage || normalizeExternalUrl(document.getElementById('man-image').value),
             status: 'pending',
             submitted_by: session.id
         };
