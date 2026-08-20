@@ -1,898 +1,3260 @@
 /**
- * AlterECO Main Application Logic
- * Author: Debora Gasparetto / UFSM / CNPq
- * Updated: corrections per print audit
+ * AlterECO Design System - Full Responsive Restoration
+ * Target: Mobile-First, Tablet, Desktop, Wide TVs
+ * Themes: Static Navy (#2C2C33) & Branded Orange (#FACD5F)
  */
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&family=Source+Serif+4:wght@400;600&display=swap');
 
-let digitalGarden = null;
-
-const CURADORES_DATA = [
-    {
-        id: "debora",
-        name: "Débora Aita Gasparetto",
-        image: "assets/debora.jpg",
-        desc: "Idealizadora e Curadora da Plataforma AlterECO. Professora do curso de Desenho Industrial da Universidade Federal de Santa Maria (UFSM), atua nas áreas de design centrado no usuário, game design, experiência do usuário (UX), arte digital, história, teoria e crítica de arte.",
-        tags: ["Design de Interfaces", "Curadoria", "Jogos", "Tecnologias", "AR", "VR"],
-        fullBio: "Idealizadora e Curadora da Plataforma AlterECO. Professora do curso de Design Desenho Industrial da Universidade Federal de Santa Maria (UFSM), atua nas áreas de design centrado no usuário, game design, experiência do usuário (UX), arte digital, história, teoria e crítica de arte. Com formação interdisciplinar, tem desenvolvido projetos voltados à ética e inovação no campo educacional e científico. Desde 2015, coordena iniciativas relacionadas aos métodos substitutivos ao uso de animais no ensino e na pesquisa, com destaque para o desenvolvimento do jogo Labchange e a idealização da plataforma AlterECO, que propõe soluções acessíveis, críticas e colaborativas para transformar a educação e a ciência no Brasil.",
-        categories: [
-            {
-                title: "Jogos",
-                items: [
-                    {
-                        title: "Labchange",
-                        icon: "rabbit",
-                        mediaClass: "labchange",
-                        desc: "Labchange é um jogo digital ficcional e educativo sobre substituição animal na pesquisa científica. Nele, o(a) jogador(a) assume o papel de animais usados em laboratório e resolve missões por meio da empatia e colaboração. A proposta une narrativa imersiva, crítica e design de interfaces para estimular reflexão e transformação.",
-                        tags: ["LabChange", "Jogo", "VR", "Materiais Didáticos"],
-                        link: "#"
-                    }
-                ]
-            },
-            {
-                title: "Arte Digital",
-                items: [
-                    {
-                        title: "FlorestAR: Experiência em Realidade Aumentada",
-                        icon: "trees",
-                        mediaClass: "florestar",
-                        desc: "Aplicativo em realidade aumentada que utiliza imagens do satélite do INPE e insere virtualmente alguns dos animais ameaçados pelas queimadas na Amazônia. A proposta consiste em um quebra-cabeças, exposto em uma mesa e um aplicativo que lê as imagens e projeta sobre elas um modelo 3D.",
-                        tags: ["Florestar", "AR", "Arte Digital", "Materiais Didáticos"],
-                        link: "#"
-                    },
-                    {
-                        title: "Be_FREE",
-                        icon: "bird",
-                        mediaClass: "befree",
-                        desc: "Aplicativo de Realidade Aumentada que utiliza imagens de natureza morta da história da arte, para redesenhar vidas.",
-                        tags: ["Be_FREE", "AR", "Materiais Didáticos"],
-                        link: "#",
-                        bannerText: "Be_FREE\nTodos querem ser livres.\nNatureza Viva."
-                    }
-                ]
-            }
-        ]
-    },
-    {
-        id: "aldair",
-        name: "Aldair Marins",
-        image: "assets/aldair.png",
-        desc: "Mestrando em Filosofia pela PUCRS, com bacharelado pela UPF, pesquisa ética animal e da alteridade. Integra grupos interdisciplinares nas áreas de filosofia, linguagem, feminismo e direito dos animais. Atua em redes nacionais de pesquisa crítica e ética.",
-        tags: ["Filosofia", "Bioética", "RedEH"]
-    },
-    {
-        id: "daniele",
-        name: "Daniele Rubert Nogueira Librelotto",
-        image: "assets/daniele.png",
-        desc: "Professora da UFSM com atuação em nanotecnologia, toxicologia in vitro e métodos alternativos para avaliação farmacológica. Doutora pela Universitat de Barcelona, desenvolve pesquisas com cultivos celulares, citotoxicidade e formulações nanotecnológicas. Atua no PPG em Ciências Farmacêuticas da UFSM.",
-        tags: ["Farmácia", "Nanotecnologia", "Toxologia", "Métodos Alternativos", "Materiais Didáticos", "RedEH"]
-    },
-    {
-        id: "karynn",
-        name: "Karynn Vieira Capilé",
-        image: "assets/karynn.png",
-        desc: "É pós-doutoranda em bem-estar animal na UFPR, pesquisando a atuação da sociedade nas CEUAs. Doutora em Bioética pelo PPGBIOS-UFF e mestre pela UFPR, atua com ética animal, ambiental e métodos alternativos no ensino. Possui formação em Medicina Veterinária e Filosofia. Coordenadora de Bioética do Fórum Animal.",
-        tags: ["Veterinária", "Bioética", "Métodos alternativos", "Filosofia", "Forum Animal", "RedEH"]
-    },
-    {
-        id: "marta",
-        name: "Marta Luciane Fischer",
-        image: "assets/marta.png",
-        desc: "Marta Fischer é bióloga, artista e doutora em Zoologia, com pós-doutorado em Ecologia Química. Professora titular da PUCPR, atua em bioética, bem-estar animal e zoologia aplicada, com destaque para sua liderança no Comitê de Ética no Uso de Animais e no Grupo de Pesquisa em Bioética Ambiental.",
-        tags: ["Biologia", "Bioética", "Zoologia", "Artes", "Ecologia Química"]
-    },
-    {
-        id: "rita",
-        name: "Rita Leal Paixão",
-        image: "assets/Rita.png",
-        desc: "Especialista em bioética na experimentação animal e autora de obras fundamentais sobre razões materiais para a construção ética nas universidades.",
-        tags: ["Bioética", "Autoridade Científica"]
-    },
-    {
-        id: "thales",
-        name: "Thales Tréz",
-        image: "assets/tales.png",
-        desc: "É biólogo com mestrado em Ética Aplicada (KU Leuven) e doutorado em Educação Científica e Tecnológica (UFSC). Professor da UNIFAL-MG, atua na humanização do ensino em engenharias e pesquisa em epistemologia, bioética e métodos substitutivos. É presidente do Instituto 1R e conselheiro titular no CONCEA.",
-        tags: ["Biologia", "Bioética", "Instituto 1R"]
-    }
-];
-
-document.addEventListener('DOMContentLoaded', () => {
-    const initialPage = window.location.hash.replace('#', '') || 'home';
-    renderPage(initialPage);
-
-    if (!digitalGarden && window.DigitalGarden) {
-        digitalGarden = new DigitalGarden('three-container');
-    }
-
-    const menuBtn = document.getElementById('menu-trigger');
-    const closeBtn = document.getElementById('close-menu');
-    const overlay = document.getElementById('nav-overlay');
-    const sideMenu = document.getElementById('side-menu');
-
-    const toggleMenu = () => {
-        if (sideMenu) sideMenu.classList.toggle('open');
-        if (overlay) overlay.classList.toggle('visible');
-    };
-
-    if (menuBtn) menuBtn.onclick = toggleMenu;
-    if (closeBtn) closeBtn.onclick = toggleMenu;
-    if (overlay) overlay.onclick = toggleMenu;
-
-    // Bot nav button is now handled purely via dataset.page="ai-eco" in document.onclick
-
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-page], [data-tag], [data-tab]');
-        if (!btn) return;
-        if (btn.dataset.page) {
-            handleNavigation(btn.dataset.page, btn);
-            if (sideMenu && sideMenu.classList.contains('open')) toggleMenu();
-        } else if (btn.dataset.tag) {
-            handleTagFilter(btn.dataset.tag, btn);
-        } else if (btn.dataset.tab) {
-            const t = btn.dataset.tabType;
-            if (t === 'db') switchDatabaseTab(btn.dataset.tab, btn);
-            else if (t === 'legis') switchLegisTab(btn.dataset.tab, btn);
-            else if (t === 'materiais') switchMateriaisTab(btn.dataset.tab, btn);
-            else if (t === 'publicacoes') switchPublicacoesTab(btn.dataset.tab, btn);
-        }
-    });
-
-    document.addEventListener('input', (e) => {
-        const ids = ['main-search', 'search-input', 'metodos-search', 'materiais-search', 'pub-search'];
-        if (!ids.includes(e.target.id)) return;
-        const query = e.target.value.toLowerCase();
-        const container = document.getElementById('content-area');
-        if (!container) return;
-        container.querySelectorAll('.mockup-section,.db-card,.legis-card,.materiais-card,.metodo-card,.pub-card,.sub-section')
-            .forEach(item => { item.style.display = item.innerText.toLowerCase().includes(query) ? '' : 'none'; });
-    });
-});
-
-/* ─── Shared Helpers ─────────────────────────────────── */
-
-function getSearchHTML(placeholder, id = 'main-search') {
-    return `<div class="search-section" style="padding-bottom:1.5rem;">
-        <div class="search-bar-wrapper">
-            <input type="text" id="${id}" placeholder="${placeholder}">
-            <i data-lucide="search" class="search-icon"></i>
-        </div>
-    </div>`;
+body, html, #app {
+    background: #EDF0F2 !important;
+    min-height: 100vh;
+    margin: 0;
 }
 
-function getFilterDropdownHTML(id = 'filter-areas') {
-    return `<div class="filter-dropdown-wrapper">
-        <select id="${id}" class="filter-dropdown">
-            <option value="">Filtre Áreas</option>
-            <option>Biologia</option>
-            <option>Medicina</option>
-            <option>Veterinária</option>
-            <option>Farmacologia</option>
-            <option>Toxicologia</option>
-            <option>Bioética</option>
-        </select>
-        <i data-lucide="chevron-down" class="dropdown-icon"></i>
-    </div>`;
+
+:root {
+    --primary-navy: #2C2C33;
+    --accent-orange: #FACD5F;   /* Cor principal da marca: amarelo */
+    --accent-yellow: #FACD5F;  /* alias */
+    --on-accent: #1C1C1E;      /* texto SOBRE amarelo â€” alto contraste WCAG AA */
+    --mint-teal: #80DEEA;
+    --on-teal: #003035;        /* texto sobre teal */
+    --bg-light: #F7F8FA;
+    --bg-gray: #E0E4E7;
+    --text-dark: #1A1A1A;
+    --text-gray: #3D3D3D;      /* elevado para WCAG AA em fundo claro */
+    --white: #FFFFFF;
+    --nav-height: 84px;
+    --border-radius: 12px;
+    --smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    --font-heading: 'Source Sans 3', sans-serif;
+    --font-ui: 'Source Sans 3', sans-serif;
+    --font-main: 'Source Serif 4', serif;
+    /* WCAG â€” tamanhos mÃ­nimos */
+    --font-min: 1rem;          /* 16px desktop */
+    --font-min-mobile: 0.875rem; /* 14px mobile */
+}
+:focus-visible { outline: 3px solid var(--primary-navy); outline-offset: 4px; }
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--font-main); }
+
+.skip-link { position: absolute; top: -60px; left: 20px; background: var(--accent-yellow); color: var(--on-accent); padding: 10px 20px; z-index: 10000; text-decoration: none; border-radius: 0 0 10px 10px; font-weight: 700; transition: top 0.3s; }
+.skip-link:focus { top: 0; }
+
+body { background-color: var(--white); color: var(--text-dark); line-height: 1.7; font-size: 1rem; }
+
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); font-weight: 600; line-height: 1.2; }
+h1 { font-size: 2rem; } h2 { font-size: 1.75rem; } h3 { font-size: 1.5rem; } h4, h5, h6 { font-size: 1.25rem; }
+p, span, li, a, label, input, textarea { font-family: var(--font-main); }
+button, .pill-tag, .page-badge, .nav-btn, .tab-btn { font-family: var(--font-ui); }
+/* Google Material Icons utility */
+.material-icons { font-size: 20px; vertical-align: middle; }
+.material-symbols-outlined { font-size: 20px; vertical-align: middle; }
+
+svg.lucide { stroke-width: 1.25px !important; }
+:focus-visible { outline: 3px solid var(--accent-yellow); outline-offset: 3px; }
+
+#app { min-height: 100vh; display: flex; flex-direction: column; }
+main { flex: 1; }
+
+#main-header { height: var(--nav-height); background-color: #2C2C33; color: var(--white); display: flex; align-items: center; position: sticky; top: 0; z-index: 2000; }
+.header-container { width: 95%; max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+.header-left { display: flex; align-items: center; gap: 1.5rem; }
+#nav-logo { height: 32px; object-fit: contain; }
+#desktop-nav { display: none; gap: 1.5rem; }
+.nav-btn { background: none; border: none; color: rgba(255,255,255,0.88); font-weight: 600; font-size: 1rem; cursor: pointer; padding: 0.5rem 0.4rem; border-bottom: 2px solid transparent; transition: var(--smooth); }
+.nav-btn:hover, .nav-btn.active { color: #fff; background-color: rgba(255,255,255,0.1); border-bottom-color: var(--accent-yellow); }
+/* Observatório highlight — amber text, legible on navy */
+.nav-btn--highlight { color: var(--accent-yellow) !important; font-weight: 700; }
+.nav-btn--highlight:hover, .nav-btn--highlight.active { color: #fff !important; background: rgba(250,205,95,0.15) !important; }
+.hamburger-menu { cursor: pointer; display: block; font-size: 1.5rem; background:none; border:none; padding:0; line-height:1; }
+@media (min-width: 1024px) { #desktop-nav { display: flex; } .hamburger-menu { display: none; } }
+.page-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 1.2rem; font-weight: 700; pointer-events: none; white-space: nowrap; }
+@media (max-width: 1200px) { .page-title { font-size: 1rem; } }
+@media (max-width: 850px) { .page-title { display: none; } }
+
+.hero-white { padding: 1rem 2rem 1.5rem; text-align: center; background: var(--white); }
+#hero-logo { max-height: 220px; margin-bottom: 3.5rem; }
+.hero-description { max-width: 850px; margin: 0 auto; font-size: 1.1rem; line-height: 1.8; color: var(--text-gray); font-weight: 500; }
+.tags-row { display: flex; flex-wrap: wrap; gap: 0.8rem; justify-content: center; max-width: 1000px; margin: 0 auto; }
+.pill-tag { background: var(--accent-yellow); color: var(--on-accent); padding: 0.7rem 1.4rem; border-radius: 50px; font-weight: 700; font-size: 1rem; border: none; cursor: pointer; transition: var(--smooth); }
+.pill-tag:hover, .pill-tag.active { filter: brightness(0.92); transform: translateY(-2px); }
+.pill-tag.dark { background: var(--primary-navy); color: var(--white); }
+.search-section { padding: 3rem 1.5rem; max-width: 1000px; margin: 0 auto; }
+.search-bar-wrapper { position: relative; width: 100%; }
+#main-search, #legis-search { width: 100%; padding: 1.4rem 1.8rem; padding-right: 4rem; border-radius: 20px; border: 2px solid #ccc; background: #F4F7F9; font-size: 1rem; transition: var(--smooth); }
+#main-search:focus, #legis-search:focus { outline: none; border-color: var(--primary-navy); box-shadow: 0 0 0 4px rgba(44,44,51,0.15); }
+.search-icon { position: absolute; right: 1.8rem; top: 50%; transform: translateY(-50%); color: #666; }
+.unified-tabs-wrapper { background: #F4F6F8; border-bottom: 2px solid #E0E4E7; }
+.unified-tabs-container { max-width: 1200px; margin: 0 auto; display: flex; overflow-x: auto; }
+.unified-tab-btn { background: none; border: none; padding: 1.8rem 2.8rem; font-weight: 700; color: #3D3D3D; font-size: 1rem; cursor: pointer; border-bottom: 4px solid transparent; transition: var(--smooth); white-space: nowrap; }
+.unified-tab-btn.active { color: var(--primary-navy); border-bottom: 4px solid var(--accent-yellow); }
+.unified-tab-btn:hover:not(.active) { background: rgba(0,0,0,0.03); }
+@media (max-width: 768px) {
+    body, p, li, label, input, textarea, button { font-size: 0.875rem !important; }
+    h1 { font-size: 1.5rem !important; } h2 { font-size: 1.3rem !important; } h3 { font-size: 1.15rem !important; }
+}
+.section-gray { background: #F8F9FA; }
+.section-light { background: #FFFFFF; }
+.mockup-card { width: 95%; max-width: 1000px; background: transparent; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+.card-title { font-size: 1.8rem; color: #444; font-weight: 700; }
+.card-content-wrapper { display: flex; flex-direction: column; align-items: center; gap: 2rem; }
+
+.icon-wrapper {
+    background: var(--white);
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+    flex-shrink: 0;
 }
 
-function getSearchFilterBarHTML(searchId, filterId, placeholder = 'Busque mé...') {
-    return `<div class="search-filter-bar">
-        <div class="search-bar-wrapper flex-1">
-            <input type="text" id="${searchId}" placeholder="${placeholder}">
-            <i data-lucide="search" class="search-icon"></i>
-        </div>
-        ${getFilterDropdownHTML(filterId)}
-    </div>`;
+.icon-wrapper i {
+    width: 60px;
+    height: 60px;
+    color: var(--primary-navy);
 }
 
-function getTabsHTML(tabs, activeValue, type) {
-    return `<div class="unified-tabs-wrapper">
-        <div class="unified-tabs-container">
-            ${tabs.map(t => `<button class="unified-tab-btn ${t.value === activeValue ? 'active' : ''}" data-tab="${t.value}" data-tab-type="${type}">${t.label}</button>`).join('')}
-        </div>
-    </div>`;
+.card-text {
+    color: var(--text-gray);
+    font-size: 1rem;
+    line-height: 1.7;
 }
 
-function pillsHTML(pills) {
-    if (!pills || !pills.length) return '';
-    return `<div class="pills-row">${pills.map((p, i) => `<span class="pill-tag ${i === 0 ? 'dark' : ''}">${p}</span>`).join('')}</div>`;
+.acessar-btn {
+    align-self: center;
+    background: #33363F;
+    color: var(--white);
+    padding: 0.9rem 2rem;
+    border-radius: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-/* ─── Navigation ─────────────────────────────────────── */
-
-function handleNavigation(pageId, btn) {
-    const nextHash = `#${pageId}`;
-    if (window.location.hash !== nextHash) {
-        window.location.hash = pageId;
-    } else {
-        renderPage(pageId);
-    }
+/* --- ObservatÃ³rio High-End Dashboard --- */
+.obs-layout {
+    display: flex;
+    height: calc(100vh - var(--nav-height));
+    overflow: hidden;
+    background: var(--primary-navy);
 }
 
-function syncNavigationState(pageId) {
-    const activePage = pageId.startsWith('curador-') ? 'curadoria' : pageId;
-    document.querySelectorAll('.nav-btn, .drawer-link').forEach((b) => {
-        const isActive = b.dataset.page === activePage;
-        b.classList.toggle('active', isActive);
-        if (isActive) b.setAttribute('aria-current', 'page');
-        else b.removeAttribute('aria-current');
-    });
+.obs-sidebar {
+    width: 300px;
+    background: #2C2C33;
+    padding: 1.5rem 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-function updateProfileHeaderContext(pageId) {
-    const header = document.getElementById('main-header');
-    const headerLeft = document.querySelector('.header-left');
-    if (!header || !headerLeft) return;
-
-    let title = document.getElementById('profile-page-title');
-    if (!title) {
-        title = document.createElement('div');
-        title.id = 'profile-page-title';
-        title.className = 'profile-page-title';
-        headerLeft.appendChild(title);
-    }
-
-    const isProfile = pageId.startsWith('curador-');
-    header.classList.toggle('curator-profile-active', isProfile);
-
-    if (isProfile) {
-        const id = pageId.replace('curador-', '');
-        const curator = CURADORES_DATA.find((item) => item.id === id);
-        title.textContent = curator?.name || 'Perfil';
-    } else {
-        title.textContent = '';
-    }
+.obs-sidebar-header {
+    padding: 1rem 2rem 3rem;
 }
 
-window.addEventListener('hashchange', () => {
-    const pageId = window.location.hash.replace('#', '') || 'home';
-    renderPage(pageId);
-});
-
-function renderPage(pageId) {
-    syncNavigationState(pageId);
-    updateProfileHeaderContext(pageId);
-    const contentArea = document.getElementById('content-area');
-    const header = document.querySelector('header');
-    const footer = document.querySelector('footer');
-    const floatingEco = document.querySelector('.fixed-icons');
-    if (!contentArea) return;
-
-    // O atalho flutuante some dentro da própria página da ECO para não duplicar a interface.
-    if (floatingEco) {
-        floatingEco.classList.toggle('fixed-icons--hidden', pageId === 'ai-eco');
-    }
-
-    contentArea.setAttribute('aria-live', 'polite');
-
-    if (header) header.style.display = 'flex';
-    if (footer) footer.style.display = 'block';
-    contentArea.style.paddingTop = '0';
-
-    contentArea.innerHTML = '';
-    const section = document.createElement('div');
-    section.className = 'page-container';
-    section.id = 'main-content';
-    section.setAttribute('role', 'main');
-    section.tabIndex = -1;
-    contentArea.appendChild(section);
-
-    switch (pageId) {
-        case 'home': renderHomePage(section); break;
-        case 'sobre': renderSobrePage(section); break;
-        case 'metodos': renderMetodosPage(section); break;
-        case 'materiais': renderMaterialsPage(section); break;
-        case 'publicacoes': renderPublicacoesPage(section); break;
-        case 'legislacao': renderLegislacaoPage(section); break;
-        case 'bases-dados': renderBasesDadosPage(section); break;
-        case 'curadoria': renderCuradoriaPage(section); break;
-        case 'eventos': renderEventosPage(section); break;
-        case 'forum': renderForumPage(section); break;
-        case 'observatorio': if (window.initObservatorio) window.initObservatorio(section); break;
-        case 'ai-eco': if (window.initAIECOInterface) window.initAIECOInterface(section); break;
-        default: 
-            if (pageId.startsWith('curador-')) {
-                const id = pageId.replace('curador-', '');
-                renderCuradorProfilePage(id, section);
-            } else {
-                renderHomePage(section); 
-            }
-            break;
-    }
-
-    if (window.lucide) window.lucide.createIcons();
-    window.scrollTo(0, 0);
+.obs-nav-list {
+    flex: 1;
+    overflow-y: auto;
 }
 
-/* ══════════════════════════════════════════════════════
-   HOME PAGE — 8 Cards + Pills conforme prints
-══════════════════════════════════════════════════════ */
-
-function renderHomePage(container) {
-    const cards = [
-        { page: 'publicacoes', icon: 'assets/publicações.png', title: 'Acesse o repositório de Publicações', text: 'Acesse uma seleção de publicações sobre métodos substitutivos, incluindo livros, artigos científicos, notícias e conteúdos atualizados, organizados por tema e tipo de material.' },
-        { page: 'metodos', icon: 'assets/métodos_validados.png', title: 'Acesse o repositório de Métodos', text: 'Explore um repositório aberto e colaborativo com métodos substitutivos ao uso de animais no ensino e na pesquisa, organizado por área, nível de ensino e tipo de recurso.' },
-        { page: 'materiais', icon: 'assets/materiais.png', title: 'Busque Materiais Didáticos', text: 'Encontre materiais didáticos como simuladores, jogos e experiências interativas voltados à substituição animal, organizados por área, tipo e nível de ensino.' },
-        { page: 'bases-dados', icon: 'assets/base_internacional_(1).png', title: 'Pesquise bases de dados nacionais e internacionais', text: 'Pesquise bases de dados nacionais e internacionais sobre métodos substitutivos e amplie o acesso a recursos validados e atualizados ao redor do mundo.' },
-        { page: 'legislacao', icon: 'assets/leis.png', title: 'Acompanhe a Legislação', text: 'Acompanhe legislações, normas e diretrizes relacionadas aos métodos substitutivos, com foco no ensino, pesquisa e ética no uso animal.' },
-        { page: 'eventos', icon: 'assets/eventos.png', title: 'Eventos sobre Substituição Animal', text: 'Confira eventos, cursos e encontros dedicados aos métodos substitutivos no ensino e na pesquisa, e fique por dentro das principais iniciativas na área.' },
-        { page: 'forum', icon: 'assets/forum.png', title: 'Fórum', text: 'Participe do fórum da plataforma e troque experiências, dúvidas e sugestões sobre métodos substitutivos com outros docentes, pesquisadores(as) e estudantes.' },
-        { page: 'curadoria', icon: 'assets/curadoria_(2).png', title: 'Curadoria de conteúdo', text: 'Conheça os curadores da plataforma — especialistas em diferentes áreas de ensino e pesquisa que selecionam e organizam os conteúdos sobre métodos substitutivos.' },
-    ];
-
-    container.innerHTML = `
-        <div class="page-dark-hero">
-            <span class="page-badge">Visão Geral</span>
-            <h1>Plataforma AlterECO</h1>
-            <p>Plataforma colaborativa com métodos substitutivos ao uso de animais no ensino e na pesquisa.</p>
-        </div>
-
-        ${getSearchHTML('Busque leis, métodos, materiais...')}
-
-        <div class="tags-row" style="margin-bottom:3rem;">
-            <button class="pill-tag dark" data-tag="Escolas">Escolas</button>
-            <button class="pill-tag" data-page="metodos">Métodos</button>
-            <button class="pill-tag" data-page="publicacoes">Publicações</button>
-            <button class="pill-tag" data-tag="Legislação">Legislação</button>
-            <button class="pill-tag" data-tag="Tecnologia">Tecnologia</button>
-            <button class="pill-tag" data-page="observatorio">Monitoramento</button>
-        </div>
-
-        <div class="home-cards-grid">
-            ${cards.map(c => `
-            <div class="home-card home-card-dynamic" data-page="${c.page}" style="cursor:pointer; display:flex; flex-direction:column; padding:1.5rem; background:#EDF0F2; border-radius:16px;">
-                <h3 class="home-card-title" style="font-size:1.45rem; font-weight:700; color:var(--text-gray); margin-bottom:1.5rem; text-align:left; line-height:1.4;">${c.title}</h3>
-                
-                <div style="display:flex; gap:1.2rem; align-items:center; margin-bottom:2rem;">
-                    <img src="${c.icon}" alt="" style="width:135px; border-radius:20px; flex-shrink:0; object-fit:contain;">
-                    <p class="home-card-text" style="font-size:0.95rem; color:var(--text-gray); line-height:1.7; text-align:left; margin:0; flex:1;">${c.text}</p>
-                </div>
-                
-                <div class="home-card-footer" style="margin-top:auto; text-align:center; width: 100%;">
-                    <button style="background:#2C2F33; color:white; border:none; padding:12px 28px; border-radius:8px; font-weight:700; font-size:1rem; display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;">Acessar <i data-lucide="arrow-right" style="width:20px;"></i></button>
-                </div>
-            </div>`).join('')}
-        </div>
-
-        <div class="observatorio-banner" data-page="observatorio" style="cursor:pointer; background:#2C2C33; border-radius:24px; padding:3.5rem; margin-top:2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.15); border:none; display:flex; gap:3rem; align-items:center;">
-            <div style="flex:1;">
-                <h3 style="color:white; font-size:1.8rem; font-weight:700; margin-bottom:1.2rem; text-align:left;">Conheça o Observatório Humano-Animal</h3>
-                <p style="color:rgba(255,255,255,0.8); font-size:1.05rem; line-height:1.6; margin-bottom:2rem; text-align:left; max-width:850px;">
-                    Explore nosso monitoramento nacional sobre economia pet, abandono animal e experimentação baseada em dados estatísticos oficiais. Lá você encontra alternativas éticas, modernas e acessíveis que já foram analisadas e reconhecidas oficialmente no Brasil.
-                </p>
-                <div style="text-align:left;">
-                    <button style="background:var(--accent-yellow); color:var(--on-accent); border:none; padding:15px 45px; border-radius:12px; font-weight:700; font-size:1.1rem; cursor:pointer; box-shadow:0 4px 15px rgba(250,205,95,0.35); transition: transform 0.2s ease;">
-                        Acessar
-                    </button>
-                </div>
-            </div>
-            <img src="assets/observatório.png" alt="Ícone Observatório" style="width:200px; height:auto; opacity:0.9; filter: drop-shadow(0 0 20px rgba(255,255,255,0.1)); border-radius:20px;">
-        </div>
-    `;
-    if (window.lucide) window.lucide.createIcons();
+.obs-nav-item {
+    margin: 4px 1rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.65);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
 }
 
-/* ══════════════════════════════════════════════════════
-   SOBRE
-══════════════════════════════════════════════════════ */
-
-function renderSobrePage(c) {
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge">Sobre a Plataforma</span>
-        <h1>Educação Humanitária</h1>
-        <p>Iniciativa interdisciplinar brasileira para Substituição do Uso de Animais na Ciência.</p>
-    </div>
-    <div class="cards-grid-4" style="margin-top: 20px; margin-bottom: 4rem;">
-        <div class="home-card" style="grid-column: 1 / -1; padding: 4rem; text-align: left; max-width: 900px; margin: 0 auto;">
-            <p style="font-size:1.15rem;line-height:1.8;color:var(--text-gray);margin-bottom:2.5rem;">
-                Criado a partir de uma rede interdisciplinar nacional, o <strong>AlterECO</strong> reúne alternativas ao uso de animais em um ambiente digital intuitivo e educativo — apoiado por curadoria científica e uma inteligência artificial própria voltada a projetar futuros mais humanitários para a pesquisa e o ensino.
-            </p>
-            <p style="font-size:1.15rem;line-height:1.8;color:var(--text-gray);margin-bottom:2.5rem;">
-                Uma iniciativa brasileira de design, arte, ciência e tecnologia que conecta educadores, estudantes e pesquisadores a métodos substitutivos éticos, acessíveis e inovadores.
-            </p>
-            <p style="font-size:1.15rem;line-height:1.8;color:var(--text-gray);">
-                Desde 2015, atuamos na promoção da educação humanitária e da substituição do uso de animais, por meio de pesquisa, design, arte digital, eventos públicos e materiais educacionais. Em 2023–2025, o AlterECO tornou-se o núcleo dessa trajetória: uma plataforma digital construída para transformar a relação entre educação, ciência e ética.
-            </p>
-            <p style="margin-top:3rem;font-size:0.95rem;color:var(--text-gray);text-align:center;">Grupo de Pesquisa Design, Ciência e Tecnologia · UFSM / CNPq</p>
-        </div>
-    </div>`;
-    if (window.lucide) window.lucide.createIcons();
+.obs-nav-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: rgba(255,255,255,0.9);
 }
 
-/* ══════════════════════════════════════════════════════
-   MÉTODOS SUBSTITUTIVOS — Busca + filtros + 4 campos + CTA
-══════════════════════════════════════════════════════ */
-
-function renderMetodosPage(c) {
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('metodos') : [];
-    const allMetodos = [...METODOS, ...dynamic.map(d => ({ name: d.title + (d.author ? ' (Por: ' + d.author + ')' : ''), description: d.description, url: d.url }))];
-    const metodosHTML = allMetodos.map(m => `
-    <div class="metodo-card">
-        <h3 class="metodo-title">${m.name}</h3>
-        ${m.oecd ? `<p class="metodo-oecd">${m.oecd}</p>` : ''}
-        <p class="metodo-desc">${m.description}</p>
-        ${m.howToUse ? `<p class="metodo-field"><strong>${m.howToUse}</strong></p>` : ''}
-        ${m.purpose ? `<p class="metodo-field">${m.purpose}</p>` : ''}
-        ${m.source ? `<p class="metodo-source">${m.source}</p>` : ''}
-        <div class="metodo-actions">
-            <a href="${m.url}" target="_blank" rel="noopener noreferrer" class="metodo-access-btn">Acessar <i data-lucide="arrow-right" aria-hidden="true"></i></a>
-            <button onclick="shareCard(this)" title="Compartilhar" aria-label="Compartilhar este método" class="metodo-share-btn"><i data-lucide="share-2" aria-hidden="true"></i></button>
-        </div>
-    </div>`).join('');
-
-    const ctaHTML = `
-    <div class="metodo-cta-card">
-        <h3>Conheça os Métodos Substitutivos Reconhecidos no Repositório do CONCEA</h3>
-        <p>Você sabia que é possível ensinar e pesquisar sem usar animais vivos? O Conselho Nacional de Controle de Experimentação Animal (CONCEA) disponibiliza um Repositório Nacional de Métodos Substitutivos ao Uso de Animais no Ensino. Lá, você encontra diversas alternativas éticas, modernas e acessíveis que já foram analisadas e reconhecidas oficialmente no Brasil.</p>
-        <a href="https://www.gov.br/mcti/pt-br/composicao/conselhos/concea" target="_blank" class="acessar-btn">Acessar <i data-lucide="arrow-right"></i></a>
-    </div>`;
-
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge">Métodos Substitutivos</span>
-        <h1>Métodos Substitutivos Reconhecidos</h1>
-        <p>Repositório Nacional conforme a RN 56/2022 do CONCEA.</p>
-    </div>
-    <div class="content-white-section">
-        ${getSearchFilterBarHTML('metodos-search', 'metodos-filter')}
-        <div class="cards-grid-4">
-            ${metodosHTML}
-        </div>
-        ${ctaHTML}
-    </div>`;
-    if (window.lucide) window.lucide.createIcons();
+.obs-nav-item.active {
+    background: var(--accent-yellow);
+    color: var(--on-accent); /* WCAG AA: dark text on yellow — 8:1 ratio */
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-/* ══════════════════════════════════════════════════════
-   MATERIAIS DIDÁTICOS — Busca + filtro em ambas as abas
-══════════════════════════════════════════════════════ */
-
-function renderMaterialsPage(c) {
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge">Materiais Didáticos</span>
-        <h1>Materiais Didáticos</h1>
-        <p>Encontre materiais, simuladores e jogos voltados à substituição animal.</p>
-    </div>
-    <div class="content-white-section">
-        ${getTabsHTML([{ label: 'Universidades', value: 'univ' }, { label: 'Escolas', value: 'escolas' }], 'univ', 'materiais')}
-        ${getSearchFilterBarHTML('materiais-search', 'materiais-filter', 'Busque materiais...')}
-        <div id="materiais-content" class="cards-grid-4"></div>
-    </div>`;
-    switchMateriaisTab('univ');
+.obs-main {
+    flex: 1;
+    background: var(--bg-light);
+    margin: 0.8rem;
+    border-radius: 35px;
+    overflow-y: auto;
+    padding: 3rem;
+    position: relative;
+    scroll-behavior: smooth;
 }
 
-function switchMateriaisTab(val, btn) {
-    const list = val === 'univ' ? MATERIAIS.universidades : MATERIAIS.escolas;
-    const grid = document.getElementById('materiais-content');
-    if (!grid) return;
-    if (btn) { document.querySelectorAll('[data-tab-type="materiais"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
-
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('materiais').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url, tags: d.tags })) : [];
-    const allItems = [...list, ...dynamic];
-    grid.innerHTML = allItems.map(item => {
-        const imageHTML = item.image ? `<div class="materiais-img-wrap"><img src="${item.image}" alt="${item.name}" class="materiais-img"></div>` : '';
-        const featuredHTML = item.featured ? `<div class="materiais-featured-badge">${item.featuredTitle}</div>` : '';
-        const isEdu = (t) => ['Escolas', 'Ensino Médio', 'IES', 'Universidades', 'Educação Básica', 'Ensino Superior'].includes(t);
-        const tagsHTML = (item.tags && item.tags.length > 0) ? `<div class="pills-row">${item.tags.map((t, i) => {
-            const eduStyle = isEdu(t) ? 'background-color: var(--mint-teal); color: var(--primary-navy); font-weight: 800;' : '';
-            return `<span class="pill-tag ${i === 0 && !isEdu(t) ? 'dark' : ''}" style="${eduStyle}">${t}</span>`;
-        }).join('')}</div>` : '';
-        return `
-        <div class="materiais-card">
-            ${featuredHTML}
-            ${imageHTML}
-            <h3 class="materiais-card-title">${item.name}</h3>
-            <p class="materiais-card-desc">${item.description}</p>
-            ${tagsHTML}
-            <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
-                <a href="${item.url}" target="_blank" style="background:#2C2F33; color:white; border:none; padding:10px 22px; border-radius:8px; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px; text-decoration:none; cursor:pointer;">Acessar <i data-lucide="arrow-right" style="width:18px;"></i></a>
-                <button onclick="shareCard(this)" title="Compartilhar" style="background:none; border:none; cursor:pointer;"><i data-lucide="share-2" style="width:18px; color:var(--text-gray);"></i></button>
-            </div>
-        </div>`;
-    }).join('');
-    if (window.lucide) window.lucide.createIcons();
+.obs-card {
+    background: white;
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+    transition: 0.3s;
 }
 
-/* ══════════════════════════════════════════════════════
-   PUBLICAÇÕES — Sub-seções com título + pills por categoria
-══════════════════════════════════════════════════════ */
-
-function renderPublicacoesPage(c) {
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge">Publicações</span>
-        <h1>Publicações e Artigos</h1>
-        <p>Acesse o repositório de pesquisas atualizadas organizadas por tema e área.</p>
-    </div>
-    <div class="content-white-section">
-        ${getTabsHTML([{ label: 'Universidades', value: 'univ' }, { label: 'Escolas', value: 'escolas' }], 'univ', 'publicacoes')}
-        ${getSearchFilterBarHTML('pub-search', 'pub-filter', 'Busque publicações...')}
-        <div id="publicacoes-content"></div>
-    </div>`;
-    switchPublicacoesTab('univ');
+.obs-card:hover {
+    transform: translateY(-5px);
 }
 
-function switchPublicacoesTab(val, btn) {
-    const staticData = val === 'univ' ? PUBLICACOES.universidades : PUBLICACOES.escolas;
-    const grid = document.getElementById('publicacoes-content');
-    if (!grid) return;
-    if (btn) { document.querySelectorAll('[data-tab-type="publicacoes"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
+.obs-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+}
 
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('publicacoes') : [];
-    
-    // Combine static and dynamic content
-    let allItems = [];
-    
-    // Flatten static items if they are grouped by category
-    staticData.forEach(section => {
-        if (section.items) {
-            section.items.forEach(item => {
-                allItems.push({
-                    ...item,
-                    category: section.category,
-                    pills: section.pills
-                });
-            });
-        } else {
-            allItems.push(section);
-        }
-    });
+.obs-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
 
-    // Add dynamic items
-    dynamic.forEach(d => {
-        allItems.push({
-            title: d.title,
-            author: d.author,
-            desc: d.description,
-            url: d.url || '#',
-            image: d.image || 'https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?auto=format&fit=crop&q=80&w=400',
-            tags: d.tags
-        });
-    });
+/* --- Side Menu (Drawer) --- */
+.drawer {
+    position: fixed;
+    top: 0;
+    left: -310px;
+    width: 290px;
+    height: 100vh;
+    background: #1E2027;
+    color: #FFFFFF;
+    z-index: 3000;
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 1.5rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 30px rgba(0,0,0,0.5);
+}
 
-    if (allItems.length === 0) {
-        grid.innerHTML = `
-        <div class="pub-login-cta">
-            <div style="background:var(--bg-light); width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--primary-navy); margin-bottom:1rem;">
-                <i data-lucide="book-open" style="width:40px; height:40px;"></i>
-            </div>
-            <h3>Nenhuma publicação cadastrada ainda</h3>
-            <p>Esta área será preenchida com livros, artigos e resumos científicos. Se você é um curador, acesse o painel para adicionar novos conteúdos.</p>
-            <div style="display:flex; gap:1rem; margin-top:1rem;">
-                <button onclick="renderLogin('curador')" class="pub-login-btn">Entrar como Curador</button>
-                <button onclick="renderLogin('admin')" class="pub-login-btn" style="background:var(--accent-orange);">Administração</button>
-            </div>
-        </div>`;
-        if (window.lucide) window.lucide.createIcons();
-        return;
+.drawer.open {
+    left: 0;
+}
+
+.drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+/* Icon helper inside drawer links */
+.drawer-link-icon {
+    font-size: 20px !important;
+    width: 20px;
+    flex-shrink: 0;
+    color: rgba(255,255,255,0.5);
+    transition: color 0.2s;
+}
+
+.drawer-link {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.88);
+    text-align: left;
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 0.85rem 0.75rem;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background 0.2s, padding-left 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    border-radius: 8px;
+    width: 100%;
+}
+
+.drawer-link:hover {
+    background: rgba(255,255,255,0.07);
+    padding-left: 1.1rem;
+    color: #FFFFFF;
+}
+.drawer-link:hover .drawer-link-icon {
+    color: var(--accent-yellow);
+}
+
+/* Observatório special link: amber text on dark bg — WCAG AA */
+.drawer-link--obs {
+    color: var(--accent-yellow) !important;
+    font-weight: 700;
+    background: rgba(250,205,95,0.08);
+    border-radius: 10px;
+    border: 1px solid rgba(250,205,95,0.2) !important;
+    margin-top: 0.25rem;
+}
+.drawer-link--obs .drawer-link-icon {
+    color: var(--accent-yellow) !important;
+}
+.drawer-link--obs:hover {
+    background: rgba(250,205,95,0.15) !important;
+    color: #fff !important;
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 2500;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.4s;
+}
+
+.overlay.visible {
+    display: block;
+    opacity: 1;
+}
+
+/* --- Footer Navy --- */
+footer {
+    background: #111;
+    color: #888;
+    padding: 4rem 1.5rem;
+    text-align: center;
+    border-top: 5px solid var(--accent-yellow);
+}
+
+.footer-logo {
+    max-height: 80px;
+    filter: grayscale(1) brightness(2);
+    margin-bottom: 2rem;
+}
+
+/* --- Responsive Adjustments / Grids --- */
+
+/* TABLET (2 Cards or Content Spacing) */
+@media (min-width: 768px) {
+    .card-content-wrapper {
+        flex-direction: row;
+        text-align: left;
     }
 
-    grid.innerHTML = `
-        <div class="pub-cards-container">
-            ${allItems.map(item => `
-            <div class="pub-book-card">
-                <div class="pub-book-img-wrapper">
-                    <img src="${item.image || 'https://images.unsplash.com/photo-1544377193-33dcf4d68fb5?auto=format&fit=crop&q=80&w=400'}" alt="${item.title}" class="pub-book-img">
-                </div>
-                <div class="pub-book-content">
-                    <h3 class="pub-book-title">${item.title}</h3>
-                    <div class="pub-book-author">${item.author || 'Autor Desconhecido'}</div>
-                    <p class="pub-book-desc">${item.desc || 'Um resumo sobre esta publicação está sendo preparado pela nossa curadoria inteligente...'}</p>
-                    
-                    <div class="pub-book-footer">
-                        <a href="${item.url}" target="_blank" class="acessar-btn">Acessar <i data-lucide="arrow-right"></i></a>
-                        <button onclick="shareCard(this)" title="Compartilhar" style="background:none; border:none; cursor:pointer;" class="share-btn-ui">
-                            <i data-lucide="share-2" style="width:20px; color:var(--text-gray);"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            `).join('')}
-        </div>
-    `;
-    
-    if (window.lucide) window.lucide.createIcons();
-}
-
-/* ══════════════════════════════════════════════════════
-   BASES DE DADOS — Com logo + descrição completa
-══════════════════════════════════════════════════════ */
-
-function renderBasesDadosPage(c) {
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge">Bases de Dados</span>
-        <h1>Bases de Dados</h1>
-        <p>Pesquise em referências consolidadas do Brasil e do mundo.</p>
-    </div>
-    <div class="content-white-section">
-        ${getTabsHTML([{ label: 'Brasil', value: 'nac' }, { label: 'Internacionais', value: 'inter' }], 'nac', 'db')}
-        <div id="db-content" class="cards-grid-4"></div>
-    </div>`;
-    switchDatabaseTab('nac');
-}
-
-function switchDatabaseTab(val, btn) {
-    const list = val === 'nac' ? BASES_DADOS.nacional : BASES_DADOS.internacional;
-    const grid = document.getElementById('db-content');
-    if (!grid) return;
-    if (btn) { document.querySelectorAll('[data-tab-type="db"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('bases').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url })) : [];
-    const allItems = [...list, ...dynamic];
-    grid.innerHTML = allItems.map(db => `
-    <div class="db-card">
-        ${db.logo ? `<div class="db-card-logo-row"><img src="${db.logo}" alt="${db.name}" class="db-logo" onerror="this.style.display='none'"><span class="db-card-name-inline">${db.name}</span></div>` : `<h3 class="db-card-name">${db.name}</h3>`}
-        <p class="db-card-desc">${db.description}</p>
-        <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
-            <a href="${db.url}" target="_blank" style="background:#2C2F33; color:white; border:none; padding:10px 22px; border-radius:8px; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px; text-decoration:none; cursor:pointer;">Acessar <i data-lucide="arrow-right" style="width:18px;"></i></a>
-            <button onclick="shareCard(this)" title="Compartilhar" style="background:none; border:none; cursor:pointer;"><i data-lucide="share-2" style="width:18px; color:var(--text-gray);"></i></button>
-        </div>
-    </div>`).join('');
-    if (window.lucide) window.lucide.createIcons();
-}
-
-/* ══════════════════════════════════════════════════════
-   LEGISLAÇÃO — Texto intro + 5 entradas Brasil
-══════════════════════════════════════════════════════ */
-
-function renderLegislacaoPage(c) {
-    c.innerHTML = `
-    <div class="page-dark-hero">
-        <span class="page-badge">Legislação</span>
-        <h1>Legislação e Normativas</h1>
-        <p>Acompanhe textos legais para regulamentação de pesquisa e ética.</p>
-    </div>
-    <div class="content-white-section">
-        ${getTabsHTML([{ label: 'Brasil', value: 'br' }, { label: 'Internacional', value: 'world' }], 'br', 'legis')}
-        <div id="legis-content"></div>
-    </div>`;
-    switchLegisTab('br');
-}
-
-function switchLegisTab(val, btn) {
-    const list = val === 'br' ? LEGISLACAO.brasil : LEGISLACAO.internacional;
-    const grid = document.getElementById('legis-content');
-    if (!grid) return;
-    if (btn) { document.querySelectorAll('[data-tab-type="legis"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
-
-    const introHTML = val === 'br' ? `<p class="legis-intro">${LEGISLACAO_INTRO}</p>` : '';
-
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('legislacao').map(d => ({ name: d.title + ' (Por: ' + d.author + ')', description: d.description, url: d.url })) : [];
-    const allItems = [...list, ...dynamic];
-
-    grid.innerHTML = introHTML + `<div class="cards-grid-4">${allItems.map(item => `
-    <div class="legis-card">
-        <h3 class="legis-card-title">${item.name}</h3>
-        <p class="legis-card-desc">${item.description}</p>
-        <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
-            <a href="${item.url}" target="_blank" style="background:#2C2F33; color:white; border:none; padding:10px 22px; border-radius:8px; font-weight:700; font-size:0.9rem; display:inline-flex; align-items:center; gap:8px; text-decoration:none; cursor:pointer;">Acessar <i data-lucide="arrow-right" style="width:18px;"></i></a>
-            <button onclick="shareCard(this)" title="Compartilhar" style="background:none; border:none; cursor:pointer;"><i data-lucide="share-2" style="width:18px; color:var(--text-gray);"></i></button>
-        </div>
-    </div>`).join('')}</div>`;
-    if (window.lucide) window.lucide.createIcons();
-}
-
-/* ══════════════════════════════════════════════════════
-   CURADORIA — Página conforme print "Sobre"
-══════════════════════════════════════════════════════ */
-
-function curatorTagsHTML(tags = []) {
-    if (!tags.length) return '';
-    return `
-        <div class="curator-tags" aria-label="Áreas de atuação">
-            ${tags.map((tag, index) => `
-                <span class="curator-tag ${index === 0 ? 'curator-tag--primary' : ''}">${tag}</span>
-            `).join('')}
-        </div>
-    `;
-}
-
-function renderCuradoriaPage(c) {
-    const htmlCards = CURADORES_DATA.map(cur => `
-        <article class="curator-card">
-            <div class="curator-card-photo">
-                <img
-                    src="${cur.image}"
-                    alt="Retrato de ${cur.name}"
-                    loading="lazy"
-                    onerror="this.src='assets/debora.jpg'; this.style.opacity='0.45';"
-                >
-            </div>
-
-            <div class="curator-card-content">
-                <h2>${cur.name}</h2>
-                <p>${cur.desc}</p>
-                ${curatorTagsHTML(cur.tags)}
-
-                <button
-                    type="button"
-                    class="curator-profile-link"
-                    data-page="curador-${cur.id}"
-                    aria-label="Acessar perfil de ${cur.name}"
-                >
-                    <span>Acessar Perfil</span>
-                    <i data-lucide="arrow-right" aria-hidden="true"></i>
-                </button>
-            </div>
-        </article>
-    `).join('');
-
-    c.innerHTML = `
-        <div class="page-dark-hero">
-            <span class="page-badge">Equipe</span>
-            <h1>Conheça Nossos Curadores Científicos</h1>
-            <p>Especialistas responsáveis pela validação do conteúdo humanitário.</p>
-        </div>
-
-        <section class="curators-list-section" aria-label="Curadores AlterECO">
-            <div class="curators-list">
-                ${htmlCards}
-            </div>
-        </section>
-    `;
-
-    if (window.lucide) window.lucide.createIcons();
-}
-
-function curatorProjectMediaHTML(item) {
-    if (item.bannerText) {
-        const lines = item.bannerText.split('\n');
-        return `
-            <div class="curator-project-media curator-project-media--${item.mediaClass || 'default'} curator-project-banner">
-                <strong>${lines[0] || item.title}</strong>
-                ${lines[1] ? `<span>${lines[1]}</span>` : ''}
-                ${lines[2] ? `<em>${lines[2]}</em>` : ''}
-            </div>
-        `;
+    .acessar-btn {
+        align-self: flex-start;
     }
 
-    if (item.image) {
-        return `
-            <div class="curator-project-media">
-                <img
-                    src="${item.image}"
-                    alt=""
-                    loading="lazy"
-                    onerror="this.parentElement.classList.add('curator-project-media--fallback'); this.remove();"
-                >
-                <i data-lucide="${item.icon || 'sparkles'}" aria-hidden="true"></i>
-            </div>
-        `;
+    .page-title {
+        font-size: 1.8rem;
     }
-
-    return `
-        <div class="curator-project-media curator-project-media--${item.mediaClass || 'default'}">
-            <i data-lucide="${item.icon || 'sparkles'}" aria-hidden="true"></i>
-        </div>
-    `;
 }
 
-function renderCuradorProfilePage(id, container) {
-    const cur = CURADORES_DATA.find(c => c.id === id);
-
-    if (!cur) {
-        container.innerHTML = `
-            <section class="curator-profile-shell">
-                <div class="curator-profile-empty">
-                    <h1>Curador não encontrado.</h1>
-                    <button class="curator-back-link" data-page="curadoria">
-                        <i data-lucide="arrow-left" aria-hidden="true"></i>
-                        Voltar para Curadoria
-                    </button>
-                </div>
-            </section>
-        `;
-        if (window.lucide) window.lucide.createIcons();
-        return;
+/* DESKTOP (Split Main Layout if needed, but keeping mockup flow) */
+@media (min-width: 1200px) {
+    .mockup-card {
+        max-width: 1100px;
+        padding: 0 4rem;
     }
 
-    const categoriesHTML = (cur.categories || []).map(cat => `
-        <section class="curator-category" aria-labelledby="category-${cur.id}-${cat.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}">
-            <div class="curator-category-heading">
-                <h2 id="category-${cur.id}-${cat.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}">${cat.title}</h2>
-            </div>
+    .card-text {
+        font-size: 1.1rem;
+    }
 
-            <div class="curator-projects-grid">
-                ${cat.items.map(item => `
-                    <article class="curator-project-card">
-                        ${curatorProjectMediaHTML(item)}
-                        <div class="curator-project-body">
-                            <h3>${item.title}</h3>
-                            <p>${item.desc}</p>
-                            ${curatorTagsHTML(item.tags || [])}
-                            ${item.link && item.link !== '#' ? `
-                                <a class="curator-project-link" href="${item.link}" target="_blank" rel="noopener noreferrer">
-                                    Ver mais
-                                    <i data-lucide="arrow-up-right" aria-hidden="true"></i>
-                                </a>
-                            ` : ''}
-                        </div>
-                    </article>
-                `).join('')}
-            </div>
-        </section>
-    `).join('');
-
-    container.innerHTML = `
-        <div class="curator-profile-page">
-            <div class="curator-profile-actions">
-                <button type="button" class="curator-back-link" data-page="curadoria">
-                    <i data-lucide="arrow-left" aria-hidden="true"></i>
-                    <span>Curadoria</span>
-                </button>
-            </div>
-
-            <section class="curator-profile-shell" aria-labelledby="curator-profile-name">
-                <article class="curator-profile-card">
-                    <div class="curator-profile-photo">
-                        <img
-                            src="${cur.image}"
-                            alt="Retrato de ${cur.name}"
-                            onerror="this.src='assets/debora.jpg'; this.style.opacity='0.45';"
-                        >
-                    </div>
-
-                    <div class="curator-profile-main">
-                        <h1 id="curator-profile-name" class="curator-profile-name">${cur.name}</h1>
-                        ${curatorTagsHTML(cur.tags)}
-                        <p class="curator-profile-bio">${cur.fullBio || cur.desc}</p>
-                    </div>
-                </article>
-            </section>
-
-            ${categoriesHTML ? `
-                <div class="curator-profile-categories">
-                    ${categoriesHTML}
-                </div>
-            ` : `
-                <section class="curator-profile-coming-soon">
-                    <i data-lucide="sparkles" aria-hidden="true"></i>
-                    <h2>Perfil em expansão</h2>
-                    <p>Projetos e materiais deste curador serão adicionados progressivamente à plataforma.</p>
-                </section>
-            `}
-        </div>
-    `;
-
-    if (window.lucide) window.lucide.createIcons();
+    .hero-description {
+        font-size: 1.3rem;
+    }
 }
 
-/* ─── Misc ──────────────────────────────────────────── */
+/* ULTRA-WIDE / TV */
+@media (min-width: 2000px) {
+    .mockup-card {
+        max-width: 1600px;
+    }
+
+    .page-title {
+        font-size: 2.5rem;
+    }
+}
+
+/* Floating AI Fixes */
+/* --- AI Assistant Floating Button --- */
+.bot-toggle-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 70px;
+    height: 70px;
+    background: var(--accent-yellow);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9999;
+    /* Highest priority */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    transition: var(--smooth);
+    animation: botPulse 3s infinite;
+}
+
+.bot-toggle-btn:hover {
+    transform: scale(1.1) rotate(5deg);
+    background: var(--mint-teal);
+}
+
+@keyframes botPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 10px 30px rgba(250, 205, 95, 0.3);
+    }
+
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 10px 40px rgba(250, 205, 95, 0.6);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 10px 30px rgba(250, 205, 95, 0.3);
+    }
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   HOME PAGE â€” 8 Cards Grid
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   GLOBAL CARDS GRID (Bento Mode: responsive, 4 Cols on Desktop)
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.home-cards-grid,
+.global-cards-grid,
+.charts-grid-2,
+.cards-grid-4 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    margin-bottom: 3rem;
+    padding: 0 1.5rem;
+}
+
+@media (min-width: 640px) {
+
+    .home-cards-grid,
+    .global-cards-grid,
+    .charts-grid-2,
+    .cards-grid-4 {
+        grid-template-columns: 1fr 1fr;
+        padding: 0 2rem;
+    }
+}
+
+@media (min-width: 1024px) {
+
+    .home-cards-grid,
+    .global-cards-grid,
+    .charts-grid-2,
+    .cards-grid-4 {
+        grid-template-columns: repeat(4, 1fr);
+        margin-left: 60px;
+        margin-right: 60px;
+        padding: 0;
+        width: calc(100% - 120px);
+    }
+}
+
+.home-card-icon {
+    width: 52px;
+    height: 52px;
+    background: var(--bg-light);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.home-card-icon i {
+    width: 28px;
+    height: 28px;
+    color: var(--primary-navy);
+}
+
+.home-card {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+/* --- Publication Cards (Book Cards) --- */
+.pub-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2.5rem;
+    padding: 2rem 0;
+}
+
+.pub-book-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    transition: var(--smooth);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: visible;
+}
+
+.pub-book-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    border-color: var(--accent-orange);
+}
+
+.pub-book-img-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 2/3;
+    margin-bottom: 1.5rem;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.pub-book-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.pub-book-card:hover .pub-book-img {
+    transform: scale(1.05);
+}
+
+.pub-book-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.pub-book-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary-navy);
+    margin-bottom: 0.5rem;
+    line-height: 1.3;
+}
+
+.pub-book-author {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--accent-orange);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.pub-book-desc {
+    font-size: 0.95rem;
+    color: var(--text-gray);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.pub-book-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pub-login-cta {
+    background: white;
+    border: 2px dashed #ccc;
+    border-radius: 20px;
+    padding: 4rem 2rem;
+    text-align: center;
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.pub-login-cta h3 {
+    color: var(--text-gray);
+    font-size: 1.5rem;
+}
+
+.pub-login-cta p {
+    color: #888;
+    max-width: 500px;
+}
+
+.pub-login-btn {
+    background: var(--primary-navy);
+    color: white;
+    padding: 1rem 2.5rem;
+    border-radius: 30px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: var(--smooth);
+}
+
+.pub-login-btn:hover {
+    background: var(--accent-orange);
+    transform: scale(1.05);
+}
+
+.home-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.home-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-navy);
+    line-height: 1.3;
+}
+
+.home-card-text {
+    font-size: 0.88rem;
+    color: var(--text-gray);
+    line-height: 1.6;
+    flex: 1;
+}
+
+.home-card-footer {
+    margin-top: auto;
+}
+
+.home-card-footer .acessar-btn {
+    font-size: 0.85rem;
+    padding: 0.7rem 1.2rem;
+}
+
+/* Removed old grids, consolidated into .global-cards-grid above */
 
 
+.observatorio-banner {
+    background: linear-gradient(135deg, var(--primary-navy), #1D1D22);
+    color: white;
+    border-radius: var(--border-radius);
+    padding: 3rem;
+    margin: 0 1.5rem 4rem;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    cursor: pointer;
+    transition: var(--smooth);
+}
 
-function handleTagFilter(tag, btn) {
-    document.querySelectorAll('[data-tag]').forEach(b => b.classList.remove('active'));
-    if (btn) btn.classList.add('active');
+.observatorio-banner:hover {
+    transform: translateY(-3px);
+}
+
+.obs-banner-icon {
+    width: 60px;
+    height: 60px;
+    background: var(--accent-orange);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.obs-banner-icon i {
+    width: 30px;
+    height: 30px;
+    color: white;
+}
+
+.observatorio-banner h3 {
+    font-size: 1.4rem;
+    margin-bottom: 0.3rem;
+}
+
+.observatorio-banner p {
+    opacity: 0.8;
+    font-size: 0.95rem;
+}
+
+.observatorio-banner>div {
+    flex: 1;
+    min-width: 200px;
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   PAGE LAYOUT â€” Dark Hero + White Content Section
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.page-dark-hero {
+    background: var(--primary-navy);
+    color: white;
+    padding: 0.8rem 2rem 1rem;
+    text-align: left;
+}
+
+@media (min-width: 1024px) {
+    .page-dark-hero {
+        padding: 0.8rem 60px 1rem;
+    }
+}
+
+.page-dark-hero .page-badge {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--accent-orange);
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+}
+
+.page-dark-hero h1 {
+    font-size: 2.8rem;
+    margin-bottom: 0.2rem;
+    line-height: 1.2;
+}
+
+.page-dark-hero p {
+    opacity: 0.8;
+    font-size: 1.1rem;
+    max-width: 750px;
+}
+
+.content-white-section {
+    background: white;
+    padding: 3rem 4rem 6rem;
+    min-height: 60vh;
+    width: 100%;
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   SEARCH + FILTER BAR
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.search-filter-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+}
+
+.search-filter-row {
+    margin-bottom: 0;
+}
+
+.search-filter-bar .search-bar-wrapper {
+    flex: 1;
+    min-width: 200px;
+}
+
+.search-filter-bar input {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    padding-right: 3.5rem;
+    border-radius: 14px;
+    border: 1px solid #ddd;
+    background: #F4F7F9;
+    font-size: 1rem;
+}
+
+.search-filter-bar input:focus {
+    outline: none;
+    border-color: var(--primary-navy);
+}
+
+.filter-dropdown-wrapper {
+    position: relative;
+    min-width: 160px;
+}
+
+.filter-dropdown {
+    appearance: none;
+    width: 100%;
+    padding: 1rem 3rem 1rem 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 14px;
+    background: #F4F7F9;
+    font-size: 1rem;
+    cursor: pointer;
+    color: var(--text-dark);
+}
+
+.filter-dropdown:focus {
+    outline: none;
+    border-color: var(--primary-navy);
+}
+
+.dropdown-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #888;
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   MÃ‰TODOS SUBSTITUTIVOS
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.metodo-card {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    border-top: 6px solid var(--primary-navy);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.metodo-title {
+    color: var(--primary-navy);
+    font-size: 1.6rem;
+    margin-bottom: 0.6rem;
+    font-weight: 700;
+}
+
+.metodo-oecd {
+    color: var(--accent-orange);
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 1.2rem;
+}
+
+.metodo-desc {
+    color: var(--text-gray);
+    margin-bottom: 1.2rem;
+    line-height: 1.7;
+}
+
+.metodo-field {
+    color: var(--text-gray);
+    margin-bottom: 0.8rem;
+    line-height: 1.6;
+    font-size: 0.95rem;
+}
+
+.metodo-source {
+    color: #888;
+    font-size: 0.85rem;
+    margin-bottom: 1.8rem;
+    font-weight: 600;
+}
+
+.metodo-cta-card {
+    background: var(--primary-navy);
+    color: white;
+    padding: 3.5rem;
+    border-radius: 24px;
+    margin-top: 3rem;
+}
+
+.metodo-cta-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.3;
+}
+
+.metodo-cta-card p {
+    opacity: 0.8;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+}
+
+.metodo-cta-card .acessar-btn {
+    background: var(--accent-orange);
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   MATERIAIS DIDÃTICOS
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.materiais-card {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.materiais-featured-badge {
+    background: var(--primary-navy);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.3;
+}
+
+.materiais-img-wrap {
+    margin-bottom: 1.5rem;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.materiais-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.materiais-card-title {
+    color: var(--primary-navy);
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+}
+
+.materiais-card-desc {
+    color: var(--text-gray);
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+}
+
+.pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   PUBLICAÃ‡Ã•ES â€” Sub-seÃ§Ãµes
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.sub-section {
+    margin-bottom: 5rem;
+}
+
+.sub-section-header {
+    margin-bottom: 3rem;
+}
+
+.sub-section-title {
+    text-align: center;
+    color: #555;
+    text-transform: uppercase;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+}
+
+.sub-section-divider {
+    width: 100px;
+    height: 4px;
+    background: var(--accent-yellow);
+    margin: 0 auto 2rem;
+}
+
+.pub-card {
+    background: white;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    height: 100%;
+}
+
+.pub-card-body {
+    flex: 1;
+}
+
+.pub-card-title {
+    font-size: 1.05rem;
+    color: var(--primary-navy);
+    margin-bottom: 0.4rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.pub-card-author {
+    color: #777;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.pub-books-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.pub-book-card {
+    text-align: center;
+}
+
+.pub-book-img {
+    width: 180px;
+    height: 240px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.pub-book-author {
+    color: #777;
+    font-size: 0.85rem;
+    margin-top: 0.8rem;
+    max-width: 180px;
+}
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   BASES DE DADOS
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.db-card {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.db-card-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.db-logo {
+    height: 45px;
+    max-width: 140px;
+    object-fit: contain;
+}
+
+.db-card-name-inline {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary-navy);
+}
+
+.db-card-name {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--primary-navy);
+    margin-bottom: 1.5rem;
+}
+
+.db-card-desc {
+    color: var(--text-gray);
+    line-height: 1.8;
+    margin-bottom: 1.5rem;
+}
+
+.db-card-link {
+    color: #007bff;
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 0.9rem;
+    word-break: break-all;
+}
+
+.db-card-link:hover {
+    background: var(--accent-orange);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   MATERIAIS DIDÁTICOS
+──────────────────────────────────────────────────────────────────────────── */
+.materiais-card {
+    background: #EDF0F2;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+    border: 2px solid transparent;
+}
+
+.materiais-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--accent-yellow);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.materiais-featured-badge {
+    background: var(--primary-navy);
+    color: white;
+    padding: 0.8rem 1.2rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 1.2rem;
+    line-height: 1.3;
+}
+
+.materiais-img-wrap {
+    margin-bottom: 1.2rem;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.materiais-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.materiais-card-title {
+    color: var(--primary-navy);
+    font-size: 1.1rem;
+    margin-bottom: 0.8rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.materiais-card-desc {
+    color: var(--text-gray);
+    line-height: 1.7;
+    margin-bottom: 1.2rem;
+    font-size: 0.95rem;
+    flex: 1;
+}
+
+.pills-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   PUBLICAÇÕES — Sub-seções
+──────────────────────────────────────────────────────────────────────────── */
+.sub-section {
+    margin-bottom: 5rem;
+}
+
+.sub-section-header {
+    margin-bottom: 3rem;
+}
+
+.sub-section-title {
+    text-align: center;
+    color: #555;
+    text-transform: uppercase;
+    font-size: 1.4rem;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+}
+
+.sub-section-divider {
+    width: 100px;
+    height: 4px;
+    background: var(--accent-yellow);
+    margin: 0 auto 2rem;
+}
+
+.pub-card {
+    background: #EDF0F2;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    height: 100%;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+    border: 2px solid transparent;
+}
+
+.pub-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--accent-yellow);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.pub-card-body {
+    flex: 1;
+}
+
+.pub-card-title {
+    font-size: 1.05rem;
+    color: var(--primary-navy);
+    margin-bottom: 0.4rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.pub-card-author {
+    color: #777;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.pub-books-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.pub-book-card {
+    background: #EDF0F2;
+    padding: 1.5rem;
+    border-radius: 16px;
+    text-align: center;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+    border: 2px solid transparent;
+}
+
+.pub-book-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--accent-yellow);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.pub-book-img {
+    width: 180px;
+    height: 240px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.pub-book-author {
+    color: #777;
+    font-size: 0.85rem;
+    margin-top: 0.8rem;
+    max-width: 180px;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   BASES DE DADOS
+──────────────────────────────────────────────────────────────────────────── */
+.db-card {
+    background: #EDF0F2;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+    border: 2px solid transparent;
+}
+
+.db-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--accent-yellow);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.db-card-logo-row {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    margin-bottom: 1.2rem;
+}
+
+.db-logo {
+    height: 38px;
+    max-width: 120px;
+    object-fit: contain;
+}
+
+.db-card-name-inline {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-navy);
+}
+
+.db-card-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-navy);
+    margin-bottom: 1rem;
+    line-height: 1.3;
+}
+
+.db-card-desc {
+    color: var(--text-gray);
+    line-height: 1.7;
+    margin-bottom: 1.2rem;
+    font-size: 0.95rem;
+    flex: 1;
+}
+
+.db-card-link {
+    color: #007bff;
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 0.9rem;
+    word-break: break-all;
+}
+
+.db-card-link:hover {
+    text-decoration: underline;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   LEGISLAÇÃO
+──────────────────────────────────────────────────────────────────────────── */
+.legis-intro {
+    color: var(--text-gray);
+    line-height: 1.8;
+    margin-bottom: 3rem;
+    font-size: 1rem;
+    padding: 2rem;
+    background: #F7F8FA;
+    border-radius: 16px;
+}
+
+.legis-card {
+    background: #EDF0F2;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+    border: 2px solid transparent;
+}
+
+.legis-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--accent-yellow);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.legis-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--primary-navy);
+    margin-bottom: 0.8rem;
+    line-height: 1.4;
+}
+
+.legis-card-desc {
+    color: var(--text-gray);
+    line-height: 1.7;
+    margin-bottom: 1.2rem;
+    font-size: 0.95rem;
+    flex: 1;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   OBSERVATÓRIO — Assistente de Pesquisa (2 colunas)
+──────────────────────────────────────────────────────────────────────────── */
+.obs-nav-assistente {
+    background: var(--accent-orange) !important;
+    color: white !important;
+    border-radius: 15px !important;
+    margin: 1.5rem 1rem !important;
+}
+
+.obs-nav-assistente.active,
+.obs-nav-assistente:hover {
+    background: #d45a20 !important;
+}
+
+.obs-assistente-shell {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+    background: white;
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+@media (max-width: 900px) {
+    .obs-assistente-shell {
+        grid-template-columns: 1fr;
+    }
+}
+
+.obs-assistente-left {
+    background: #F7F8FA;
+    padding: 2rem 1.5rem;
+    border-right: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.obs-nova-conversa-btn {
+    background: var(--primary-navy);
+    color: white;
+    border: none;
+    padding: 0.9rem 1.5rem;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: 1rem;
+    transition: var(--smooth);
+}
+
+.obs-nova-conversa-btn:hover {
+    background: #1a3a6e;
+}
+
+.obs-hist-label {
+    font-size: 0.8rem;
+    color: #aaa;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin: 1rem 0 0.5rem;
+    letter-spacing: 1px;
+}
+
+.obs-hist-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    color: #666;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.obs-hist-item:hover {
+    background: #eee;
+}
+
+.obs-nota-cientifica {
+    background: #FFF5EE;
+    border: 1px solid #f5c8a8;
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin-top: 1.5rem;
+}
+
+.obs-agente-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary-navy);
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.obs-agente-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.obs-agente-lista li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--text-gray);
+    line-height: 1.5;
+}
+
+.obs-agente-lista li span {
+    color: var(--accent-orange);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.obs-assistente-right {
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.obs-suggestion {
+    cursor: pointer;
+    transition: var(--smooth);
+}
+
+.obs-suggestion:hover {
+    border: 1px solid var(--accent-orange);
+    transform: translateY(-3px);
+}
+
+.obs-input-bar {
+    background: #F7F8FA;
+    border-radius: 30px;
+    padding: 1.2rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: auto;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   acessar-btn global hover
+──────────────────────────────────────────────────────────────────────────── */
+.acessar-btn {
+    cursor: pointer;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--smooth);
+    background: #222;
+    color: white;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+}
+
+.acessar-btn:hover {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+
+.obs-scroll-list {
+    max-height: 500px;
+    overflow-y: auto;
 }
 
 /* ------------------------------------------------------
-   THEME TOGGLE LOGIC (CLARO / ESCURO)
-   Now uses Material Icons span (textContent) instead of Lucide
+   DARK MODE THEME OVERRIDES
+   Matches the requested Dark Mode Theme Palette
 ------------------------------------------------------ */
-document.addEventListener('DOMContentLoaded', () => {
-    const themeBtn = document.getElementById('theme-toggle');
-    const themeIcon = document.getElementById('theme-icon');
 
-    // Check saved theme
-    if (localStorage.getItem('theme') === 'dark') {
-        document.body.setAttribute('data-theme', 'dark');
-        if (themeIcon) themeIcon.textContent = 'light_mode';
+[data-theme="dark"] {
+    /* === Core colour tokens (WCAG AA verified) === */
+    --bg-light:   #23252E;   /* card surface — slightly lighter than page bg */
+    --bg-gray:    #1A1C24;   /* deeper surface, e.g. nested cards */
+    --text-dark:  #F0F2F8;   /* primary text — contrast 13:1 on page bg */
+    --text-gray:  #B8C4CC;   /* secondary text — contrast 6.5:1 on #2c2c33 ✓ WCAG AA */
+    --white:      #1E2230;   /* replaces inline background:white → dark card */
+    --primary-navy: #3A3D4A; /* nav & dark-card bg in dark mode */
+    --accent-orange: #FACD5F; /* keep brand yellow in dark mode */
+    --accent-yellow: #FACD5F;
+    --on-accent:  #1C1C1E;   /* dark text on yellow — unchanged */
+    --border-subtle: rgba(255,255,255,0.08);
+}
+
+/* ── Page & section backgrounds ── */
+[data-theme="dark"] body,
+[data-theme="dark"] #app,
+[data-theme="dark"] .content-white-section,
+[data-theme="dark"] main {
+    background-color: #2C2C33 !important;
+    color: var(--text-dark);
+}
+
+/* ── Generic cards ── */
+[data-theme="dark"] .home-card,
+[data-theme="dark"] .home-card-dynamic,
+[data-theme="dark"] .pub-book-card,
+[data-theme="dark"] .legis-card,
+[data-theme="dark"] .db-card,
+[data-theme="dark"] .metodo-card,
+[data-theme="dark"] .materiais-card,
+[data-theme="dark"] .pub-card,
+[data-theme="dark"] .metodo-cta-card,
+[data-theme="dark"] .obs-card,
+[data-theme="dark"] .obs-suggestion {
+    background: #23252E !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.35) !important;
+}
+
+/* ── Headings ── */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6,
+[data-theme="dark"] .metodo-title,
+[data-theme="dark"] .materiais-card-title,
+[data-theme="dark"] .legis-card-title,
+[data-theme="dark"] .db-card-name,
+[data-theme="dark"] .pub-card-title,
+[data-theme="dark"] .home-card-title {
+    color: #F0F2F8 !important;
+}
+
+/* ── Body / secondary text ── */
+[data-theme="dark"] p,
+[data-theme="dark"] span:not(.material-icons):not(.obs2-nav-label):not(.page-badge):not(.pill-tag),
+[data-theme="dark"] li,
+[data-theme="dark"] .metodo-desc,
+[data-theme="dark"] .metodo-field,
+[data-theme="dark"] .materiais-card-desc,
+[data-theme="dark"] .legis-card-desc,
+[data-theme="dark"] .db-card-desc,
+[data-theme="dark"] .pub-card-author,
+[data-theme="dark"] .home-card-text {
+    color: #B8C4CC !important;
+}
+
+/* ── Observatory 2 sidebar (obs2) ── */
+[data-theme="dark"] .obs2-sidebar {
+    background: #181A22 !important;
+    border-right: 1px solid rgba(255,255,255,0.06) !important;
+}
+[data-theme="dark"] .obs2-nav-item {
+    color: rgba(255,255,255,0.65) !important;
+}
+[data-theme="dark"] .obs2-nav-item:hover {
+    background: rgba(255,255,255,0.06) !important;
+    color: #fff !important;
+}
+[data-theme="dark"] .obs2-nav-item.active {
+    background: var(--accent-yellow) !important;
+    color: var(--on-accent) !important;
+}
+[data-theme="dark"] .obs2-brand-label {
+    color: #F0F2F8 !important;
+}
+
+/* ── Observatory main content area ── */
+[data-theme="dark"] .obs2-main,
+[data-theme="dark"] .obs-main,
+[data-theme="dark"] #obs-display {
+    background: #2C2C33 !important;
+}
+
+/* ── Observatory content white cards → dark cards ── */
+/* The JS now uses var(--white) which resolves to #1E2230 in dark mode */
+
+/* ── Observatory progress bar tracks ── */
+[data-theme="dark"] .obs2-main div[style*="background:var(--bg-gray)"],
+[data-theme="dark"] div[style*="background:#f0f0f0"],
+[data-theme="dark"] div[style*="background:var(--bg-gray)"] {
+    background: rgba(255,255,255,0.1) !important;
+}
+
+/* Fix green "Experimentação" banner — dark text on mint isn't legible */
+[data-theme="dark"] div[style*="background:#E5F8ED"],
+[data-theme="dark"] div[style*="background: #E5F8ED"] {
+    background: #0D3320 !important;
+    border-color: rgba(56,142,60,0.4) !important;
+    color: #A5D6A7 !important;
+}
+[data-theme="dark"] div[style*="background:#E5F8ED"] h1,
+[data-theme="dark"] div[style*="background:#E5F8ED"] h2 {
+    color: #C8E6C9 !important;
+}
+
+/* Fix red "Abandono" banner */
+[data-theme="dark"] div[style*="background:#F2DEDE"],
+[data-theme="dark"] div[style*="background: #F2DEDE"] {
+    background: #3B1515 !important;
+    border-color: rgba(183,28,28,0.35) !important;
+    color: #EF9A9A !important;
+}
+[data-theme="dark"] div[style*="background:#F2DEDE"] h1 {
+    color: #FFCDD2 !important;
+}
+
+/* Fix amber/warning callout boxes */
+[data-theme="dark"] div[style*="background:#FFF4E5"],
+[data-theme="dark"] div[style*="background: #FFF4E5"] {
+    background: #3D2600 !important;
+    border-color: rgba(252,163,17,0.35) !important;
+    color: #FFD180 !important;
+}
+[data-theme="dark"] div[style*="background:#FFF4E5"] p,
+[data-theme="dark"] div[style*="background:#FFF4E5"] strong {
+    color: #FFD180 !important;
+}
+
+/* ── Source badge and footer chips ── */
+[data-theme="dark"] .obs-source-badge,
+[data-theme="dark"] .obs-source-link,
+[data-theme="dark"] .obs-micro-source {
+    color: #B8C4CC !important;
+}
+[data-theme="dark"] .obs-sources-footer {
+    background: rgba(255,255,255,0.04) !important;
+    border-top-color: rgba(255,255,255,0.1) !important;
+}
+[data-theme="dark"] .obs-footer-src-link {
+    background: rgba(255,255,255,0.05) !important;
+    color: #B8C4CC !important;
+    border-color: rgba(255,255,255,0.1) !important;
+}
+[data-theme="dark"] .obs-footer-src-link:hover {
+    background: var(--accent-yellow) !important;
+    color: var(--on-accent) !important;
+    border-color: var(--accent-yellow) !important;
+}
+
+/* ── Curadoria & About pages ── */
+[data-theme="dark"] .curator-card,
+[data-theme="dark"] .sobre-card,
+[data-theme="dark"] .team-card {
+    background: #23252E !important;
+    border: 1px solid rgba(255,255,255,0.07) !important;
+}
+[data-theme="dark"] .curator-card p,
+[data-theme="dark"] .sobre-card p,
+[data-theme="dark"] .team-card p {
+    color: #B8C4CC !important;
+}
+/* Curator card link */
+[data-theme="dark"] a[style*="color:var(--accent-orange)"] {
+    color: var(--accent-yellow) !important;
+}
+
+/* ── Search bar ── */
+[data-theme="dark"] .search-bar input {
+    background-color: #14181b;
+    color: #F0F2F8;
+    border-color: rgba(255,255,255,0.15);
+}
+[data-theme="dark"] .search-bar input::placeholder {
+    color: #6e869a;
+}
+
+/* ── Pill tags ── */
+[data-theme="dark"] .pill-tag {
+    background: rgba(64,248,226,0.15) !important;
+    color: #80DEEA !important;
+    border: 1px solid rgba(64,248,226,0.3) !important;
+}
+[data-theme="dark"] .pill-tag.dark {
+    background: rgba(244,202,35,0.15) !important;
+    color: var(--accent-yellow) !important;
+    border: 1px solid rgba(250,205,95,0.3) !important;
+}
+
+/* ── Tab buttons ── */
+[data-theme="dark"] .tab-btn { color: #B8C4CC; }
+[data-theme="dark"] .tab-btn.active { color: var(--accent-yellow); border-bottom: 4px solid var(--accent-yellow); }
+
+/* ── Page badges ── */
+[data-theme="dark"] .page-badge {
+    background: rgba(255,255,255,0.08) !important;
+    color: #F0F2F8 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+}
+
+/* ── Header ── */
+[data-theme="dark"] #main-header {
+    background-color: #1E2028 !important;
+    border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.3) !important;
+}
+
+/* ── Drawer (sidebar) in dark mode ── */
+[data-theme="dark"] .drawer {
+    background: #13141A !important;
+    box-shadow: 4px 0 40px rgba(0,0,0,0.6) !important;
+}
+[data-theme="dark"] .drawer-link { color: rgba(255,255,255,0.85) !important; }
+[data-theme="dark"] .drawer-link:hover { background: rgba(255,255,255,0.06) !important; color: #fff !important; }
+[data-theme="dark"] .drawer-link-icon { color: rgba(255,255,255,0.45) !important; }
+[data-theme="dark"] .drawer-link:hover .drawer-link-icon { color: var(--accent-yellow) !important; }
+[data-theme="dark"] .drawer-link--obs { background: rgba(250,205,95,0.1) !important; }
+
+/* ── Footer ── */
+[data-theme="dark"] footer { background: #111318 !important; }
+[data-theme="dark"] .footer-logo { filter: brightness(2); }
+
+/* ── Nav active state text contrast fix ── */
+[data-theme="dark"] .nav-btn { color: rgba(255,255,255,0.75) !important; }
+[data-theme="dark"] .nav-btn:hover,
+[data-theme="dark"] .nav-btn.active { color: #fff !important; background: rgba(255,255,255,0.08) !important; }
+[data-theme="dark"] .nav-btn--highlight { color: var(--accent-yellow) !important; }
+
+/* ── Input fields globally ── */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+    background: #1E2230 !important;
+    color: #F0F2F8 !important;
+    border-color: rgba(255,255,255,0.15) !important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: #6e869a !important; }
+
+/* ── Obs input bar (AI chat) ── */
+[data-theme="dark"] .obs-input-bar {
+    background: #1E2230 !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+}
+[data-theme="dark"] .obs-input-bar input { color: #F0F2F8 !important; }
+
+/* ── Admin pages ── */
+[data-theme="dark"] .admin-panel,
+[data-theme="dark"] #content-area > div[style*="background: white"],
+[data-theme="dark"] #content-area > div[style*="background:white"] {
+    background: #23252E !important;
+    color: #F0F2F8 !important;
+}
+
+/* ── Ensure WCAG: primary-navy text on light bg becomes light in dark mode ── */
+[data-theme="dark"] [style*="color:var(--primary-navy)"],
+[data-theme="dark"] [style*="color: var(--primary-navy)"] {
+    color: #F0F2F8 !important;
+}
+.unified-tabs-wrapper { margin-bottom: 3rem; }
+
+/* Custom elegant motion hover for dynamic home cards */
+.home-card-dynamic {
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease !important;
+    border: 2px solid transparent !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}
+
+.home-card-dynamic:hover {
+    transform: translateY(-8px) !important;
+    border-color: var(--accent-yellow) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Floating ECO Button - CTA 60x60px, 20px bottom margin + 30px up = 50px */
+.fixed-icons {
+    position: fixed;
+    bottom: 50px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.fixed-icon-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 20px;
+    background: white;
+    border: 2px solid #A3D8F4; /* Linha Azul Clarinho interna */
+    box-shadow: 0 0 0 2px var(--accent-yellow), 0 4px 15px rgba(0,0,0,0.2); /* Linha Amarela externa */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 10px;
+    outline: none;
+}
+
+.fixed-icon-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.25);
+}
+
+.fixed-icon-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+
+/* RESPONSIVE LAYOUTS - UNIVERSAL SUPPORT */
+@media (max-width: 991px) { .obs-sidebar { width: 100px; } .obs-nav-item span { display: none; } .obs-nav-item { justify-content: center; padding: 1.25rem; } }
+@media (max-width: 768px) { .obs-layout { flex-direction: column; height: auto; overflow: visible; } .obs-sidebar { width: 100%; height: auto; position: sticky; top: 0; z-index: 1000; border-bottom: 1px solid rgba(255,255,255,0.1); } .obs-sidebar-header { display: none; } .obs-nav-list { display: flex; overflow-x: auto; padding: 0.5rem; gap: 0.5rem; } .obs-nav-item { margin: 0; padding: 0.8rem 1.2rem; flex-direction: column; gap: 4px; white-space: nowrap; border-radius: 8px; } .obs-nav-item span { display: block; font-size: 0.75rem; } .obs-main { margin: 0; border-radius: 0; padding: 2rem 1rem; } }
+@media (min-width: 2000px) { .obs-sidebar { width: 450px; } .obs-nav-item { font-size: 1.5rem; padding: 2.5rem; } }
+
+/* ULTRA-WIDE TV GRID SUPPORT */
+@media (min-width: 2500px) {
+    .home-cards-grid, .global-cards-grid, .charts-grid-2, .cards-grid-4 {
+        grid-template-columns: repeat(6, 1fr) !important;
+    }
+    h1 { font-size: 5rem !important; }
+    p { font-size: 1.8rem !important; }
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   OBSERVATÃ“RIO v2 â€” Sidebar Esquerda Escura Fixa
+   Same home design visual on the right content area
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+/* Full viewport wrapper: sidebar + scrollable content */
+.obs2-wrapper {
+    display: flex;
+    height: calc(100vh - var(--nav-height));
+    overflow: hidden;
+    background: var(--primary-navy);
+}
+
+/* â”€â”€ Sidebar â”€â”€ */
+.obs2-sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: #2C2C33;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid rgba(255,255,255,0.05);
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.3s ease;
+    flex-shrink: 0;
+}
+
+.obs2-sidebar::-webkit-scrollbar { width: 4px; }
+.obs2-sidebar::-webkit-scrollbar-track { background: transparent; }
+.obs2-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+/* Brand header inside sidebar */
+.obs2-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1.5rem 1.2rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+
+.obs2-brand-icon {
+    width: 38px;
+    height: 38px;
+    background: rgba(250,205,95,0.12);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.obs2-brand-label {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+/* Nav list */
+.obs2-nav-list {
+    flex: 1;
+    padding: 0.8rem 0.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Each nav item */
+.obs2-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1rem;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.45);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: background 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.obs2-nav-item:hover {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.8);
+}
+
+.obs2-nav-item.active {
+    background: var(--accent-yellow);
+    color: var(--on-accent); /* WCAG AA: dark text on yellow — 8:1 ratio */
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(250,205,95,0.35);
+}
+
+.obs2-nav-item.obs2-nav-accent {
+    color: var(--accent-yellow);
+}
+
+.obs2-nav-item.obs2-nav-accent.active {
+    background: var(--accent-yellow);
+    color: var(--primary-navy);
+}
+
+.obs2-nav-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.obs2-nav-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Sidebar footer */
+.obs2-sidebar-footer {
+    padding: 1rem 1.2rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+
+.obs2-footer-badge {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.25);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* â”€â”€ Right Content Area â”€â”€ */
+.obs2-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background: #EDF0F2;
+    scroll-behavior: smooth;
+}
+
+.obs2-content::-webkit-scrollbar { width: 6px; }
+.obs2-content::-webkit-scrollbar-track { background: transparent; }
+.obs2-content::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 6px; }
+
+/* Dark hero strip at the top of the content area â€” same style as .page-dark-hero */
+.obs2-hero {
+    background: var(--primary-navy);
+    color: white;
+    padding: 1rem 2.5rem 1.2rem;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.obs2-hero::after {
+    content: '';
+    position: absolute;
+    right: -5%;
+    top: -50%;
+    width: 40%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(250,205,95,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.obs2-hero .page-badge {
+    margin-bottom: 0.4rem;
+}
+
+.obs2-hero h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.2rem;
+    line-height: 1.2;
+}
+
+.obs2-hero p {
+    opacity: 0.75;
+    font-size: 1rem;
+    max-width: 680px;
+}
+
+/* Display area â€” white/light like .content-white-section */
+.obs2-display-area {
+    flex: 1;
+    background: #EDF0F2;
+    padding: 2.5rem 2.5rem 4rem;
+}
+
+/* â”€â”€ Responsive â”€â”€ */
+
+/* Collapsed sidebar on medium screens */
+@media (max-width: 1100px) {
+    .obs2-sidebar {
+        width: 58px;
+        min-width: 58px;
+    }
+    .obs2-brand-label,
+    .obs2-nav-label,
+    .obs2-sidebar-footer,
+    .obs2-sidebar-brand .obs2-brand-label {
+        display: none;
+    }
+    .obs2-sidebar-brand {
+        justify-content: center;
+        padding: 1rem 0.5rem;
+    }
+    .obs2-nav-item {
+        justify-content: center;
+        padding: 0.9rem;
+        border-radius: 8px;
+    }
+    .obs2-nav-icon {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Mobile: sidebar becomes a top scrollable row */
+@media (max-width: 768px) {
+    .obs2-wrapper {
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+    }
+    .obs2-sidebar {
+        width: 100%;
+        min-width: unset;
+        height: auto;
+        flex-direction: row;
+        border-right: none;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+    .obs2-sidebar-brand { display: none; }
+    .obs2-sidebar-footer { display: none; }
+    .obs2-nav-list {
+        flex-direction: row;
+        gap: 4px;
+        padding: 0.5rem;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+    .obs2-nav-item {
+        flex-direction: column;
+        gap: 4px;
+        padding: 0.6rem 0.9rem;
+        border-radius: 8px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        min-width: fit-content;
+    }
+    .obs2-nav-label { display: block !important; font-size: 0.72rem; }
+    .obs2-hero { padding: 1rem 1.2rem; }
+    .obs2-hero h1 { font-size: 1.6rem; }
+    .obs2-display-area { padding: 1.5rem 1rem 3rem; }
+    .obs2-content { overflow-y: visible; }
+}
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SOURCE ATTRIBUTION BADGES â€” ObservatÃ³rio
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+/* Inline badge: aparece sob um nÃºmero/valor */
+.obs-source-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent-orange);
+    background: rgba(250,205,95,0.08);
+    border: 1px solid rgba(250,205,95,0.2);
+    border-radius: 20px;
+    padding: 3px 10px;
+}
+
+.obs-source-icon {
+    width: 11px !important;
+    height: 11px !important;
+    flex-shrink: 0;
+}
+
+.obs-source-link {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.obs-source-link:hover { text-decoration: underline; }
+
+/* Micro source: linha Ãºnica abaixo de stat */
+.obs-micro-source {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.4);
+    margin-top: 0.3rem;
+    font-style: italic;
+    letter-spacing: 0.2px;
+}
+
+/* Dark card variant */
+.obs-kpi-card .obs-micro-source { color: rgba(255,255,255,0.4); }
+
+/* Footer bar: rodapÃ© de uma seÃ§Ã£o com todas as fontes */
+.obs-sources-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem 1.2rem;
+    margin-top: 2rem;
+    padding: 1rem 1.5rem;
+    background: #F4F6F8;
+    border-radius: 12px;
+    border: 1px solid #E8ECF0;
+    font-size: 0.78rem;
+}
+
+.obs-sources-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 800;
+    color: var(--primary-navy);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.7rem;
+    white-space: nowrap;
+    margin-right: 0.4rem;
+}
+
+.obs-footer-src-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--accent-orange);
+    text-decoration: none;
+    font-weight: 600;
+    padding: 3px 10px;
+    background: white;
+    border: 1px solid rgba(250,205,95,0.25);
+    border-radius: 20px;
+    transition: all 0.2s ease;
+}
+.obs-footer-src-link:hover {
+    background: var(--accent-yellow);
+    color: var(--on-accent); /* WCAG fix: dark text on yellow — not white */
+    border-color: var(--accent-yellow);
+}
+
+
+
+/* ══════════════════════════════════════════════════════
+   CURADORIA / PERFIS — layout responsivo
+══════════════════════════════════════════════════════ */
+
+.curators-list-section {
+    background: #EDF0F2;
+    padding: 2.5rem 1rem 4rem;
+}
+
+.curators-list {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.curator-card {
+    background: #E8ECEE;
+    border-radius: 18px;
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+    box-shadow: 0 8px 24px rgba(26, 26, 26, 0.05);
+}
+
+.curator-card-photo {
+    width: 112px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #D7DDE0;
+}
+
+.curator-card-photo img,
+.curator-profile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.curator-card-content {
+    min-width: 0;
+    border-left: 3px solid var(--accent-yellow);
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.curator-card-content h2 {
+    margin: 0 0 0.8rem;
+    color: var(--primary-navy);
+    font-size: 1.45rem;
+}
+
+.curator-card-content p {
+    margin: 0 0 1.15rem;
+    color: var(--text-gray);
+    line-height: 1.65;
+}
+
+.curator-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.curator-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    padding: 0.42rem 0.9rem;
+    border-radius: 999px;
+    background: var(--mint-teal);
+    color: var(--on-teal);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.curator-tag--primary {
+    background: #545B62;
+    color: #FFFFFF;
+    border: 2px solid var(--accent-yellow);
+    font-weight: 700;
+}
+
+.curator-profile-link,
+.curator-back-link,
+.curator-project-link {
+    font-family: var(--font-ui);
+}
+
+.curator-profile-link {
+    margin-top: 1.25rem;
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: #55218B;
+    padding: 0.5rem 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.curator-profile-link svg,
+.curator-back-link svg,
+.curator-project-link svg {
+    width: 18px;
+    height: 18px;
+}
+
+.curator-profile-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+/* Profile page */
+.curator-profile-page {
+    background: #EDF0F2;
+    min-height: 70vh;
+    padding-bottom: 4rem;
+}
+
+.curator-profile-actions {
+    width: min(calc(100% - 2rem), 1400px);
+    margin: 0 auto;
+    padding: 1rem 0 0;
+}
+
+.curator-back-link {
+    border: 0;
+    background: transparent;
+    color: var(--text-gray);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.65rem 0;
+    font-weight: 700;
+}
+
+.curator-profile-shell {
+    width: min(calc(100% - 2rem), 1400px);
+    margin: 0 auto;
+    padding: 0.5rem 0 1.5rem;
+}
+
+.curator-profile-card {
+    background: #E8ECEE;
+    border-radius: 18px;
+    padding: 2rem;
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 2rem;
+    align-items: start;
+    box-shadow: 0 8px 24px rgba(26, 26, 26, 0.05);
+}
+
+.curator-profile-photo {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #D7DDE0;
+    margin: 0 auto;
+}
+
+.curator-profile-main {
+    min-width: 0;
+    border-left: 3px solid var(--accent-yellow);
+    padding-left: 1.5rem;
+}
+
+.curator-profile-name {
+    color: var(--primary-navy);
+    margin: 0 0 1.1rem;
+    font-size: 1.8rem;
+}
+
+.curator-profile-main .curator-tags {
+    margin-bottom: 1.25rem;
+}
+
+.curator-profile-bio {
+    color: var(--text-gray);
+    font-size: 1.05rem;
+    line-height: 1.75;
+    max-width: 930px;
+}
+
+.curator-profile-categories {
+    width: min(100%, 1400px);
+    margin: 0 auto;
+}
+
+.curator-category {
+    margin-top: 1rem;
+}
+
+.curator-category-heading {
+    border-bottom: 3px solid var(--accent-yellow);
+    padding: 0.9rem 1rem 0.8rem;
+    text-align: center;
+}
+
+.curator-category-heading h2 {
+    color: #666B6F;
+    margin: 0;
+    font-size: 1.7rem;
+}
+
+.curator-projects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding: 1.5rem 1rem 0;
+}
+
+.curator-project-card {
+    overflow: hidden;
+    background: #FFFFFF;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(26, 26, 26, 0.06);
+}
+
+.curator-project-media {
+    height: 240px;
+    background: #70A3A4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+}
+
+.curator-project-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.curator-project-media > svg {
+    width: 110px;
+    height: 110px;
+    color: rgba(255,255,255,0.95);
+    stroke-width: 1.1 !important;
+}
+
+.curator-project-media--labchange {
+    background: #70A3A4;
+}
+
+.curator-project-media--florestar {
+    background: #6C9684;
+}
+
+.curator-project-media--befree {
+    background: #7C92A3;
+}
+
+.curator-project-banner {
+    min-height: 240px;
+    height: auto;
+    padding: 2.25rem;
+    flex-direction: column;
+    text-align: center;
+    background: var(--primary-navy);
+    color: white;
+}
+
+.curator-project-banner strong {
+    font-family: var(--font-heading);
+    font-size: clamp(2.2rem, 6vw, 4rem);
+    line-height: 1;
+}
+
+.curator-project-banner span {
+    margin-top: 1rem;
+    font-size: 1.1rem;
+}
+
+.curator-project-banner em {
+    margin-top: 0.35rem;
+    opacity: 0.8;
+}
+
+.curator-project-body {
+    padding: 1.5rem;
+}
+
+.curator-project-body h3 {
+    margin: 0 0 1rem;
+    color: var(--primary-navy);
+}
+
+.curator-project-body > p {
+    border-left: 3px solid var(--accent-yellow);
+    padding-left: 1rem;
+    color: var(--text-gray);
+    line-height: 1.7;
+    margin-bottom: 1.25rem;
+}
+
+.curator-project-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+    color: #55218B;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.curator-profile-coming-soon,
+.curator-profile-empty {
+    width: min(calc(100% - 2rem), 900px);
+    margin: 1.5rem auto 0;
+    background: #FFFFFF;
+    border-radius: 18px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.curator-profile-coming-soon > svg {
+    width: 34px;
+    height: 34px;
+    color: var(--primary-navy);
+    margin-bottom: 0.75rem;
+}
+
+/* Nome do perfil no header apenas no mobile */
+.profile-page-title {
+    display: none;
+    color: #FFFFFF;
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+    max-width: calc(100vw - 140px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (min-width: 760px) {
+    .curators-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            const isDark = document.body.getAttribute('data-theme') === 'dark';
-            if (isDark) {
-                document.body.removeAttribute('data-theme');
-                if (themeIcon) themeIcon.textContent = 'dark_mode';
-                localStorage.setItem('theme', 'light');
-            } else {
-                document.body.setAttribute('data-theme', 'dark');
-                if (themeIcon) themeIcon.textContent = 'light_mode';
-                localStorage.setItem('theme', 'dark');
-            }
-        });
+    .curator-projects-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-});
+}
+
+@media (min-width: 1024px) {
+    .curators-list-section {
+        padding: 3rem 60px 5rem;
+    }
+
+    .curators-list {
+        width: 100%;
+        max-width: 1400px;
+    }
+
+    .curator-card {
+        grid-template-columns: 140px minmax(0, 1fr);
+        padding: 2rem;
+    }
+
+    .curator-card-photo {
+        width: 140px;
+    }
+
+    .curator-profile-actions,
+    .curator-profile-shell,
+    .curator-profile-categories {
+        width: calc(100% - 120px);
+        max-width: 1400px;
+    }
+
+    .curator-profile-card {
+        grid-template-columns: 170px minmax(0, 1fr);
+        padding: 2rem 2.25rem;
+    }
+
+    .curator-projects-grid {
+        padding-left: 0;
+        padding-right: 0;
+    }
+}
+
+@media (max-width: 1023px) {
+    #main-header.curator-profile-active #nav-logo {
+        display: none;
+    }
+
+    #main-header.curator-profile-active .profile-page-title {
+        display: block;
+    }
+}
+
+@media (max-width: 640px) {
+    .curators-list-section {
+        padding: 1.25rem 0.75rem 3rem;
+    }
+
+    .curators-list {
+        gap: 1rem;
+    }
+
+    .curator-card {
+        grid-template-columns: 84px minmax(0, 1fr);
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: 15px;
+    }
+
+    .curator-card-photo {
+        width: 84px;
+    }
+
+    .curator-card-content {
+        padding-left: 0.9rem;
+    }
+
+    .curator-card-content h2 {
+        font-size: 1.12rem !important;
+    }
+
+    .curator-card-content p {
+        font-size: 0.9rem !important;
+    }
+
+    .curator-tag {
+        min-height: 30px;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8rem !important;
+    }
+
+    .curator-profile-actions {
+        display: none;
+    }
+
+    .curator-profile-shell {
+        width: calc(100% - 1.5rem);
+        padding: 0.75rem 0 1rem;
+    }
+
+    .curator-profile-card {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 1.4rem 1.2rem 1.6rem;
+        border-radius: 0 0 16px 16px;
+        box-shadow: none;
+    }
+
+    .curator-profile-photo {
+        width: 108px;
+        height: 108px;
+        margin-bottom: 0.45rem;
+    }
+
+    .curator-profile-main {
+        border-left: 0;
+        padding-left: 0;
+    }
+
+    .curator-profile-name {
+        display: none;
+    }
+
+    .curator-profile-main .curator-tags {
+        justify-content: flex-start;
+        margin: 0 0 1.1rem;
+    }
+
+    .curator-profile-bio {
+        font-size: 0.92rem !important;
+        line-height: 1.6;
+    }
+
+    .curator-profile-categories {
+        width: 100%;
+    }
+
+    .curator-category {
+        margin-top: 0;
+    }
+
+    .curator-category-heading {
+        padding: 0.9rem 1rem 0.65rem;
+    }
+
+    .curator-category-heading h2 {
+        font-size: 1.45rem !important;
+    }
+
+    .curator-projects-grid {
+        padding: 1.25rem 0.9rem 0;
+    }
+
+    .curator-project-media {
+        height: 220px;
+    }
+
+    .curator-project-body {
+        padding: 1.25rem;
+    }
+}
+
+/* Dark mode — perfis */
+[data-theme="dark"] .curators-list-section,
+[data-theme="dark"] .curator-profile-page {
+    background: #17191F !important;
+}
+
+[data-theme="dark"] .curator-card,
+[data-theme="dark"] .curator-profile-card,
+[data-theme="dark"] .curator-project-card,
+[data-theme="dark"] .curator-profile-coming-soon,
+[data-theme="dark"] .curator-profile-empty {
+    background: #23252E !important;
+    border-color: rgba(255,255,255,0.07) !important;
+}
+
+[data-theme="dark"] .curator-card-content h2,
+[data-theme="dark"] .curator-profile-name,
+[data-theme="dark"] .curator-project-body h3 {
+    color: #F0F2F8 !important;
+}
+
+[data-theme="dark"] .curator-card-content p,
+[data-theme="dark"] .curator-profile-bio,
+[data-theme="dark"] .curator-project-body > p,
+[data-theme="dark"] .curator-back-link,
+[data-theme="dark"] .curator-profile-coming-soon p {
+    color: #C4CDD4 !important;
+}
+
+[data-theme="dark"] .curator-category-heading h2 {
+    color: #D9E0E5 !important;
+}
+
+[data-theme="dark"] .curator-profile-link,
+[data-theme="dark"] .curator-project-link {
+    color: var(--accent-yellow) !important;
+}
+
+/* ══════════════════════════════════════════════════════
+   MOBILE REFINEMENT — cards + ECO flutuante
+   20/08/2026
+══════════════════════════════════════════════════════ */
+
+/* Ações dos cards de métodos: classes reais em vez de estilos inline. */
+.metodo-actions {
+    margin-top: auto;
+    padding-top: 0.35rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.metodo-access-btn {
+    min-height: 44px;
+    padding: 0.7rem 1.25rem;
+    border-radius: 10px;
+    background: #2C2F33;
+    color: #FFFFFF;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    text-decoration: none;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    line-height: 1;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.metodo-access-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(44, 44, 51, 0.18);
+}
+
+.metodo-access-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.metodo-share-btn {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border: 1px solid rgba(44, 44, 51, 0.12);
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text-gray);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.metodo-share-btn svg {
+    width: 19px;
+    height: 19px;
+}
+
+/* A ECO não precisa aparecer flutuando quando a própria página da ECO está aberta. */
+.fixed-icons {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fixed-icons.fixed-icons--hidden {
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+    pointer-events: none;
+}
+
+@media (max-width: 640px) {
+    html,
+    body,
+    #app,
+    #content-area,
+    .page-container {
+        max-width: 100%;
+        overflow-x: clip;
+    }
+
+    /* Usa de fato a largura útil do celular. Antes havia 4rem de padding
+       na seção + 1.5rem na grade, deixando os cards excessivamente estreitos. */
+    .content-white-section {
+        padding: 1.35rem 0.85rem 4.5rem;
+    }
+
+    .content-white-section .search-filter-bar {
+        margin-bottom: 1.25rem;
+    }
+
+    .home-cards-grid,
+    .global-cards-grid,
+    .charts-grid-2,
+    .cards-grid-4 {
+        width: 100%;
+        padding: 0;
+        margin-left: 0;
+        margin-right: 0;
+        gap: 1rem;
+    }
+
+    .metodo-card {
+        width: 100%;
+        min-width: 0;
+        padding: 1.35rem 1.2rem 1.25rem;
+        border-radius: 20px;
+        border-top-width: 5px;
+        box-shadow: 0 8px 24px rgba(27, 31, 38, 0.07);
+    }
+
+    .metodo-title {
+        font-size: 1.35rem !important;
+        line-height: 1.25;
+        margin-bottom: 0.5rem;
+        overflow-wrap: anywhere;
+    }
+
+    .metodo-oecd {
+        font-size: 1rem !important;
+        line-height: 1.45;
+        margin-bottom: 1rem;
+    }
+
+    .metodo-desc,
+    .metodo-field,
+    .metodo-source {
+        font-size: 1rem !important;
+        line-height: 1.6;
+    }
+
+    .metodo-desc {
+        margin-bottom: 1rem;
+    }
+
+    .metodo-field {
+        margin-bottom: 0.7rem;
+    }
+
+    .metodo-source {
+        margin-bottom: 1.15rem;
+    }
+
+    .metodo-actions {
+        gap: 0.65rem;
+    }
+
+    .metodo-access-btn {
+        min-height: 48px;
+        flex: 1 1 auto;
+        padding: 0.8rem 1rem;
+        font-size: 1rem !important;
+        border-radius: 12px;
+    }
+
+    .metodo-share-btn {
+        width: 48px;
+        height: 48px;
+        flex-basis: 48px;
+        border-radius: 12px;
+    }
+
+    /* Assistente flutuante: menor, dentro da safe area e sem invadir o card. */
+    .fixed-icons {
+        right: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        z-index: 1650;
+    }
+
+    .fixed-icon-btn {
+        width: 52px;
+        height: 52px;
+        padding: 7px;
+        border-radius: 16px;
+        border: 1px solid rgba(163, 216, 244, 0.95);
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow:
+            0 0 0 2px rgba(250, 205, 95, 0.9),
+            0 7px 20px rgba(24, 28, 35, 0.18);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .fixed-icon-btn:hover,
+    .fixed-icon-btn:active {
+        transform: translateY(-2px) scale(1.02);
+    }
+
+    .fixed-icon-btn img {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Espaço inferior para o botão não cobrir o último conteúdo da página. */
+    #content-area {
+        padding-bottom: 16px;
+    }
+}
+
+@media (max-width: 380px) {
+    .content-white-section {
+        padding-left: 0.65rem;
+        padding-right: 0.65rem;
+    }
+
+    .metodo-card {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .fixed-icons {
+        right: 10px;
+    }
+}
+
+
+/* ═══════════ ECO Curadoria — múltiplos achados ═══════════ */
+.curator-ai-bulk-panel {
+    display: grid;
+    gap: 1.25rem;
+}
+
+.curator-ai-bulk-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1.25rem;
+    border-radius: 16px;
+    background: #fff;
+    border: 2px solid rgba(250, 205, 95, .68);
+}
+
+.curator-ai-bulk-head h3 {
+    margin: 0 0 .35rem;
+    color: var(--primary-navy);
+}
+
+.curator-ai-bulk-head p {
+    max-width: 760px;
+    margin: 0;
+    color: var(--text-gray);
+    line-height: 1.6;
+}
+
+.curator-ai-bulk-actions {
+    display: grid;
+    gap: .55rem;
+    min-width: 210px;
+    padding: .85rem 1rem;
+    border-radius: 12px;
+    background: var(--bg-light);
+    color: var(--primary-navy);
+}
+
+.curator-ai-bulk-actions label {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    cursor: pointer;
+}
+
+.curator-ai-candidates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.curator-ai-candidate {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 16px;
+    background: #fff;
+    border: 1px solid rgba(128,128,128,.18);
+    box-shadow: 0 8px 24px rgba(0,0,0,.045);
+}
+
+.curator-ai-candidate.is-existing {
+    opacity: .7;
+}
+
+.curator-ai-candidate-select {
+    padding: .8rem 1rem;
+    border-bottom: 1px solid rgba(128,128,128,.12);
+    background: var(--bg-light);
+}
+
+.curator-ai-candidate-select label {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    color: var(--primary-navy);
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .03em;
+}
+
+.curator-ai-candidate-image {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 8.5;
+    overflow: hidden;
+    background: var(--bg-light);
+}
+
+.curator-ai-candidate-image img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.curator-ai-candidate-image small {
+    position: absolute;
+    right: .6rem;
+    bottom: .55rem;
+    padding: .3rem .5rem;
+    border-radius: 999px;
+    background: rgba(0,0,0,.7);
+    color: #fff;
+    font-size: .68rem;
+}
+
+.curator-ai-candidate-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 1rem;
+}
+
+.curator-ai-candidate-body h3 {
+    margin: 0 0 .5rem;
+    color: var(--primary-navy);
+    font-size: 1.05rem;
+    line-height: 1.35;
+}
+
+.curator-ai-candidate-meta {
+    margin: 0 0 .75rem;
+    color: var(--text-gray);
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.curator-ai-candidate-summary {
+    margin: 0;
+    color: var(--text-gray);
+    font-size: .92rem;
+    line-height: 1.6;
+}
+
+.curator-ai-candidate-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .7rem;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding-top: 1rem;
+}
+
+.curator-ai-candidate-footer a {
+    color: var(--accent-purple);
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.curator-ai-candidate-footer button {
+    border: 0;
+    border-radius: 10px;
+    padding: .72rem .85rem;
+    background: var(--primary-navy);
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.curator-ai-existing-note {
+    color: var(--text-gray);
+    font-size: .76rem;
+}
+
+.curator-ai-submit-bar {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.15rem;
+    border: 1px solid rgba(250,205,95,.8);
+    border-radius: 16px;
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 14px 36px rgba(0,0,0,.12);
+    backdrop-filter: blur(12px);
+}
+
+.curator-ai-submit-bar div {
+    display: grid;
+    gap: .2rem;
+}
+
+.curator-ai-submit-bar span {
+    color: var(--text-gray);
+    font-size: .82rem;
+}
+
+.curator-ai-submit-bar button {
+    border: 0;
+    border-radius: 12px;
+    padding: .9rem 1.05rem;
+    background: var(--accent-orange);
+    color: var(--primary-navy);
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.curator-ai-submit-bar button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+/* Publicações dinâmicas sem imagem real não recebem imagem genérica. */
+.pub-book-card--no-image .pub-book-content {
+    min-height: 100%;
+    justify-content: flex-start;
+}
+
+.pub-book-card--no-image .pub-book-title {
+    margin-top: .25rem;
+}
+
+@media (max-width: 700px) {
+    .curator-ai-candidates-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .curator-ai-bulk-actions,
+    .curator-ai-submit-bar,
+    .curator-ai-submit-bar button {
+        width: 100%;
+    }
+
+    .curator-ai-submit-bar {
+        bottom: max(.6rem, env(safe-area-inset-bottom));
+    }
+}
