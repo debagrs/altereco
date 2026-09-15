@@ -1297,3 +1297,32 @@ body.obs-atlas-modal-open {
         padding: 1rem;
     }
 }
+
+/* Atlas: ícones padronizados com a mesma biblioteca Material Icons do menu lateral. */
+.obs-atlas-filter-icon,
+.obs-atlas-list-badge .material-icons,
+.obs-atlas-modal-badge .material-icons,
+.obs-atlas-legend-card strong .material-icons {
+    font-size: 1.15rem !important;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.obs-atlas-list-badge,
+.obs-atlas-modal-badge,
+.obs-atlas-legend-card strong {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+}
+
+.obs-atlas-div-icon-animal.material-icons {
+    font-family: 'Material Icons' !important;
+    font-size: 21px !important;
+    line-height: 1;
+    color: var(--obs-marker-color, var(--accent-yellow));
+}
+
+.obs-atlas-div-icon-paw {
+    display: none !important;
+}
