@@ -143,15 +143,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const ids = ['search-input', 'metodos-search', 'materiais-search', 'pub-search'];
-        if (!ids.includes(e.target.id)) return;
+        const repositoryInputMap = {
+            'metodos-search': 'metodos',
+            'materiais-search': 'materiais',
+            'pub-search': 'publicacoes'
+        };
+        if (repositoryInputMap[e.target.id]) {
+            applyRepositoryFilters(repositoryInputMap[e.target.id]);
+            return;
+        }
+
+        if (e.target.id !== 'search-input') return;
         const query = normalizeSearchText(e.target.value);
         const content = document.getElementById('content-area');
         if (!content) return;
-        content.querySelectorAll('.mockup-section,.db-card,.legis-card,.materiais-card,.metodo-card,.pub-card,.sub-section')
+        content.querySelectorAll('.mockup-section,.db-card,.legis-card,.sub-section')
             .forEach(item => {
                 item.style.display = normalizeSearchText(item.innerText).includes(query) ? '' : 'none';
             });
+    });
+
+    document.addEventListener('change', (e) => {
+        const repositoryFilterMap = {
+            'metodos-filter': 'metodos',
+            'materiais-filter': 'materiais',
+            'pub-filter': 'publicacoes'
+        };
+        if (repositoryFilterMap[e.target.id]) {
+            applyRepositoryFilters(repositoryFilterMap[e.target.id]);
+        }
     });
 
     document.addEventListener('keydown', (e) => {
@@ -168,6 +188,17 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('altereco:content-updated', () => {
         const input = document.getElementById('main-search');
         if (input && input.value.trim()) runGlobalSearch(input.value);
+
+        const pageId = window.location.hash.replace('#', '') || 'home';
+        if (pageId === 'publicacoes' && document.getElementById('publicacoes-content')) {
+            const active = document.querySelector('[data-tab-type="publicacoes"].active')?.dataset.tab || 'univ';
+            switchPublicacoesTab(active);
+        } else if (pageId === 'materiais' && document.getElementById('materiais-content')) {
+            const active = document.querySelector('[data-tab-type="materiais"].active')?.dataset.tab || 'univ';
+            switchMateriaisTab(active);
+        } else if (pageId === 'metodos' && document.getElementById('metodos-search')) {
+            renderMetodosPage(document.getElementById('main-content'));
+        }
     });
 });
 
@@ -177,7 +208,7 @@ function getSearchHTML(placeholder, id = 'main-search') {
     return `<div class="search-section" style="padding-bottom:1.5rem;">
         <div class="search-bar-wrapper">
             <input type="search" id="${id}" placeholder="${placeholder}" autocomplete="off" aria-label="Pesquisar na plataforma AlterECO">
-            <i data-lucide="search" class="search-icon"></i>
+            <i data-lucide="search" class="search-icon" aria-hidden="true"></i>
         </div>
         ${id === 'main-search' ? '<div id="global-search-results" class="global-search-results" aria-live="polite"></div>' : ''}
     </div>`;
@@ -426,7 +457,7 @@ function applyPendingSearch(pageId) {
 
 function getFilterDropdownHTML(id = 'filter-areas') {
     return `<div class="filter-dropdown-wrapper">
-        <select id="${id}" class="filter-dropdown">
+        <select id="${id}" class="filter-dropdown" aria-label="Filtrar por área">
             <option value="">Filtre Áreas</option>
             <option>Biologia</option>
             <option>Medicina</option>
@@ -435,15 +466,15 @@ function getFilterDropdownHTML(id = 'filter-areas') {
             <option>Toxicologia</option>
             <option>Bioética</option>
         </select>
-        <i data-lucide="chevron-down" class="dropdown-icon"></i>
+        <i data-lucide="chevron-down" class="dropdown-icon" aria-hidden="true"></i>
     </div>`;
 }
 
 function getSearchFilterBarHTML(searchId, filterId, placeholder = 'Busque mé...') {
     return `<div class="search-filter-bar">
         <div class="search-bar-wrapper flex-1">
-            <input type="text" id="${searchId}" placeholder="${placeholder}">
-            <i data-lucide="search" class="search-icon"></i>
+            <input type="search" id="${searchId}" placeholder="${placeholder}" autocomplete="off" aria-label="${placeholder}">
+            <i data-lucide="search" class="search-icon" aria-hidden="true"></i>
         </div>
         ${getFilterDropdownHTML(filterId)}
     </div>`;
@@ -460,6 +491,65 @@ function getTabsHTML(tabs, activeValue, type) {
 function pillsHTML(pills) {
     if (!pills || !pills.length) return '';
     return `<div class="pills-row">${pills.map((p, i) => `<span class="pill-tag ${i === 0 ? 'dark' : ''}">${p}</span>`).join('')}</div>`;
+}
+
+
+/* ─── Repository search + area filters ───────────────── */
+function getRepositoryFilterConfig(kind) {
+    return {
+        metodos: { searchId: 'metodos-search', filterId: 'metodos-filter', selector: '.metodo-card', root: '#metodos-content' },
+        materiais: { searchId: 'materiais-search', filterId: 'materiais-filter', selector: '.materiais-card', root: '#materiais-content' },
+        publicacoes: { searchId: 'pub-search', filterId: 'pub-filter', selector: '.pub-book-card', root: '#publicacoes-content' }
+    }[kind] || null;
+}
+
+function normalizeFilterToken(value = '') {
+    return normalizeSearchText(value).trim();
+}
+
+function applyRepositoryFilters(kind) {
+    const cfg = getRepositoryFilterConfig(kind);
+    if (!cfg) return;
+    const root = document.querySelector(cfg.root);
+    if (!root) return;
+
+    const query = normalizeSearchText(document.getElementById(cfg.searchId)?.value || '').trim();
+    const area = normalizeFilterToken(document.getElementById(cfg.filterId)?.value || '');
+    const cards = [...root.querySelectorAll(cfg.selector)];
+    let visible = 0;
+
+    cards.forEach(card => {
+        const searchable = normalizeSearchText(card.dataset.search || card.innerText || '');
+        const tags = normalizeFilterToken(card.dataset.filterTags || '');
+        const matchesQuery = !query || searchable.includes(query);
+        const matchesArea = !area || tags.split('|').some(tag => tag.trim() === area);
+        const show = matchesQuery && matchesArea;
+        card.hidden = !show;
+        card.style.display = show ? '' : 'none';
+        if (show) visible += 1;
+    });
+
+    let empty = root.querySelector('.repository-filter-empty');
+    if (!empty) {
+        empty = document.createElement('div');
+        empty.className = 'repository-filter-empty';
+        empty.setAttribute('role', 'status');
+        empty.setAttribute('aria-live', 'polite');
+        empty.innerHTML = '<span class="material-icons" aria-hidden="true">search_off</span><strong>Nenhum resultado encontrado.</strong><span>Tente outra palavra ou selecione outra área.</span>';
+        root.appendChild(empty);
+    }
+    empty.hidden = visible !== 0 || cards.length === 0;
+}
+
+function inferPublicationVisualIcon(tags = []) {
+    const normalized = normalizeFilterToken((tags || []).join(' '));
+    if (normalized.includes('medicina')) return 'medical_information';
+    if (normalized.includes('veterin')) return 'pets';
+    if (normalized.includes('biologia')) return 'biotech';
+    if (normalized.includes('farmac')) return 'medication';
+    if (normalized.includes('toxic')) return 'science';
+    if (normalized.includes('bioetica')) return 'balance';
+    return 'article';
 }
 
 /* ─── Navigation ─────────────────────────────────────── */
@@ -671,9 +761,9 @@ function renderSobrePage(c) {
 
 function renderMetodosPage(c) {
     const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('metodos') : [];
-    const allMetodos = [...METODOS, ...dynamic.map(d => ({ name: d.title + (d.author ? ' (Por: ' + d.author + ')' : ''), description: d.description, url: d.url }))];
+    const allMetodos = [...METODOS, ...dynamic.map(d => ({ name: d.title + (d.author ? ' (Por: ' + d.author + ')' : ''), description: d.description, url: d.url, areas: d.tags || [] }))];
     const metodosHTML = allMetodos.map(m => `
-    <div class="metodo-card">
+    <div class="metodo-card" data-filter-tags="${(m.areas || m.tags || []).join('|')}" data-search="${[m.name, m.oecd, m.description, m.howToUse, m.purpose, m.source, ...(m.areas || m.tags || [])].filter(Boolean).join(' ')}">
         <h3 class="metodo-title">${m.name}</h3>
         ${m.oecd ? `<p class="metodo-oecd">${m.oecd}</p>` : ''}
         <p class="metodo-desc">${m.description}</p>
@@ -701,12 +791,13 @@ function renderMetodosPage(c) {
     </div>
     <div class="content-white-section">
         ${getSearchFilterBarHTML('metodos-search', 'metodos-filter')}
-        <div class="cards-grid-4">
+        <div id="metodos-content" class="cards-grid-4">
             ${metodosHTML}
         </div>
         ${ctaHTML}
     </div>`;
     if (window.lucide) window.lucide.createIcons();
+    applyRepositoryFilters('metodos');
 }
 
 /* ══════════════════════════════════════════════════════
@@ -734,17 +825,27 @@ function switchMateriaisTab(val, btn) {
     if (!grid) return;
     if (btn) { document.querySelectorAll('[data-tab-type="materiais"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
 
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('materiais').map(d => ({
-        name: d.title + (d.author ? ' (Por: ' + d.author + ')' : ''),
-        description: d.description,
-        url: d.url,
-        tags: d.tags,
-        image: d.image || d.image_url || null,
-        buttonLabel: 'Acessar'
-    })) : [];
+    const dynamicSource = window.getDynamicPostsForArea ? getDynamicPostsForArea('materiais') : [];
+    const dynamic = dynamicSource
+        .filter(d => {
+            const levels = normalizeSearchText((d.tags || []).join(' '));
+            const school = /educacao basica|escola|ensino fundamental|ensino medio/.test(levels);
+            const higher = /ensino superior|universidade|(^|\s)ies(\s|$)/.test(levels);
+            return val === 'escolas' ? school : (!school || higher);
+        })
+        .map(d => ({
+            name: d.title + (d.author ? ' (Por: ' + d.author + ')' : ''),
+            description: d.description,
+            url: d.url,
+            tags: d.tags,
+            image: d.image || d.image_url || null,
+            visualIcon: 'school',
+            visualLabel: 'Material didático',
+            buttonLabel: 'Acessar'
+        }));
     const allItems = [...list, ...dynamic];
     grid.innerHTML = allItems.map(item => {
-        const imageHTML = item.image ? `<div class="materiais-img-wrap"><img src="${item.image}" alt="${item.name}" class="materiais-img" loading="lazy" onerror="this.closest('.materiais-img-wrap')?.remove()"></div>` : '';
+        const imageHTML = item.image ? `<div class="materiais-img-wrap"><img src="${item.image}" alt="${item.name}" class="materiais-img" loading="lazy" onerror="this.closest('.materiais-img-wrap')?.classList.add('materiais-img-wrap--fallback'); this.remove();"></div>` : `<div class="materiais-img-wrap materiais-img-wrap--fallback" role="img" aria-label="${item.visualLabel || 'Ilustração do material'}"><span class="material-icons" aria-hidden="true">${item.visualIcon || 'school'}</span><strong>${item.visualLabel || 'Material didático'}</strong></div>`;
         const featuredHTML = item.featured ? `<div class="materiais-featured-badge">${item.featuredTitle}</div>` : '';
         const isEdu = (t) => ['Escolas', 'Ensino Médio', 'IES', 'Universidades', 'Educação Básica', 'Ensino Superior'].includes(t);
         const tagsHTML = (item.tags && item.tags.length > 0) ? `<div class="pills-row">${item.tags.map((t, i) => {
@@ -752,7 +853,7 @@ function switchMateriaisTab(val, btn) {
             return `<span class="pill-tag ${i === 0 && !isEdu(t) ? 'dark' : ''}" style="${eduStyle}">${t}</span>`;
         }).join('')}</div>` : '';
         return `
-        <div class="materiais-card">
+        <div class="materiais-card" data-filter-tags="${(item.tags || []).join('|')}" data-search="${[item.name, item.description, ...(item.tags || [])].filter(Boolean).join(' ')}">
             ${featuredHTML}
             ${imageHTML}
             <h3 class="materiais-card-title">${item.name}</h3>
@@ -765,6 +866,7 @@ function switchMateriaisTab(val, btn) {
         </div>`;
     }).join('');
     if (window.lucide) window.lucide.createIcons();
+    applyRepositoryFilters('materiais');
 }
 
 /* ══════════════════════════════════════════════════════
@@ -792,7 +894,13 @@ function switchPublicacoesTab(val, btn) {
     if (!grid) return;
     if (btn) { document.querySelectorAll('[data-tab-type="publicacoes"]').forEach(t => t.classList.remove('active')); btn.classList.add('active'); }
 
-    const dynamic = window.getDynamicPostsForArea ? getDynamicPostsForArea('publicacoes') : [];
+    const dynamicSource = window.getDynamicPostsForArea ? getDynamicPostsForArea('publicacoes') : [];
+    const dynamic = dynamicSource.filter(d => {
+        const levels = normalizeSearchText((d.tags || []).join(' '));
+        const school = /educacao basica|escola|ensino fundamental|ensino medio/.test(levels);
+        const higher = /ensino superior|universidade|(^|\s)ies(\s|$)/.test(levels);
+        return val === 'escolas' ? school : (!school || higher);
+    });
     
     // Combine static and dynamic content
     let allItems = [];
@@ -820,7 +928,8 @@ function switchPublicacoesTab(val, btn) {
             desc: d.description,
             url: d.url || '#',
             image: d.image || '',
-            tags: d.tags
+            tags: d.tags,
+            category: d.source_type === 'crossref' ? 'Artigo científico' : 'Publicação'
         });
     });
 
@@ -844,11 +953,15 @@ function switchPublicacoesTab(val, btn) {
     grid.innerHTML = `
         <div class="pub-cards-container">
             ${allItems.map(item => `
-            <div class="pub-book-card ${item.image ? '' : 'pub-book-card--no-image'}">
+            <div class="pub-book-card" data-filter-tags="${(item.tags || item.pills || []).join('|')}" data-search="${[item.title, item.author, item.desc, item.category, ...(item.tags || []), ...(item.pills || [])].filter(Boolean).join(' ')}">
                 ${item.image ? `
                 <div class="pub-book-img-wrapper">
-                    <img src="${item.image}" alt="" class="pub-book-img" loading="lazy" onerror="this.parentElement.remove(); this.closest('.pub-book-card')?.classList.add('pub-book-card--no-image');">
-                </div>` : ''}
+                    <img src="${item.image}" alt="Imagem da publicação ${item.title}" class="pub-book-img" loading="lazy" onerror="this.parentElement.classList.add('pub-book-img-wrapper--fallback'); this.remove();">
+                </div>` : `
+                <div class="pub-book-img-wrapper pub-book-img-wrapper--fallback" role="img" aria-label="Publicação científica sem imagem de capa disponível">
+                    <span class="material-icons" aria-hidden="true">${inferPublicationVisualIcon(item.tags || item.pills || [])}</span>
+                    <small>${item.category || 'Publicação científica'}</small>
+                </div>`}
                 <div class="pub-book-content">
                     <h3 class="pub-book-title">${item.title}</h3>
                     <div class="pub-book-author">${item.author || 'Autor Desconhecido'}</div>
@@ -867,6 +980,7 @@ function switchPublicacoesTab(val, btn) {
     `;
     
     if (window.lucide) window.lucide.createIcons();
+    applyRepositoryFilters('publicacoes');
 }
 
 /* ══════════════════════════════════════════════════════
