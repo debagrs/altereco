@@ -414,3 +414,19 @@ button.ae-calendar-cell.has-event { cursor: pointer; }
         grid-column: 1 / -1 !important;
     }
 }
+
+/* ==========================================================
+   Ajuste 2026-09-15 · contraste dos controles amarelos
+========================================================== */
+[data-theme="dark"] .ae-chip--kind,
+[data-theme="dark"] .ae-btn--yellow,
+[data-theme="dark"] .ae-calendar-cell.is-today .ae-calendar-day,
+[data-theme="dark"] .ae-reply-avatar {
+    color: #1C1C1E !important;
+}
+
+/* Garante leitura escura também em qualquer chip amarelo herdado. */
+[data-theme="dark"] .ae-chip--kind *,
+[data-theme="dark"] .ae-btn--yellow * {
+    color: #1C1C1E !important;
+}
