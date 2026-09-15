@@ -59,17 +59,17 @@ svg.lucide { stroke-width: 1.25px !important; }
 main { flex: 1; }
 
 #main-header { height: var(--nav-height); background-color: #2C2C33; color: var(--white); display: flex; align-items: center; position: sticky; top: 0; z-index: 2000; }
-.header-container { width: min(96%, 1600px); max-width: 1600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+.header-container { width: 95%; max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
 .header-left { display: flex; align-items: center; gap: 1.5rem; }
 #nav-logo { height: 32px; object-fit: contain; }
-#desktop-nav { display: none; gap: clamp(0.45rem, 0.75vw, 0.95rem); align-items: center; }
-.nav-btn { background: none; border: none; color: rgba(255,255,255,0.88); font-weight: 600; font-size: clamp(0.84rem, 0.78vw, 0.96rem); cursor: pointer; padding: 0.5rem 0.28rem; border-bottom: 2px solid transparent; transition: var(--smooth); white-space: nowrap; }
+#desktop-nav { display: none; gap: 1.5rem; }
+.nav-btn { background: none; border: none; color: rgba(255,255,255,0.88); font-weight: 600; font-size: 1rem; cursor: pointer; padding: 0.5rem 0.4rem; border-bottom: 2px solid transparent; transition: var(--smooth); }
 .nav-btn:hover, .nav-btn.active { color: #fff; background-color: rgba(255,255,255,0.1); border-bottom-color: var(--accent-yellow); }
 /* Observatório highlight — amber text, legible on navy */
 .nav-btn--highlight { color: var(--accent-yellow) !important; font-weight: 700; }
 .nav-btn--highlight:hover, .nav-btn--highlight.active { color: #fff !important; background: rgba(250,205,95,0.15) !important; }
 .hamburger-menu { cursor: pointer; display: block; font-size: 1.5rem; background:none; border:none; padding:0; line-height:1; }
-@media (min-width: 1200px) { #desktop-nav { display: flex; } .hamburger-menu { display: none; } }
+@media (min-width: 1024px) { #desktop-nav { display: flex; } .hamburger-menu { display: none; } }
 .page-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 1.2rem; font-weight: 700; pointer-events: none; white-space: nowrap; }
 @media (max-width: 1200px) { .page-title { font-size: 1rem; } }
 @media (max-width: 850px) { .page-title { display: none; } }
@@ -4320,3 +4320,140 @@ body.obs-modal-open { overflow: hidden; }
 [data-theme="dark"] .pub-book-img-wrapper--fallback:empty::before { color: #FACD5F; }
 [data-theme="dark"] .materiais-img-wrap--fallback:empty::after,
 [data-theme="dark"] .pub-book-img-wrapper--fallback:empty::after { color: #F4F5F8; }
+
+/* ==========================================================
+   Ajuste 2026-09-15 · Publicações/Materiais
+   Fallback visual compacto + conteúdo alinhado à esquerda
+========================================================== */
+.pub-book-card,
+.pub-book-content,
+.pub-book-title,
+.pub-book-author,
+.pub-book-desc,
+.materiais-card,
+.materiais-card-title,
+.materiais-card-desc {
+    text-align: left !important;
+}
+
+.pub-book-author {
+    max-width: none !important;
+}
+
+/* Apenas o placeholder sem imagem fica compacto. Imagens reais mantêm
+   a proporção editorial original. */
+.pub-book-img-wrapper--fallback {
+    aspect-ratio: auto !important;
+    min-height: 0 !important;
+    height: clamp(135px, 18vw, 180px) !important;
+    margin-bottom: 1.25rem !important;
+}
+
+.materiais-img-wrap--fallback {
+    min-height: 0 !important;
+    height: clamp(120px, 16vw, 165px) !important;
+    margin-bottom: 1.25rem !important;
+}
+
+.pub-book-img-wrapper--fallback .material-icons,
+.materiais-img-wrap--fallback .material-icons {
+    font-size: 40px !important;
+}
+
+@media (max-width: 700px) {
+    .pub-book-img-wrapper--fallback {
+        height: 145px !important;
+    }
+
+    .materiais-img-wrap--fallback {
+        height: 130px !important;
+    }
+
+    .pub-book-card,
+    .materiais-card {
+        text-align: left !important;
+    }
+}
+
+/* =========================================================
+   Assistente IA do Observatório · acessibilidade modo escuro
+   2026-09-15
+   ========================================================= */
+[data-theme="dark"] .obs-chat-ai {
+    background: #23252E !important;
+    color: #F0F2F8 !important;
+    border-color: rgba(64, 248, 226, .42) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .32) !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-answer-text {
+    color: #F0F2F8 !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-sources {
+    border-top-color: rgba(255, 255, 255, .14) !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-sources-title {
+    color: #F0F2F8 !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-source-card {
+    background: #1A1C24 !important;
+    color: #F0F2F8 !important;
+    border-color: rgba(255, 255, 255, .14) !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-source-card:hover,
+[data-theme="dark"] .obs-chat-ai .obs-ai-source-card:focus-visible {
+    border-color: var(--accent-yellow) !important;
+    background: #20232D !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-source-content strong {
+    color: #F0F2F8 !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-source-content small,
+[data-theme="dark"] .obs-chat-ai .obs-ai-source-content span {
+    color: #C8D2DA !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-source-number {
+    background: var(--accent-yellow) !important;
+    color: var(--on-accent) !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-citation {
+    background: var(--accent-yellow) !important;
+    color: var(--on-accent) !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-disclaimer {
+    color: #C8D2DA !important;
+}
+
+[data-theme="dark"] .obs-chat-ai .obs-ai-no-sources {
+    background: #3A1E22 !important;
+    color: #FFD2D7 !important;
+    border: 1px solid #7B3C45 !important;
+    border-radius: 10px;
+    padding: .75rem .85rem;
+}
+
+[data-theme="dark"] .obs-chat-user {
+    background: var(--accent-yellow) !important;
+    color: var(--on-accent) !important;
+}
+
+[data-theme="dark"] .obs-chat-typing {
+    background: #1A1C24 !important;
+    color: #C8D2DA !important;
+    border-color: rgba(255, 255, 255, .14) !important;
+}
+
+[data-theme="dark"] .obs-chat-error {
+    background: #3A1E22 !important;
+    color: #FFD2D7 !important;
+    border-color: #7B3C45 !important;
+}
