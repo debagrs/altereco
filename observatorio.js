@@ -85,7 +85,7 @@ function initObservatorio(container) {
         <main class="obs2-content" id="obs2-content">
             <!-- Dark hero strip -->
             <div class="obs2-hero" id="obs2-hero">
-                <span class="page-badge" style="background:rgba(255,255,255,0.12); color:var(--accent-yellow);">🔭 Observatório Humano-Animal</span>
+                <span class="page-badge obs2-hero-badge" style="background:rgba(255,255,255,0.12); color:var(--accent-yellow);"><span class="material-icons" aria-hidden="true">telescope</span> Observatório Humano-Animal</span>
                 <h1 id="obs2-hero-title">Visão Geral</h1>
                 <p id="obs2-hero-desc">Dados, pesquisas e cruzamentos científicos inéditos (UFSM / CNPq).</p>
             </div>
@@ -138,7 +138,7 @@ function sourcesFooter(sources) {
 
 function microSource(fonte, ano, url) {
     const content = url
-        ? `<a href="${url.startsWith('http') ? url : 'https://'+url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${fonte} · ${ano} ↗</a>`
+        ? `<a href="${url.startsWith('http') ? url : 'https://'+url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">${fonte} · ${ano} <span class="material-icons" aria-hidden="true" style="font-size:13px;">open_in_new</span></a>`
         : `${fonte} · ${ano}`;
     return `<div class="obs-micro-source">${content}</div>`;
 }
@@ -163,7 +163,6 @@ function renderObsSubpage(subId) {
         case 'metodo': renderObsMetodo(main); break;
         case 'assistente': renderObsAssistente(main); break;
     }
-    if (window.lucide) window.lucide.createIcons();
 }
 
 /** --- Real Content Renderers (Screenshot faithful) --- */
@@ -182,12 +181,12 @@ function renderObsAssistente(c) {
                 <button class="obs-nova-conversa-btn" onclick="obsStartNewConversation()">+ Nova conversa</button>
 
                 <p class="obs-hist-label">Histórico</p>
-                <div class="obs-hist-item"><i data-lucide="message-circle" style="width:14px;"></i> Nova conversa</div>
-                <div class="obs-hist-item"><i data-lucide="message-circle" style="width:14px;"></i> Nova conversa</div>
+                <div class="obs-hist-item"><span class="material-icons obs-inline-icon" aria-hidden="true">chat_bubble_outline</span> Nova conversa</div>
+                <div class="obs-hist-item"><span class="material-icons obs-inline-icon" aria-hidden="true">chat_bubble_outline</span> Nova conversa</div>
 
                 <div class="obs-nota-cientifica">
                     <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.8rem;">
-                        <i data-lucide="info" style="width:16px; color:var(--accent-yellow);"></i>
+                        <span class="material-icons obs-inline-icon" aria-hidden="true" style="color:var(--accent-yellow);">info</span>
                         <strong style="color:var(--accent-yellow); font-size:0.85rem;">Nota científica</strong>
                     </div>
                     <p style="font-size:0.82rem; line-height:1.6; color:#c7692a;">A resposta combina dados do Observatório com literatura científica e fontes oficiais recuperadas no momento da pergunta. Os links das referências aparecem em cada resposta. Verifique a fonte primária antes de citar academicamente.</p>
@@ -195,19 +194,19 @@ function renderObsAssistente(c) {
 
                 <p class="obs-agente-label">O agente pode:</p>
                 <ul class="obs-agente-lista">
-                    <li><span>›</span> Cruzar dados de diferentes seções</li>
-                    <li><span>›</span> Identificar contradições nos dados</li>
-                    <li><span>›</span> Buscar artigos científicos e revisões</li>
-                    <li><span>›</span> Vincular cada análise às referências</li>
-                    <li><span>›</span> Sinalizar subnotificação e limitações</li>
-                    <li><span>›</span> Sugerir perguntas de pesquisa</li>
+                    <li><span class="material-icons" aria-hidden="true">chevron_right</span> Cruzar dados de diferentes seções</li>
+                    <li><span class="material-icons" aria-hidden="true">chevron_right</span> Identificar contradições nos dados</li>
+                    <li><span class="material-icons" aria-hidden="true">chevron_right</span> Buscar artigos científicos e revisões</li>
+                    <li><span class="material-icons" aria-hidden="true">chevron_right</span> Vincular cada análise às referências</li>
+                    <li><span class="material-icons" aria-hidden="true">chevron_right</span> Sinalizar subnotificação e limitações</li>
+                    <li><span class="material-icons" aria-hidden="true">chevron_right</span> Sugerir perguntas de pesquisa</li>
                 </ul>
             </div>
 
             <!-- Coluna Direita -->
             <div class="obs-assistente-right">
                 <div style="text-align:center; margin-bottom:3rem;">
-                    <div style="margin-bottom:1rem;"><span class="material-icons" style="font-size:4rem; color:var(--primary-navy);">smart_toy</span></div>
+                    <div style="margin-bottom:1rem;"><span class="material-icons" aria-hidden="true" style="font-size:4rem; color:var(--primary-navy);">smart_toy</span></div>
                     <h2 style="color:var(--primary-navy); font-size:1.6rem; margin-bottom:0.5rem;">Assistente de Pesquisa Humano-Animal</h2>
                     <p style="color:var(--text-gray); font-size:0.95rem;">Faça perguntas sobre os dados do observatório ou escolha uma das sugestões abaixo para começar.</p>
                 </div>
@@ -437,7 +436,7 @@ function renderObsMetodo(c) {
         <div style="background:var(--white); padding:5rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
              <div style="margin-bottom:5rem;">
                 <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:2rem;">
-                    <i data-lucide="database" style="color:var(--accent-yellow); width:35px; height:35px;"></i>
+                    <span class="material-icons obs-section-icon" aria-hidden="true">database</span>
                     <h2 style="font-size:1.8rem; color:var(--primary-navy); font-weight:800;">Fontes de Dados Primárias</h2>
                 </div>
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem; color:var(--primary-navy); font-weight:600;">
@@ -454,7 +453,7 @@ function renderObsMetodo(c) {
 
              <div style="margin-bottom:5rem;">
                 <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:2rem;">
-                    <i data-lucide="file-text" style="color:var(--accent-yellow); width:35px; height:35px;"></i>
+                    <span class="material-icons obs-section-icon" aria-hidden="true">description</span>
                     <h2 style="font-size:1.8rem; color:var(--primary-navy); font-weight:800;">Tratamento e Subnotificação</h2>
                 </div>
                 <p style="color:var(--text-gray); line-height:1.8; font-size:1.25rem;">Os microdados passam por um processo de limpeza. Para indicadores onde há sabida subnotificação (como casos de crueldade ou abandono), aplicamos notas metodológicas específicas. A subnotificação estrutural é estimada em >50% para maus-tratos e abandono.</p>
@@ -462,7 +461,7 @@ function renderObsMetodo(c) {
 
              <div>
                 <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:2rem;">
-                    <i data-lucide="scale" style="color:var(--accent-yellow); width:35px; height:35px;"></i>
+                    <span class="material-icons obs-section-icon" aria-hidden="true">balance</span>
                     <h2 style="font-size:1.8rem; color:var(--primary-navy); font-weight:800;">Perspectiva de Senciência</h2>
                 </div>
                 <p style="color:var(--text-gray); line-height:1.8; margin-bottom:2rem; font-size:1.25rem;">Este observatório baseia-se na <strong>Declaração de Cambridge sobre Consciência (2012)</strong>. O objetivo é fomentar a reflexão crítica sobre a objetificação dos animais não humanos.</p>
@@ -474,7 +473,6 @@ function renderObsMetodo(c) {
              </div>
         </div>
     `;
-    if (window.lucide) window.lucide.createIcons();
 }
 
 function renderObsVisao(c) {
@@ -485,7 +483,7 @@ function renderObsVisao(c) {
             <div style="font-size:1.8rem; color:white; font-weight:800; font-family:'Source Serif 4';">${k.value}</div>
             <div class="obs-micro-source">
                 <a href="https://${k.url}" target="_blank" rel="noopener" style="color:var(--accent-yellow);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin-top:8px;">
-                    <span class="material-icons" aria-hidden="true" style="font-size:14px;">${OBS_MATERIAL_ICONS[k.icon] || 'analytics'}</span> ${k.fonte} · ${k.ano} ↗
+                    <span class="material-icons" aria-hidden="true" style="font-size:14px;">${OBS_MATERIAL_ICONS[k.icon] || 'analytics'}</span> ${k.fonte} · ${k.ano} <span class="material-icons" aria-hidden="true" style="font-size:13px;">open_in_new</span>
                 </a>
             </div>
             <span class="material-icons" aria-hidden="true" style="position:absolute; right: -10px; bottom: -10px; font-size:80px; color:rgba(255,255,255,0.15); line-height:1;">${OBS_MATERIAL_ICONS[k.icon] || 'circle'}</span>
@@ -531,14 +529,19 @@ function renderObsVisao(c) {
             <div style="background:#2C2C33; padding:3rem; border-radius:30px; color:white; display:flex; flex-direction:column; justify-content:center;">
                 <h2 style="color:var(--accent-yellow); margin-bottom:1.5rem; font-size:1.8rem; font-weight:800;">A ciência convida ao pensar</h2>
                 <p style="font-size:1.15rem; opacity:0.9; line-height:1.7;">${db.card_narrativo}</p>
-                <div style="margin-top:2.5rem; display:flex; gap:1rem;">
-                    <button class="obs-nova-conversa-btn" style="background:var(--accent-orange); color:white; width:auto; padding:12px 30px;">Explorar Paradoxo X001</button>
-                    <button class="obs-nav-assistente" style="background:transparent; border:1px solid rgba(255,255,255,0.2) ; color:white; padding:12px 30px; border-radius:15px; cursor:pointer;" onclick="renderObsSubpage('assistente')">Falar com Assistente</button>
+                <div class="obs-paradox-actions">
+                    <button type="button" class="obs-paradox-btn obs-paradox-btn--primary" onclick="openParadoxoX001()">
+                        <span class="material-icons" aria-hidden="true">travel_explore</span>
+                        <span>Explorar Paradoxo X001</span>
+                    </button>
+                    <button type="button" class="obs-paradox-btn obs-paradox-btn--secondary" onclick="renderObsSubpage('assistente')">
+                        <span class="material-icons" aria-hidden="true">smart_toy</span>
+                        <span>Falar com Assistente</span>
+                    </button>
                 </div>
             </div>
         </div>
     `;
-    if (window.lucide) window.lucide.createIcons();
 }
 
 function renderObsPets(c) {
@@ -750,7 +753,7 @@ function renderObsViolencia(c) {
                         <div style="font-size:0.85rem; font-weight:800; color:var(--text-gray); text-transform:uppercase; letter-spacing:1px;">${e.uf}</div>
                         <div style="font-size:2.2rem; font-weight:900; color:var(--primary-navy); margin:1rem 0;">${e.casos || e.variacao}</div>
                         <div style="font-size:0.8rem; color:#D32F2F; font-weight:800; margin-bottom:1.5rem;">${e.status || 'Cruzamento Histórico'}</div>
-                        ${e.link ? `<a href="${e.link}" target="_blank" rel="noopener" style="margin-top:auto; font-size:0.85rem; color:var(--primary-navy); font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><span class="material-icons" style="font-size:14px;">open_in_new</span> Fonte de Dados</a>` : ''}
+                        ${e.link ? `<a href="${e.link}" target="_blank" rel="noopener" style="margin-top:auto; font-size:0.85rem; color:var(--primary-navy); font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><span class="material-icons" aria-hidden="true" style="font-size:14px;">open_in_new</span> Fonte de Dados</a>` : ''}
                     </div>
                 `).join('')}
             </div>
@@ -774,7 +777,7 @@ function renderObsAtlas(c) {
              
              <div style="background:#2C2C33; border-radius:30px; padding:6rem 3rem; margin-bottom:4rem; position:relative; overflow:hidden;">
                 <div style="position:relative; z-index:2;">
-                    <i data-lucide="globe" style="width:100px; height:100px; color:var(--accent-yellow); margin-bottom:2rem; opacity:0.5;"></i>
+                    <span class="material-icons obs-atlas-icon" aria-hidden="true">public</span>
                     <h2 style="color:white; font-size:2rem; margin-bottom:1rem;">Camadas Geográficas em Processamento</h2>
                     <p style="color:rgba(255,255,255,0.6); font-size:1.25rem; max-width:600px; margin:0 auto;">Integrando bases da FAOSTAT (Consumo), CITES (Tráfico) e WAP (Legislação) para visualização em mapa de calor (Heatmap).</p>
                 </div>
@@ -793,7 +796,6 @@ function renderObsAtlas(c) {
              </div>
         </div>
     `;
-    if (window.lucide) window.lucide.createIcons();
 }
 
 function renderObsEntretenimento(c) {
@@ -807,12 +809,12 @@ function renderObsEntretenimento(c) {
                 <div style="background:var(--bg-light); padding:2rem; border-radius:25px; text-align:center;">
                     <div style="font-size:3.2rem; font-weight:900; color:var(--primary-navy);">${db.zoos.total}</div>
                     <div style="font-size:1.05rem; font-weight:800; color:var(--text-gray);">Zoológicos e Criadouros</div>
-                    <a href="${db.zoos.link}" target="_blank" style="font-size:0.7rem; color:var(--primary-navy); text-decoration:underline; display:inline-block; margin-top:1rem;">Fonte: IBAMA/SISPASS →</a>
+                    <a href="${db.zoos.link}" target="_blank" style="font-size:0.7rem; color:var(--primary-navy); text-decoration:underline; display:inline-block; margin-top:1rem;">Fonte: IBAMA/SISPASS <span class="material-icons" aria-hidden="true" style="font-size:13px;">open_in_new</span></a>
                 </div>
                 <div style="background:var(--bg-light); padding:2rem; border-radius:25px; text-align:center;">
                     <div style="font-size:2.8rem; font-weight:900; color:var(--primary-navy);">${db.rodeios.total}</div>
                     <div style="font-size:0.85rem; font-weight:800; color:var(--text-gray);">Rodeios Estimados/Ano</div>
-                    <a href="${db.rodeios.link}" target="_blank" style="font-size:0.7rem; color:var(--primary-navy); text-decoration:underline; display:inline-block; margin-top:1rem;">Fonte: CNAR →</a>
+                    <a href="${db.rodeios.link}" target="_blank" style="font-size:0.7rem; color:var(--primary-navy); text-decoration:underline; display:inline-block; margin-top:1rem;">Fonte: CNAR <span class="material-icons" aria-hidden="true" style="font-size:13px;">open_in_new</span></a>
                 </div>
                 <div style="background:var(--bg-light); padding:2rem; border-radius:25px; text-align:center;">
                     <div style="font-size:2.8rem; font-weight:900; color:var(--primary-navy);">${db.aquarios.total}</div>
@@ -1175,7 +1177,7 @@ window.openCNPqModal = function(area) {
                     <h2 id="cnpq-modal-title">${obsEscapeHTML(area)}</h2>
                     <p><strong>${obsEscapeHTML(groups.length)} grupos nominais catalogados</strong>. O total é calculado automaticamente a partir da base verificável do AlterECO.</p>
                 </div>
-                <button class="obs-modal-close" type="button" onclick="closeCNPqModal()" aria-label="Fechar lista de grupos"><span class="material-icons">close</span></button>
+                <button class="obs-modal-close" type="button" onclick="closeCNPqModal()" aria-label="Fechar lista de grupos"><span class="material-icons" aria-hidden="true">close</span></button>
             </div>
 
             <div class="obs-cnpq-context-grid">
@@ -1442,6 +1444,17 @@ window.filterObsEducationPublications = function(level, trigger) {
     });
 };
 
+window.openParadoxoX001 = function() {
+    renderCruzamentosIneditos();
+    requestAnimationFrame(() => {
+        const target = document.querySelector('[data-cross-id="X001"]');
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.focus({ preventScroll: true });
+        }
+    });
+};
+
 function renderCruzamentosIneditos() {
     const main = document.getElementById('obs-display');
     const db = window.OBSERVATORIO_DB.cruzamentos_ineditos;
@@ -1449,18 +1462,18 @@ function renderCruzamentosIneditos() {
     main.innerHTML = `
         <div style="background:var(--white); padding:4rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
             <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:3rem;">
-                <button onclick="renderObsSubpage('visao')" style="background:var(--bg-light); border:none; width:55px; height:55px; border-radius:50%; cursor:pointer;" aria-label="Voltar para visão geral"><i data-lucide="arrow-left"></i></button>
+                <button onclick="renderObsSubpage('visao')" style="background:var(--bg-light); border:none; width:55px; height:55px; border-radius:50%; cursor:pointer;" aria-label="Voltar para visão geral"><span class="material-icons" aria-hidden="true">arrow_back</span></button>
                 <h1 style="color:var(--primary-navy); font-size:2.8rem; font-weight:800; margin:0;">Cruzamentos Científicos Inéditos</h1>
             </div>
 
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem;">
                 ${db.map(c => `
-                    <div style="background:var(--bg-light); padding:3rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); position:relative; overflow:hidden;">
+                    <div class="obs-cross-card" data-cross-id="${c.id}" tabindex="-1" style="background:var(--bg-light); padding:3rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); position:relative; overflow:hidden;">
                         <span style="position:absolute; top:20px; right:20px; font-weight:900; color:rgba(0,0,0,0.05); font-size:4rem;">${c.id}</span>
                         <h3 style="color:var(--primary-navy); font-size:1.8rem; font-weight:800; margin-bottom:1.5rem; position:relative; z-index:2;">${c.title}</h3>
                         <p style="color:var(--text-gray); line-height:1.7; font-size:1.2rem; margin-bottom:2rem; position:relative; z-index:2;">${c.data}</p>
                         <a href="${c.link}" target="_blank" style="color:var(--primary-navy); font-size:1.1rem; font-weight:800; text-decoration:underline; display:flex; align-items:center; gap:0.5rem;">
-                            <i data-lucide="external-link" style="width:22px;"></i> Acessar Base Primária
+                            <span class="material-icons" aria-hidden="true">open_in_new</span> Acessar Base Primária
                         </a>
                     </div>
                 `).join('')}
@@ -1472,7 +1485,6 @@ function renderCruzamentosIneditos() {
             </div>
         </div>
     `;
-    if (window.lucide) window.lucide.createIcons();
 }
 
 function renderObsPlaceholder(main, title) {
