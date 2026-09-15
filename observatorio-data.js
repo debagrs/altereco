@@ -350,6 +350,12 @@ window.OBSERVATORIO_DB = {
 
     cruzamentos_ineditos: [
         {
+            id: "X001",
+            title: "Paradoxo Afetivo-Econômico",
+            data: "O Observatório coloca lado a lado o crescimento do investimento e do cuidado direcionado aos animais de companhia e a escala massiva de uso de outras espécies. O cruzamento torna visível uma assimetria ética que costuma aparecer fragmentada em bases econômicas, demográficas e de produção.",
+            link: "https://www.ibge.gov.br/estatisticas/economicas/agricultura-e-pecuaria/9203-pesquisas-trimestrais-do-abate-de-animais.html"
+        },
+        {
             id: "X009",
             title: "A Gatificação das Cidades",
             data: "O crescimento de 100% na população de gatos em 10 anos correlaciona-se com a verticalização urbana. Gatos ocupam 30% menos espaço e custo que cães em apartamentos.",
