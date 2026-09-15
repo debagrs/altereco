@@ -772,32 +772,32 @@ function renderObsViolencia(c) {
 const OBS_ATLAS_CATEGORY_META = {
     companheiros: {
         label: 'Causa animal ampla',
-        icon: '🐾',
-        marker: '🐱',
+        icon: 'pets',
+        marker: 'pets',
         color: '#5B4BFF',
         short: 'Pata de gato',
         description: 'ONGs multiespécies, resgate, adoção e proteção ampla.'
     },
     alimentacao: {
         label: 'Animais na alimentação',
-        icon: '🐔',
-        marker: '🐔',
+        icon: 'restaurant',
+        marker: 'restaurant',
         color: '#FF8A3D',
         short: 'Pata de galinha',
         description: 'Organizações veganas ou focadas em animais explorados para alimentação.'
     },
     pesquisa: {
         label: 'Pesquisa e substituição',
-        icon: '🐇',
-        marker: '🐇',
+        icon: 'biotech',
+        marker: 'biotech',
         color: '#00A58A',
         short: 'Pata de coelho',
         description: 'Entidades ligadas à experimentação animal e à substituição por métodos alternativos.'
     },
     entretenimento: {
         label: 'Animais e entretenimento',
-        icon: '🐘',
-        marker: '🐘',
+        icon: 'live_tv',
+        marker: 'live_tv',
         color: '#E0509A',
         short: 'Pata de elefante',
         description: 'ONGs e santuários que enfrentam circo, cativeiro e exploração recreativa.'
@@ -870,8 +870,7 @@ function obsAtlasCreateMarkerIcon(category) {
         className: 'obs-atlas-div-icon-wrapper',
         html: `
             <div class="obs-atlas-div-icon" style="--obs-marker-color:${meta.color};">
-                <span class="obs-atlas-div-icon-animal" aria-hidden="true">${meta.marker}</span>
-                <span class="obs-atlas-div-icon-paw" aria-hidden="true">🐾</span>
+                <span class="material-icons obs-atlas-div-icon-animal" aria-hidden="true">${meta.marker}</span>
             </div>
         `,
         iconSize: [42, 42],
@@ -891,13 +890,13 @@ function obsAtlasRenderLegend(data) {
 
     root.innerHTML = `
         <button type="button" class="obs-atlas-filter-chip ${obsAtlasController.activeCategory === 'all' ? 'active' : ''}" data-atlas-filter="all">
-            <span class="obs-atlas-filter-icon" aria-hidden="true">🌍</span>
+            <span class="material-icons obs-atlas-filter-icon" aria-hidden="true">public</span>
             <span>Todas</span>
             <strong>${data.length}</strong>
         </button>
         ${Object.entries(OBS_ATLAS_CATEGORY_META).map(([key, meta]) => `
             <button type="button" class="obs-atlas-filter-chip ${obsAtlasController.activeCategory === key ? 'active' : ''}" data-atlas-filter="${key}" style="--atlas-chip-color:${meta.color};">
-                <span class="obs-atlas-filter-icon" aria-hidden="true">${meta.icon}</span>
+                <span class="material-icons obs-atlas-filter-icon" aria-hidden="true">${meta.icon}</span>
                 <span>${meta.label}</span>
                 <strong>${counts[key] || 0}</strong>
             </button>
@@ -932,7 +931,7 @@ function obsAtlasRenderList() {
         return `
             <article class="obs-atlas-list-card" data-atlas-org-card="${item.id}">
                 <div class="obs-atlas-list-topline">
-                    <span class="obs-atlas-list-badge" style="--atlas-badge-color:${meta.color};">${meta.icon} ${meta.short}</span>
+                    <span class="obs-atlas-list-badge" style="--atlas-badge-color:${meta.color};"><span class="material-icons" aria-hidden="true">${meta.icon}</span>${meta.short}</span>
                     <span class="obs-atlas-list-country">${item.pais}</span>
                 </div>
                 <h3>${item.nome}</h3>
@@ -968,7 +967,7 @@ function obsAtlasOpenModal(org) {
     const meta = OBS_ATLAS_CATEGORY_META[org.categoria] || OBS_ATLAS_CATEGORY_META.companheiros;
     body.innerHTML = `
         <div class="obs-atlas-modal-header">
-            <span class="obs-atlas-modal-badge" style="--atlas-badge-color:${meta.color};">${meta.icon} ${meta.label}</span>
+            <span class="obs-atlas-modal-badge" style="--atlas-badge-color:${meta.color};"><span class="material-icons" aria-hidden="true">${meta.icon}</span>${meta.label}</span>
             <h3 id="obs-atlas-modal-title">${org.nome}</h3>
             <p>${org.foco}</p>
         </div>
@@ -1186,7 +1185,7 @@ function renderObsAtlas(c) {
             <div class="obs-atlas-legend-text">
                 ${Object.values(OBS_ATLAS_CATEGORY_META).map(meta => `
                     <div class="obs-atlas-legend-card" style="--atlas-card-color:${meta.color};">
-                        <strong>${meta.icon} ${meta.short}</strong>
+                        <strong><span class="material-icons" aria-hidden="true">${meta.icon}</span>${meta.short}</strong>
                         <p>${meta.description}</p>
                     </div>
                 `).join('')}
