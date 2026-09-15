@@ -623,3 +623,214 @@
         border-bottom: 1px solid var(--obs-border);
     }
 }
+
+/* =========================================================
+   Revisão de acessibilidade 2026-09-15
+   Contraste WCAG AA nos dois temas + ícones Material Icons
+   ========================================================= */
+
+/* A biblioteca visual do Observatório é Material Icons, inclusive conteúdo. */
+.obs2-wrapper .material-icons {
+    font-family: 'Material Icons' !important;
+    font-weight: normal !important;
+    font-style: normal !important;
+    line-height: 1 !important;
+    letter-spacing: normal !important;
+    text-transform: none !important;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-feature-settings: 'liga';
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'liga';
+}
+
+.obs2-hero-badge {
+    display: inline-flex !important;
+    align-items: center;
+    gap: .4rem;
+}
+.obs2-hero-badge .material-icons { font-size: 18px; }
+.obs-inline-icon { font-size: 16px !important; flex: 0 0 auto; }
+.obs-section-icon {
+    color: var(--accent-yellow) !important;
+    font-size: 35px !important;
+    flex: 0 0 auto;
+}
+.obs-atlas-icon {
+    display: block !important;
+    color: var(--accent-yellow) !important;
+    font-size: 100px !important;
+    margin-bottom: 2rem;
+    opacity: .72;
+}
+
+/* O hero e qualquer superfície escura precisam permanecer claros também no modo claro. */
+.obs2-wrapper .obs2-hero h1,
+.obs2-wrapper .obs2-hero h2,
+.obs2-wrapper .obs2-hero h3,
+.obs2-wrapper .obs2-hero p {
+    color: #FFFFFF !important;
+}
+.obs2-wrapper .obs2-hero p { color: #E2E4EA !important; opacity: 1 !important; }
+
+.obs2-wrapper #obs-display [style*="background:#2C2C33"],
+.obs2-wrapper #obs-display [style*="background: #2C2C33"],
+.obs2-wrapper #obs-display [style*="background:var(--primary-navy)"],
+.obs2-wrapper #obs-display [style*="background: var(--primary-navy)"] {
+    color: #FFFFFF !important;
+}
+
+.obs2-wrapper #obs-display [style*="background:#2C2C33"] h1,
+.obs2-wrapper #obs-display [style*="background:#2C2C33"] h2,
+.obs2-wrapper #obs-display [style*="background:#2C2C33"] h3,
+.obs2-wrapper #obs-display [style*="background:#2C2C33"] h4,
+.obs2-wrapper #obs-display [style*="background:#2C2C33"] p,
+.obs2-wrapper #obs-display [style*="background: #2C2C33"] h1,
+.obs2-wrapper #obs-display [style*="background: #2C2C33"] h2,
+.obs2-wrapper #obs-display [style*="background: #2C2C33"] h3,
+.obs2-wrapper #obs-display [style*="background: #2C2C33"] h4,
+.obs2-wrapper #obs-display [style*="background: #2C2C33"] p,
+.obs2-wrapper #obs-display [style*="background:var(--primary-navy)"] h1,
+.obs2-wrapper #obs-display [style*="background:var(--primary-navy)"] h2,
+.obs2-wrapper #obs-display [style*="background:var(--primary-navy)"] h3,
+.obs2-wrapper #obs-display [style*="background:var(--primary-navy)"] h4,
+.obs2-wrapper #obs-display [style*="background:var(--primary-navy)"] p,
+.obs2-wrapper #obs-display [style*="background: var(--primary-navy)"] h1,
+.obs2-wrapper #obs-display [style*="background: var(--primary-navy)"] h2,
+.obs2-wrapper #obs-display [style*="background: var(--primary-navy)"] h3,
+.obs2-wrapper #obs-display [style*="background: var(--primary-navy)"] h4,
+.obs2-wrapper #obs-display [style*="background: var(--primary-navy)"] p {
+    color: #F7F8FA !important;
+    opacity: 1 !important;
+}
+
+/* Amarelo institucional em fundo escuro: contraste alto, sem ser sobrescrito pela regra acima. */
+.obs2-wrapper #obs-display [style*="background:#2C2C33"] [style*="color:var(--accent-yellow)"],
+.obs2-wrapper #obs-display [style*="background: #2C2C33"] [style*="color:var(--accent-yellow)"],
+.obs2-wrapper #obs-display [style*="background:var(--primary-navy)"] [style*="color:var(--accent-yellow)"],
+.obs2-wrapper #obs-display [style*="background: var(--primary-navy)"] [style*="color:var(--accent-yellow)"] {
+    color: var(--accent-yellow) !important;
+}
+
+/* Cards KPI são sempre escuros independentemente do tema global. */
+.obs2-wrapper .obs-kpi-card,
+.obs2-wrapper .obs-kpi-card *:not(.material-icons) {
+    color: #FFFFFF !important;
+}
+.obs2-wrapper .obs-kpi-card .obs-micro-source a,
+.obs2-wrapper .obs-kpi-card .material-icons {
+    color: var(--accent-yellow) !important;
+}
+
+/* Fontes e links em superfícies claras: não usar amarelo como cor de texto. */
+.obs2-wrapper .obs-source-badge,
+.obs2-wrapper .obs-source-link,
+.obs2-wrapper .obs-footer-src-link {
+    color: #684D00 !important;
+}
+.obs2-wrapper .obs-footer-src-link {
+    background: #FFFFFF !important;
+    border-color: #A98320 !important;
+    text-decoration: underline;
+}
+.obs2-wrapper .obs-sources-label { color: #25252B !important; }
+
+[data-theme="dark"] .obs2-wrapper .obs-source-badge,
+[data-theme="dark"] .obs2-wrapper .obs-source-link,
+[data-theme="dark"] .obs2-wrapper .obs-footer-src-link,
+[data-theme="dark"] .obs2-wrapper .obs-sources-label {
+    color: #FFE39A !important;
+}
+[data-theme="dark"] .obs2-wrapper .obs-footer-src-link {
+    background: #2B2E38 !important;
+    border-color: #776B4A !important;
+}
+[data-theme="dark"] .obs2-wrapper .obs-sources-footer {
+    background: #23252E !important;
+    border-color: #555B69 !important;
+}
+
+/* CTAs do paradoxo: mesmo componente, estados acessíveis e alvo funcional. */
+.obs-paradox-actions {
+    margin-top: 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .85rem;
+}
+.obs-paradox-btn {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .55rem;
+    padding: .8rem 1.15rem;
+    border-radius: 12px;
+    border: 2px solid var(--accent-yellow);
+    font-family: var(--font-ui) !important;
+    font-size: .95rem !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: transform .16s ease, background-color .16s ease, color .16s ease, border-color .16s ease;
+}
+.obs-paradox-btn .material-icons { font-size: 20px; }
+.obs-paradox-btn--primary {
+    background: var(--accent-yellow);
+    color: var(--on-accent) !important;
+}
+.obs-paradox-btn--secondary {
+    background: transparent;
+    color: #FFFFFF !important;
+    border-color: #FFFFFF;
+}
+.obs-paradox-btn:hover { transform: translateY(-1px); }
+.obs-paradox-btn--primary:hover { background: #FFE18B; border-color: #FFE18B; }
+.obs-paradox-btn--secondary:hover { background: #FFFFFF; color: #25252B !important; }
+.obs-paradox-btn:focus-visible {
+    outline: 3px solid #FFFFFF !important;
+    outline-offset: 3px !important;
+    box-shadow: 0 0 0 6px #25252B;
+}
+
+.obs-cross-card:focus-visible {
+    outline: 4px solid var(--obs-focus) !important;
+    outline-offset: 5px !important;
+}
+
+/* Controles interativos sempre com alvo mínimo recomendado. */
+.obs2-wrapper button,
+.obs2-wrapper select,
+.obs2-wrapper input[type="text"],
+.obs2-wrapper input[type="search"],
+.obs2-wrapper a.obs-primary-action,
+.obs2-wrapper a.obs-secondary-action {
+    min-height: 44px;
+}
+
+/* Contraste do menu lateral, inclusive itens não selecionados. */
+.obs2-nav-item { color: #C1C6D0 !important; }
+.obs2-nav-item:hover { color: #FFFFFF !important; }
+.obs2-nav-item.active,
+.obs2-nav-item.obs2-nav-accent.active { color: var(--on-accent) !important; }
+.obs2-nav-item.obs2-nav-accent:not(.active) { color: #FFE08A !important; }
+.obs2-brand-label { color: #FFFFFF !important; }
+.obs2-footer-badge { color: #AEB4C0 !important; }
+
+/* Redução de movimento para pessoas que solicitaram essa preferência. */
+@media (prefers-reduced-motion: reduce) {
+    .obs2-wrapper *,
+    .obs2-wrapper *::before,
+    .obs2-wrapper *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
+
+@media (max-width: 760px) {
+    .obs-paradox-actions { flex-direction: column; }
+    .obs-paradox-btn { width: 100%; }
+    .obs-atlas-icon { font-size: 72px !important; }
+}
