@@ -769,33 +769,494 @@ function renderObsViolencia(c) {
     `;
 }
 
-function renderObsAtlas(c) {
-    c.innerHTML = `
-        <div style="padding:5rem; background:var(--white); border-radius:30px; border:1px solid rgba(128,128,128,0.15); text-align:center;">
-             <h1 style="color:var(--primary-navy); font-size:3.5rem; font-weight:800; margin-bottom:1rem;">Atlas Global de Bem-Estar</h1>
-             <p style="color:var(--text-gray); font-size:1.25rem; max-width:850px; margin:0 auto 4rem;">Posicionando o Brasil frente aos grandes benchmarks internacionais de proteção e consumo.</p>
-             
-             <div style="background:#2C2C33; border-radius:30px; padding:6rem 3rem; margin-bottom:4rem; position:relative; overflow:hidden;">
-                <div style="position:relative; z-index:2;">
-                    <span class="material-icons obs-atlas-icon" aria-hidden="true">public</span>
-                    <h2 style="color:white; font-size:2rem; margin-bottom:1rem;">Camadas Geográficas em Processamento</h2>
-                    <p style="color:rgba(255,255,255,0.6); font-size:1.25rem; max-width:600px; margin:0 auto;">Integrando bases da FAOSTAT (Consumo), CITES (Tráfico) e WAP (Legislação) para visualização em mapa de calor (Heatmap).</p>
+const OBS_ATLAS_CATEGORY_META = {
+    companheiros: {
+        label: 'Causa animal ampla',
+        icon: '🐾',
+        marker: '🐱',
+        color: '#5B4BFF',
+        short: 'Pata de gato',
+        description: 'ONGs multiespécies, resgate, adoção e proteção ampla.'
+    },
+    alimentacao: {
+        label: 'Animais na alimentação',
+        icon: '🐔',
+        marker: '🐔',
+        color: '#FF8A3D',
+        short: 'Pata de galinha',
+        description: 'Organizações veganas ou focadas em animais explorados para alimentação.'
+    },
+    pesquisa: {
+        label: 'Pesquisa e substituição',
+        icon: '🐇',
+        marker: '🐇',
+        color: '#00A58A',
+        short: 'Pata de coelho',
+        description: 'Entidades ligadas à experimentação animal e à substituição por métodos alternativos.'
+    },
+    entretenimento: {
+        label: 'Animais e entretenimento',
+        icon: '🐘',
+        marker: '🐘',
+        color: '#E0509A',
+        short: 'Pata de elefante',
+        description: 'ONGs e santuários que enfrentam circo, cativeiro e exploração recreativa.'
+    }
+};
+
+let obsAtlasLeafletPromise = null;
+let obsAtlasController = {
+    map: null,
+    markers: [],
+    lines: [],
+    activeCategory: 'all',
+    data: []
+};
+
+function getObsAtlasData() {
+    return (window.OBSERVATORIO_DB?.atlas_global?.organizacoes || []).slice();
+}
+
+function obsAtlasEnsureLeaflet() {
+    if (window.L) return Promise.resolve(window.L);
+    if (obsAtlasLeafletPromise) return obsAtlasLeafletPromise;
+
+    obsAtlasLeafletPromise = new Promise((resolve, reject) => {
+        const cssHref = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        if (![...document.querySelectorAll('link[rel="stylesheet"]')].some(link => link.href.includes('leaflet'))) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = cssHref;
+            link.crossOrigin = '';
+            document.head.appendChild(link);
+        }
+
+        const existingScript = [...document.querySelectorAll('script')].find(script => script.src && script.src.includes('leaflet'));
+        if (existingScript) {
+            existingScript.addEventListener('load', () => resolve(window.L), { once: true });
+            existingScript.addEventListener('error', () => reject(new Error('Falha ao carregar Leaflet.')), { once: true });
+            if (window.L) resolve(window.L);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.async = true;
+        script.crossOrigin = '';
+        script.onload = () => resolve(window.L);
+        script.onerror = () => reject(new Error('Falha ao carregar Leaflet.'));
+        document.body.appendChild(script);
+    });
+
+    return obsAtlasLeafletPromise;
+}
+
+function obsAtlasDestroyMap() {
+    if (obsAtlasController.map) {
+        obsAtlasController.map.remove();
+    }
+    obsAtlasController = {
+        map: null,
+        markers: [],
+        lines: [],
+        activeCategory: 'all',
+        data: []
+    };
+}
+
+function obsAtlasCreateMarkerIcon(category) {
+    const meta = OBS_ATLAS_CATEGORY_META[category] || OBS_ATLAS_CATEGORY_META.companheiros;
+    return window.L.divIcon({
+        className: 'obs-atlas-div-icon-wrapper',
+        html: `
+            <div class="obs-atlas-div-icon" style="--obs-marker-color:${meta.color};">
+                <span class="obs-atlas-div-icon-animal" aria-hidden="true">${meta.marker}</span>
+                <span class="obs-atlas-div-icon-paw" aria-hidden="true">🐾</span>
+            </div>
+        `,
+        iconSize: [42, 42],
+        iconAnchor: [21, 36],
+        popupAnchor: [0, -30]
+    });
+}
+
+function obsAtlasRenderLegend(data) {
+    const root = document.getElementById('obs-atlas-filters');
+    if (!root) return;
+
+    const counts = data.reduce((acc, item) => {
+        acc[item.categoria] = (acc[item.categoria] || 0) + 1;
+        return acc;
+    }, {});
+
+    root.innerHTML = `
+        <button type="button" class="obs-atlas-filter-chip ${obsAtlasController.activeCategory === 'all' ? 'active' : ''}" data-atlas-filter="all">
+            <span class="obs-atlas-filter-icon" aria-hidden="true">🌍</span>
+            <span>Todas</span>
+            <strong>${data.length}</strong>
+        </button>
+        ${Object.entries(OBS_ATLAS_CATEGORY_META).map(([key, meta]) => `
+            <button type="button" class="obs-atlas-filter-chip ${obsAtlasController.activeCategory === key ? 'active' : ''}" data-atlas-filter="${key}" style="--atlas-chip-color:${meta.color};">
+                <span class="obs-atlas-filter-icon" aria-hidden="true">${meta.icon}</span>
+                <span>${meta.label}</span>
+                <strong>${counts[key] || 0}</strong>
+            </button>
+        `).join('')}
+    `;
+
+    root.querySelectorAll('[data-atlas-filter]').forEach(button => {
+        button.addEventListener('click', () => obsAtlasApplyFilter(button.dataset.atlasFilter));
+    });
+}
+
+function obsAtlasRenderList() {
+    const list = document.getElementById('obs-atlas-list');
+    const summary = document.getElementById('obs-atlas-filter-summary');
+    if (!list) return;
+
+    const visibleItems = obsAtlasController.data.filter(item =>
+        obsAtlasController.activeCategory === 'all' || item.categoria === obsAtlasController.activeCategory
+    );
+
+    if (summary) {
+        if (obsAtlasController.activeCategory === 'all') {
+            summary.textContent = `${visibleItems.length} organizações verificadas em múltiplos continentes.`;
+        } else {
+            const meta = OBS_ATLAS_CATEGORY_META[obsAtlasController.activeCategory];
+            summary.textContent = `${visibleItems.length} organizações em “${meta?.label || 'categoria'}”.`;
+        }
+    }
+
+    list.innerHTML = visibleItems.map(item => {
+        const meta = OBS_ATLAS_CATEGORY_META[item.categoria] || OBS_ATLAS_CATEGORY_META.companheiros;
+        return `
+            <article class="obs-atlas-list-card" data-atlas-org-card="${item.id}">
+                <div class="obs-atlas-list-topline">
+                    <span class="obs-atlas-list-badge" style="--atlas-badge-color:${meta.color};">${meta.icon} ${meta.short}</span>
+                    <span class="obs-atlas-list-country">${item.pais}</span>
                 </div>
-                <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:url('https://www.transparenttextures.com/patterns/carbon-fibre.png'); opacity:0.1;"></div>
-             </div>
-             
-             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem; text-align:left;">
-                <div style="background:var(--bg-light); padding:3.5rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
-                    <h4 style="color:var(--primary-navy); margin-bottom:1.5rem; font-size:1.4rem; font-weight:800;">Animal Protection Index (D)</h4>
-                    <p style="color:var(--text-gray); line-height:1.7; font-size:1.25rem;">O Brasil ocupa a categoria D. Embora reconheça a senciência em sua Constituição e em leis recentes, a ausência de um órgão federal exclusivo de proteção animal e a escala industrial do abate impedem o avanço para categorias A ou B.</p>
+                <h3>${item.nome}</h3>
+                <p>${item.foco}</p>
+                <div class="obs-atlas-list-meta">
+                    <span class="material-icons" aria-hidden="true">location_on</span>
+                    <span>${item.cidade}</span>
                 </div>
-                <div style="background:var(--bg-light); padding:3.5rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
-                    <h4 style="color:var(--primary-navy); margin-bottom:1.5rem; font-size:1.4rem; font-weight:800;">Consumo per Capita (Brasil vs Mundo)</h4>
-                    <p style="color:var(--text-gray); line-height:1.7; font-size:1.25rem;">Com 89kg/hab/ano, o brasileiro consome 2.5x mais proteína animal que a média global da FAO, evidenciando que a relação é baseada em uma forte cultura de consumo industrializado.</p>
+                <div class="obs-atlas-list-actions">
+                    <button type="button" class="obs-secondary-action" data-atlas-open="${item.id}">
+                        <span class="material-icons" aria-hidden="true">info</span>
+                        Ver detalhes
+                    </button>
                 </div>
-             </div>
+            </article>
+        `;
+    }).join('');
+
+    list.querySelectorAll('[data-atlas-open], [data-atlas-org-card]').forEach(node => {
+        node.addEventListener('click', (event) => {
+            const id = node.dataset.atlasOpen || node.dataset.atlasOrgCard;
+            if (event.target.closest('a')) return;
+            obsAtlasFocusOrg(id, true);
+        });
+    });
+}
+
+function obsAtlasOpenModal(org) {
+    const modal = document.getElementById('obs-atlas-modal');
+    const body = document.getElementById('obs-atlas-modal-body');
+    if (!modal || !body || !org) return;
+
+    const meta = OBS_ATLAS_CATEGORY_META[org.categoria] || OBS_ATLAS_CATEGORY_META.companheiros;
+    body.innerHTML = `
+        <div class="obs-atlas-modal-header">
+            <span class="obs-atlas-modal-badge" style="--atlas-badge-color:${meta.color};">${meta.icon} ${meta.label}</span>
+            <h3 id="obs-atlas-modal-title">${org.nome}</h3>
+            <p>${org.foco}</p>
+        </div>
+        <div class="obs-atlas-modal-grid">
+            <div class="obs-atlas-modal-item">
+                <span class="material-icons" aria-hidden="true">location_on</span>
+                <div>
+                    <strong>Endereço</strong>
+                    <p>${org.endereco}</p>
+                </div>
+            </div>
+            <div class="obs-atlas-modal-item">
+                <span class="material-icons" aria-hidden="true">public</span>
+                <div>
+                    <strong>Site oficial</strong>
+                    <p><a href="${org.site}" target="_blank" rel="noopener">${org.site}</a></p>
+                </div>
+            </div>
+            <div class="obs-atlas-modal-item">
+                <span class="material-icons" aria-hidden="true">verified</span>
+                <div>
+                    <strong>Fonte de verificação</strong>
+                    <p><a href="${org.fonte_url}" target="_blank" rel="noopener">${org.fonte_label}</a></p>
+                </div>
+            </div>
+            <div class="obs-atlas-modal-item">
+                <span class="material-icons" aria-hidden="true">travel_explore</span>
+                <div>
+                    <strong>Localização</strong>
+                    <p>${org.cidade}, ${org.pais}</p>
+                </div>
+            </div>
         </div>
     `;
+
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('obs-atlas-modal-open');
+}
+
+function obsAtlasCloseModal() {
+    const modal = document.getElementById('obs-atlas-modal');
+    if (!modal) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('obs-atlas-modal-open');
+}
+
+function obsAtlasFocusOrg(id, openModal = false) {
+    const markerEntry = obsAtlasController.markers.find(entry => entry.org.id === id);
+    if (!markerEntry || !obsAtlasController.map) return;
+
+    const { marker, org } = markerEntry;
+    obsAtlasController.map.flyTo([org.latitude, org.longitude], Math.max(obsAtlasController.map.getZoom(), 4), {
+        animate: true,
+        duration: 1.1
+    });
+
+    document.querySelectorAll('[data-atlas-org-card]').forEach(card => {
+        card.classList.toggle('is-highlighted', card.dataset.atlasOrgCard === id);
+    });
+
+    if (openModal) obsAtlasOpenModal(org);
+}
+
+function obsAtlasApplyFilter(category) {
+    obsAtlasController.activeCategory = category;
+
+    obsAtlasController.markers.forEach(({ marker, org }) => {
+        const shouldShow = category === 'all' || org.categoria === category;
+        if (shouldShow) {
+            if (!obsAtlasController.map.hasLayer(marker)) marker.addTo(obsAtlasController.map);
+        } else if (obsAtlasController.map.hasLayer(marker)) {
+            obsAtlasController.map.removeLayer(marker);
+        }
+    });
+
+    obsAtlasController.lines.forEach(({ line, category: lineCategory }) => {
+        const shouldShow = category === 'all' || lineCategory === category;
+        if (shouldShow) {
+            if (!obsAtlasController.map.hasLayer(line)) line.addTo(obsAtlasController.map);
+        } else if (obsAtlasController.map.hasLayer(line)) {
+            obsAtlasController.map.removeLayer(line);
+        }
+    });
+
+    const visibleMarkers = obsAtlasController.markers
+        .filter(({ org }) => category === 'all' || org.categoria === category)
+        .map(({ marker }) => marker);
+
+    if (visibleMarkers.length > 1) {
+        const group = window.L.featureGroup(visibleMarkers);
+        obsAtlasController.map.fitBounds(group.getBounds().pad(0.24), { maxZoom: 4 });
+    } else if (visibleMarkers.length === 1) {
+        obsAtlasController.map.setView(visibleMarkers[0].getLatLng(), 5);
+    } else {
+        obsAtlasController.map.setView([18, 0], 2);
+    }
+
+    obsAtlasRenderLegend(obsAtlasController.data);
+    obsAtlasRenderList();
+}
+
+async function initObsAtlasMap() {
+    const data = getObsAtlasData();
+    const mapEl = document.getElementById('obs-atlas-map');
+    const statusEl = document.getElementById('obs-atlas-status');
+
+    obsAtlasDestroyMap();
+    obsAtlasController.data = data;
+
+    if (!mapEl) return;
+
+    try {
+        if (statusEl) statusEl.textContent = 'Carregando mapa e marcadores globais…';
+        await obsAtlasEnsureLeaflet();
+        if (!document.getElementById('obs-atlas-map')) return;
+
+        const map = window.L.map(mapEl, {
+            zoomControl: true,
+            minZoom: 2,
+            maxZoom: 8,
+            worldCopyJump: true,
+            scrollWheelZoom: false
+        }).setView([18, 0], 2);
+
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        obsAtlasController.map = map;
+
+        data.forEach(org => {
+            const marker = window.L.marker([org.latitude, org.longitude], {
+                icon: obsAtlasCreateMarkerIcon(org.categoria),
+                keyboard: true,
+                title: `${org.nome} — ${org.cidade}, ${org.pais}`
+            });
+
+            marker.on('click', () => obsAtlasFocusOrg(org.id, true));
+            marker.on('keypress', () => obsAtlasFocusOrg(org.id, true));
+            marker.addTo(map);
+            obsAtlasController.markers.push({ org, marker });
+        });
+
+        Object.entries(OBS_ATLAS_CATEGORY_META).forEach(([category, meta]) => {
+            const coords = data
+                .filter(item => item.categoria === category)
+                .sort((a, b) => a.longitude - b.longitude)
+                .map(item => [item.latitude, item.longitude]);
+
+            if (coords.length < 2) return;
+
+            const line = window.L.polyline(coords, {
+                color: meta.color,
+                weight: 2,
+                opacity: 0.4,
+                dashArray: '5 7',
+                smoothFactor: 1
+            }).addTo(map);
+
+            obsAtlasController.lines.push({ category, line });
+        });
+
+        obsAtlasRenderLegend(data);
+        obsAtlasRenderList();
+        obsAtlasApplyFilter('all');
+
+        if (statusEl) statusEl.textContent = 'Clique nos marcadores ou nos cards laterais para abrir o modal com endereço e site oficial.';
+        setTimeout(() => map.invalidateSize(), 180);
+    } catch (error) {
+        if (statusEl) {
+            statusEl.textContent = 'Não foi possível carregar o mapa agora. Verifique sua conexão e tente novamente.';
+        }
+        console.error(error);
+    }
+}
+
+function renderObsAtlas(c) {
+    const data = getObsAtlasData().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    const countries = new Set(data.map(item => item.pais)).size;
+    const continents = 6;
+
+    c.innerHTML = `
+        <section class="obs-education-shell obs-atlas-shell">
+            <div class="obs-section-intro">
+                <span class="page-badge"><span class="material-icons" aria-hidden="true">public</span> Atlas Global</span>
+                <h1>Mapa-múndi de ONGs da causa animal</h1>
+                <p>Uma camada global inicial para localizar organizações verificadas ligadas à causa animal ampla, aos animais explorados na alimentação, à substituição da experimentação animal e à crítica do entretenimento com animais. Clique em cada ponto para abrir o modal com nome, endereço e site oficial.</p>
+            </div>
+
+            <div class="obs-atlas-kpis">
+                <div class="obs-edu-kpi">
+                    <strong>${data.length}</strong>
+                    <h2>ONGs verificadas</h2>
+                    <p>Curadoria inicial com dados confirmados por sites oficiais e registros institucionais.</p>
+                </div>
+                <div class="obs-edu-kpi">
+                    <strong>${countries}</strong>
+                    <h2>Países mapeados</h2>
+                    <p>Entradas distribuídas em diferentes regiões do mundo, com foco em endereços institucionais.</p>
+                </div>
+                <div class="obs-edu-kpi">
+                    <strong>${continents}</strong>
+                    <h2>Continentes cobertos</h2>
+                    <p>Américas, Europa, África, Ásia e Oceania, com rede temática por categoria.</p>
+                </div>
+                <div class="obs-edu-kpi">
+                    <strong>4</strong>
+                    <h2>Camadas temáticas</h2>
+                    <p>Pata de gato, galinha, coelho e elefante para navegar rapidamente pelos tipos de organização.</p>
+                </div>
+            </div>
+
+            <div class="obs-atlas-legend-text">
+                ${Object.values(OBS_ATLAS_CATEGORY_META).map(meta => `
+                    <div class="obs-atlas-legend-card" style="--atlas-card-color:${meta.color};">
+                        <strong>${meta.icon} ${meta.short}</strong>
+                        <p>${meta.description}</p>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="obs-atlas-filters" id="obs-atlas-filters" aria-label="Filtrar mapa por categoria"></div>
+
+            <div class="obs-atlas-layout">
+                <div class="obs-atlas-map-card">
+                    <div class="obs-atlas-map-head">
+                        <div>
+                            <h2>Rede sobre o mapa</h2>
+                            <p id="obs-atlas-status">Preparando a visualização global…</p>
+                        </div>
+                        <button type="button" class="obs-secondary-action" id="obs-atlas-reset">
+                            <span class="material-icons" aria-hidden="true">filter_alt_off</span>
+                            Limpar filtro
+                        </button>
+                    </div>
+                    <div id="obs-atlas-map" class="obs-atlas-map" role="application" aria-label="Mapa-múndi com organizações da causa animal"></div>
+                </div>
+
+                <aside class="obs-atlas-sidebar">
+                    <div class="obs-atlas-sidebar-head">
+                        <h2>Rede confirmada</h2>
+                        <p id="obs-atlas-filter-summary">${data.length} organizações verificadas em múltiplos continentes.</p>
+                    </div>
+                    <div class="obs-atlas-list" id="obs-atlas-list"></div>
+                </aside>
+            </div>
+
+            <div class="obs-atlas-footnote">
+                <span class="material-icons" aria-hidden="true">info</span>
+                <p>Os pontos indicam endereços institucionais, escritórios ou endereços postais divulgados oficialmente por cada organização. As coordenadas foram aproximadas para visualização cartográfica.</p>
+            </div>
+        </section>
+
+        <div class="obs-atlas-modal" id="obs-atlas-modal" aria-hidden="true" hidden>
+            <div class="obs-atlas-modal-backdrop" data-atlas-close="true"></div>
+            <div class="obs-atlas-modal-panel" role="dialog" aria-modal="true" aria-labelledby="obs-atlas-modal-title">
+                <button type="button" class="obs-atlas-modal-close" id="obs-atlas-modal-close" aria-label="Fechar modal">
+                    <span class="material-icons" aria-hidden="true">close</span>
+                </button>
+                <div id="obs-atlas-modal-body"></div>
+            </div>
+        </div>
+    `;
+
+    const resetButton = document.getElementById('obs-atlas-reset');
+    if (resetButton) {
+        resetButton.addEventListener('click', () => obsAtlasApplyFilter('all'));
+    }
+
+    const closeButton = document.getElementById('obs-atlas-modal-close');
+    if (closeButton) closeButton.addEventListener('click', obsAtlasCloseModal);
+
+    const modal = document.getElementById('obs-atlas-modal');
+    if (modal) {
+        modal.addEventListener('click', (event) => {
+            if (event.target.closest('[data-atlas-close="true"]')) obsAtlasCloseModal();
+        });
+    }
+
+    document.removeEventListener('keydown', window.__obsAtlasEscHandler || (() => {}));
+    window.__obsAtlasEscHandler = (event) => {
+        if (event.key === 'Escape') obsAtlasCloseModal();
+    };
+    document.addEventListener('keydown', window.__obsAtlasEscHandler);
+
+    initObsAtlasMap();
 }
 
 function renderObsEntretenimento(c) {
