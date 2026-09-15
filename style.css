@@ -59,17 +59,17 @@ svg.lucide { stroke-width: 1.25px !important; }
 main { flex: 1; }
 
 #main-header { height: var(--nav-height); background-color: #2C2C33; color: var(--white); display: flex; align-items: center; position: sticky; top: 0; z-index: 2000; }
-.header-container { width: 95%; max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+.header-container { width: min(96%, 1600px); max-width: 1600px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
 .header-left { display: flex; align-items: center; gap: 1.5rem; }
 #nav-logo { height: 32px; object-fit: contain; }
-#desktop-nav { display: none; gap: 1.5rem; }
-.nav-btn { background: none; border: none; color: rgba(255,255,255,0.88); font-weight: 600; font-size: 1rem; cursor: pointer; padding: 0.5rem 0.4rem; border-bottom: 2px solid transparent; transition: var(--smooth); }
+#desktop-nav { display: none; gap: clamp(0.45rem, 0.75vw, 0.95rem); align-items: center; }
+.nav-btn { background: none; border: none; color: rgba(255,255,255,0.88); font-weight: 600; font-size: clamp(0.84rem, 0.78vw, 0.96rem); cursor: pointer; padding: 0.5rem 0.28rem; border-bottom: 2px solid transparent; transition: var(--smooth); white-space: nowrap; }
 .nav-btn:hover, .nav-btn.active { color: #fff; background-color: rgba(255,255,255,0.1); border-bottom-color: var(--accent-yellow); }
 /* Observatório highlight — amber text, legible on navy */
 .nav-btn--highlight { color: var(--accent-yellow) !important; font-weight: 700; }
 .nav-btn--highlight:hover, .nav-btn--highlight.active { color: #fff !important; background: rgba(250,205,95,0.15) !important; }
 .hamburger-menu { cursor: pointer; display: block; font-size: 1.5rem; background:none; border:none; padding:0; line-height:1; }
-@media (min-width: 1024px) { #desktop-nav { display: flex; } .hamburger-menu { display: none; } }
+@media (min-width: 1200px) { #desktop-nav { display: flex; } .hamburger-menu { display: none; } }
 .page-title { position: absolute; left: 50%; transform: translateX(-50%); font-size: 1.2rem; font-weight: 700; pointer-events: none; white-space: nowrap; }
 @media (max-width: 1200px) { .page-title { font-size: 1rem; } }
 @media (max-width: 850px) { .page-title { display: none; } }
