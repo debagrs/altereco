@@ -4219,3 +4219,104 @@ body.obs-modal-open { overflow: hidden; }
     .obs-ai-source-card { grid-template-columns:auto 1fr; }
     .obs-ai-source-card > .material-icons { display:none; }
 }
+
+/* =========================================================
+   Repositórios — filtros funcionais, mídia resiliente e a11y
+   ========================================================= */
+.repository-filter-empty {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem;
+    padding: 2rem;
+    border: 1px dashed #9AA1A9;
+    border-radius: 16px;
+    color: var(--text-gray);
+    text-align: center;
+    background: #F7F8FA;
+}
+.repository-filter-empty[hidden] { display: none !important; }
+.repository-filter-empty .material-icons { font-size: 32px; color: #4A4A52; }
+.repository-filter-empty strong { font-family: var(--font-heading); color: var(--text-dark); }
+
+.materiais-card[hidden], .metodo-card[hidden], .pub-book-card[hidden] { display: none !important; }
+
+.materiais-img-wrap--fallback,
+.pub-book-img-wrapper--fallback {
+    min-height: 150px;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    background: linear-gradient(145deg, #E9ECEF, #F7F8FA);
+    border-bottom: 1px solid #D6DCE1;
+    color: #2C2C33;
+    text-align: center;
+}
+.materiais-img-wrap--fallback .material-icons,
+.pub-book-img-wrapper--fallback .material-icons {
+    font-size: 48px;
+    color: #665021;
+}
+.materiais-img-wrap--fallback strong,
+.pub-book-img-wrapper--fallback small {
+    font-family: var(--font-ui);
+    font-size: .8rem;
+    font-weight: 600;
+    color: #3A3A40;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.filter-dropdown:focus-visible,
+.search-filter-bar input:focus-visible,
+.unified-tab-btn:focus-visible,
+.metodo-access-btn:focus-visible,
+.acessar-btn:focus-visible,
+.share-btn-ui:focus-visible,
+.metodo-share-btn:focus-visible {
+    outline: 3px solid var(--accent-yellow) !important;
+    outline-offset: 3px !important;
+}
+
+[data-theme="dark"] .repository-filter-empty,
+[data-theme="dark"] .materiais-img-wrap--fallback,
+[data-theme="dark"] .pub-book-img-wrapper--fallback {
+    background: #262932;
+    border-color: #555B69;
+    color: #F4F5F8;
+}
+[data-theme="dark"] .repository-filter-empty strong,
+[data-theme="dark"] .materiais-img-wrap--fallback strong,
+[data-theme="dark"] .pub-book-img-wrapper--fallback small {
+    color: #F4F5F8;
+}
+[data-theme="dark"] .repository-filter-empty .material-icons,
+[data-theme="dark"] .materiais-img-wrap--fallback .material-icons,
+[data-theme="dark"] .pub-book-img-wrapper--fallback .material-icons {
+    color: #FACD5F;
+}
+.materiais-img-wrap--fallback:empty::before,
+.pub-book-img-wrapper--fallback:empty::before {
+    content: 'image_not_supported';
+    font-family: 'Material Icons';
+    font-size: 44px;
+    color: #665021;
+}
+.materiais-img-wrap--fallback:empty::after,
+.pub-book-img-wrapper--fallback:empty::after {
+    content: 'Imagem indisponível';
+    font-family: var(--font-ui);
+    font-size: .8rem;
+    font-weight: 600;
+    color: #3A3A40;
+}
+[data-theme="dark"] .materiais-img-wrap--fallback:empty::before,
+[data-theme="dark"] .pub-book-img-wrapper--fallback:empty::before { color: #FACD5F; }
+[data-theme="dark"] .materiais-img-wrap--fallback:empty::after,
+[data-theme="dark"] .pub-book-img-wrapper--fallback:empty::after { color: #F4F5F8; }
