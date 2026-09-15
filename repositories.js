@@ -14,6 +14,7 @@ var METODOS = [
         howToUse: "Exposição à substância em membrana ocular reconstituída e avaliação de viabilidade celular.",
         purpose: "Evita testes dolorosos em coelhos.",
         source: "Fonte oficial: RN 56/2022",
+        areas: ["Toxicologia", "Farmacologia"],
         url: "https://www.gov.br/mcti/pt-br/composicao/conselhos/concea"
     },
     {
@@ -23,6 +24,7 @@ var METODOS = [
         howToUse: "Modo prático: cultura celular exposta à luz e ao composto; depois avalia viabilidade.",
         purpose: "Finalidade: substituir testes em animais expostos à luz e à substância.",
         source: "Referência na RN 56/2022",
+        areas: ["Toxicologia", "Farmacologia"],
         url: "https://www.gov.br/mcti/pt-br/composicao/conselhos/concea"
     },
     {
@@ -32,6 +34,7 @@ var METODOS = [
         howToUse: "Uso: cultivar células humanas com o composto e medir hormônios produzidos.",
         purpose: "Quando aplicar: segurança endócrina, sem uso de animais.",
         source: "Referência: RN 56/2022",
+        areas: ["Toxicologia", "Farmacologia", "Biologia"],
         url: "https://www.gov.br/mcti/pt-br/composicao/conselhos/concea"
     },
     {
@@ -41,6 +44,7 @@ var METODOS = [
         howToUse: "Como utilizar: exposição de células à substância, análise de sinal via reporter gene.",
         purpose: "Objetivo: substituir testes hormonais masculinos em animais.",
         source: "Base legal: RN 56/2022",
+        areas: ["Toxicologia", "Farmacologia", "Biologia"],
         url: "https://www.gov.br/mcti/pt-br/composicao/conselhos/concea"
     },
     {
@@ -50,6 +54,7 @@ var METODOS = [
         howToUse: "Aplicação: testar se substâncias causam mutação ou dano genético.",
         purpose: "Visão cidadã: segurança sem teste em animais vivos.",
         source: "Detalhes: RN 56/2022",
+        areas: ["Toxicologia", "Biologia", "Medicina"],
         url: "https://www.gov.br/mcti/pt-br/composicao/conselhos/concea"
     }
 ];
@@ -258,7 +263,9 @@ var MATERIAIS = {
             description: "Plataforma brasileira de inteligência artificial especializada em Medicina Veterinária, voltada a estudantes e profissionais. Oferece apoio a raciocínio clínico, estudo, pesquisa científica conversacional e consulta a literatura veterinária. É uma tecnologia educacional e de apoio profissional; não é apresentada aqui como método substitutivo validado.",
             tags: ["Veterinária", "IA", "Pesquisa científica"],
             url: "https://aivets.com.br/",
-            buttonLabel: "Acessar AiVets"
+            buttonLabel: "Acessar AiVets",
+            visualIcon: "pets",
+            visualLabel: "IA veterinária"
         },
         {
             name: "Synthea™ – Pacientes Sintéticos para Pesquisa em Saúde",
@@ -266,7 +273,9 @@ var MATERIAIS = {
             description: "Simulador de população de pacientes da MITRE que gera prontuários e dados clínicos sintéticos, realistas e fictícios. Pode ser utilizado em ensino, pesquisa, desenvolvimento e testes de sistemas em saúde sem expor dados pessoais de pacientes reais.",
             tags: ["Medicina", "Dados sintéticos", "Saúde Digital"],
             url: "https://synthea.mitre.org/",
-            buttonLabel: "Acessar Synthea"
+            buttonLabel: "Acessar Synthea",
+            visualIcon: "monitor_heart",
+            visualLabel: "Pacientes sintéticos"
         },
         {
             name: "Froggipedia by Embibe",
@@ -290,7 +299,9 @@ var MATERIAIS = {
             description: "Modelo 3D de epiderme humana reconstruída da MatTek/Sartorius utilizado em aplicações in vitro de toxicologia e avaliação de segurança. Possui ensaios aceitos em diretrizes OECD, incluindo irritação e corrosão cutânea.",
             tags: ["Toxicologia", "Pele 3D", "OECD", "In vitro"],
             url: "https://www.mattek.com/mattek-product/epiderm/",
-            buttonLabel: "Conhecer EpiDerm"
+            buttonLabel: "Conhecer EpiDerm",
+            visualIcon: "layers",
+            visualLabel: "Modelo de pele 3D"
         },
         {
             name: "SimMan® 3G PLUS – Simulação Clínica",
@@ -331,7 +342,9 @@ var MATERIAIS = {
             description: "Aplicativo gratuito de realidade aumentada criado no ProfBio/UFPA para o ensino de artrópodes na Educação Básica. Combina modelos virtuais 3D de animais com o ambiente real em dispositivos Android.",
             tags: ["Artrópodes", "RA", "3D", "Biologia"],
             url: "https://ufpa.br/alunos-da-ufpa-sao-premiados-em-evento-nacional-de-ensino-de-biologia/",
-            buttonLabel: "Conhecer projeto"
+            buttonLabel: "Conhecer projeto",
+            visualIcon: "view_in_ar",
+            visualLabel: "Realidade aumentada"
         }
     ]
 };
@@ -340,8 +353,21 @@ var MATERIAIS = {
    PUBLICAÇÕES
 ═══════════════════════════════════════════════ */
 var PUBLICACOES = {
-    universidades: [],
-    escolas: []
+    universidades: [
+        { title: "Métodos alternativos ao uso animal em aulas práticas no curso de Biologia da UNEB: estratégias didáticas replacement dos 3R’s", author: "Cunha, E. C. S.; Santos, C. L. A.; Meira, J. S.", desc: "Relato docente sobre simuladores virtuais, modelos em gesso e modelagem de órgãos como estratégias de substituição de animais em aulas práticas de Biologia.", url: "https://www.periodicos.univasf.edu.br/revasf/article/view/3099", tags: ["Biologia", "Ensino Superior", "Português"], category: "Artigo científico" },
+        { title: "Tecnologia e Bioética no Ensino: Etapas da Produção de um Modelo Substitutivo Realista", author: "Adami, E. R. et al.", desc: "Descreve o desenvolvimento e a validação de um modelo anatômico para treinamento veterinário, articulando bioética, tecnologia e substituição do uso de animais vivos.", url: "https://ojs.revistagesec.org.br/secretariado/article/view/5207", tags: ["Veterinária", "Bioética", "Ensino Superior", "Português"], category: "Artigo científico" },
+        { title: "A representação do animal como recurso didático: a etapa 2 do Modelo de Reconstrução Educacional", author: "Fischer, M. L.; Furlan, A. L. D.", desc: "Analisa a representação do animal como recurso didático e a percepção de métodos alternativos/substitutivos entre licenciados, bacharéis e graduandos de Ciências Biológicas.", url: "https://periodicos.ufmg.br/index.php/ensaio/article/view/35665", tags: ["Biologia", "Bioética", "Ensino Superior", "Português"], category: "Artigo científico" },
+        { title: "Métodos alternativos ao uso de animais como recurso didático: um novo paradigma bioético para o ensino da Zoologia", author: "Furlan, A. L. D.; Fischer, M. L.", desc: "Mapeia métodos alternativos no contexto acadêmico e pedagógico, incluindo a formação de professores de Ciências e Biologia e experiências no ensino superior.", url: "https://www.scielo.br/j/edur/a/SvzX4qmqNKh7JFSZppbz6WJ/?lang=pt", tags: ["Biologia", "Bioética", "Ensino Superior", "Português"], category: "Artigo científico" },
+        { title: "Métodos substitutivos ao uso de animais vivos no ensino de graduação em Medicina Veterinária: procedimentos em roedores de laboratório", author: "Zanatto, D. A.", desc: "Investiga vídeos, simuladores e outros recursos para substituir animais vivos no ensino de procedimentos em graduação veterinária.", url: "https://teses.usp.br/teses/disponiveis/10/10133/tde-11062019-145628/pt-br.html", tags: ["Veterinária", "Ensino Superior", "Português"], category: "Dissertação" }
+    ],
+    escolas: [
+        { title: "Do conhecimento à ação: o impacto de uma oficina pedagógica no combate ao abandono de animais", author: "Oliveira, R. B.; Nascimento, L. F. C.; Dias, M. M.", desc: "Avalia uma oficina pedagógica com estudantes do 4º ano do Ensino Fundamental sobre abandono, guarda responsável e bem-estar animal.", url: "https://ojs.revistacontribuciones.com/ojs/index.php/clcs/article/view/16756", tags: ["Bioética", "Educação Básica", "Português"], category: "Artigo científico" },
+        { title: "O ensino da ética animal: bioética no ensino de ciências", author: "Albuquerque, N. F.; Rocha Filho, J. B.", desc: "Discute a presença ainda reduzida da ética animal no ensino de Ciências e defende o aprofundamento do tema na educação científica.", url: "https://ojs.cuadernoseducacion.com/ojs/index.php/ced/article/view/1722", tags: ["Biologia", "Bioética", "Educação Básica", "Português"], category: "Artigo científico" },
+        { title: "Percepção de alunos de escola pública sobre bem-estar animal e a ocorrência do tema nos livros didáticos", author: "Sitton, H. A. et al.", desc: "Investiga conhecimentos de estudantes do Ensino Fundamental e Médio e a presença do bem-estar animal em materiais didáticos.", url: "https://rsdjournal.org/rsd/article/view/25166", tags: ["Biologia", "Educação Básica", "Português"], category: "Artigo científico" },
+        { title: "Conscientização sobre Bem-Estar Animal e Guarda Responsável em escola de Educação Fundamental localizada na Região Sul-Fluminense do estado do Rio de Janeiro", author: "Fernandes, G. T. M. et al.", desc: "Relata atividades de educação em bem-estar animal, guarda responsável e prevenção de zoonoses com turmas do 1º ao 6º ano.", url: "https://editora.univassouras.edu.br/index.php/RFEU/article/view/2258", tags: ["Bioética", "Educação Básica", "Português"], category: "Artigo científico" },
+        { title: "Educação, ética animal e ambiental: destituindo o paradigma antropocêntrico", author: "Oliveira, F. A. G.; Dias, M. C.", desc: "Propõe revisar o viés antropocêntrico presente nos conteúdos programáticos escolares e ampliar a reflexão ética sobre animais não humanos na educação formal.", url: "https://periodicos.ufpb.br/index.php/rec/article/view/ufpb.1983-1579.2018v3n11.40557", tags: ["Bioética", "Educação Básica", "Português"], category: "Artigo científico" },
+        { title: "Educação no ensino fundamental para o bem-estar animal", author: "Muller, C. A. S.", desc: "Pesquisa a presença do tema bem-estar e guarda responsável no Ensino Fundamental e o repertório de professores para abordá-lo em sala de aula.", url: "https://riut.utfpr.edu.br/jspui/handle/1/11048", tags: ["Bioética", "Educação Básica", "Português"], category: "Trabalho acadêmico" }
+    ]
 };
 
 /* ═══════════════════════════════════════════════
