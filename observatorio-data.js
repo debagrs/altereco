@@ -6,104 +6,314 @@
 window.OBSERVATORIO_DB = {
     visao_geral: {
         kpis: [
-            { label: "Faturamento Mercado Pet", value: "R$ 75,4 bi", fonte: "ABINPET", ano: 2024, url: "abinpet.org.br", icon: "trending-up" },
-            { label: "Animais Abatidos (Frangos)", value: "6,28 bi", fonte: "IBGE/ABATE", ano: 2023, url: "ibge.gov.br", icon: "skull" },
-            { label: "Uso em Experimentação", value: "11,3 mi", fonte: "CONCEA", ano: "2019-23", url: "gov.br/mcti", icon: "microscope" },
-            { label: "Taxa de Abandono Estimada", value: "4,2%", fonte: "CFMV", ano: 2022, url: "cfmv.gov.br", icon: "home" },
-            { label: "Denúncias de Maus-Tratos", value: "~49k", fonte: "Agregado SSP", ano: 2022, url: "isp.rj.gov.br", icon: "alert-triangle" },
-            { label: "Grupos de Pesquisa", value: "89", fonte: "CNPq/Lattes", ano: 2023, url: "cnpq.br", icon: "graduation-cap" }
+            {
+                label: "Faturamento Mercado Pet",
+                value: "R$ 75,4 bi",
+                fonte: "ABEMPET (Abinpet)",
+                ano: 2024,
+                url: "https://abinpet.org.br/informacoes-gerais-do-setor/",
+                icon: "trending-up"
+            },
+            {
+                label: "Frangos abatidos",
+                value: "6,28 bi",
+                fonte: "IBGE · Pesquisa Trimestral do Abate",
+                ano: 2023,
+                url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes",
+                icon: "skull"
+            },
+            {
+                label: "Uso em ensino e pesquisa",
+                value: "> 11,3 mi",
+                fonte: "CONCEA/MCTI",
+                ano: "2019–2023",
+                url: "https://www.gov.br/mcti/pt-br/composicao/conselhos/concea/paginas/Destaques/relatorio-de-uso-animal-concea-2019_2023-1-1.pdf",
+                icon: "microscope"
+            },
+            {
+                label: "Sob tutela de ONGs/protetores",
+                value: "184.960",
+                fonte: "Instituto Pet Brasil via CFMV",
+                ano: 2021,
+                url: "https://www.cfmv.gov.br/combater-os-maus-tratos-aos-animais-e-um-dever-de-todos/comunicacao/noticias/2023/05/04/",
+                icon: "home"
+            },
+            {
+                label: "Registros de maus-tratos no RJ",
+                value: "252",
+                fonte: "Instituto de Segurança Pública do RJ",
+                ano: 2022,
+                url: "https://www.rj.gov.br/isp/node/669",
+                icon: "alert-triangle"
+            },
+            {
+                label: "Grupos no Censo DGP",
+                value: "42.852",
+                fonte: "CNPq · Censo DGP",
+                ano: 2023,
+                url: "https://www.gov.br/mcti/pt-br/acompanhe-o-mcti/indicadores/paginas/recursos-humanos/indicadores-dos-grupos-de-pesquisa/arquivos/tab_03_04_01_e_2023.pdf",
+                icon: "graduation-cap"
+            }
         ],
-        nota_metodologica: "O paradoxo central: O Brasil investe bilhões no bem-estar de animais domésticos enquanto institucionaliza o uso de bilhões de outras espécies. Dados de abate referem-se apenas ao sistema formal (SIF/SIE/SIM). Maus-tratos e abandono apresentam subnotificação sistemática estrutural.",
-        card_narrativo: "Os dados demonstram um paradoxo profundo: enquanto investimos R$ 75,4 bilhões no bem-estar de algumas espécies, institucionalizamos o uso e o sofrimento de outras. A ciência nos convida a repensar nossa ética através de evidências."
+        nota_metodologica: "Cada indicador mantém o escopo da fonte original. Não aplicamos fatores próprios de correção nem extrapolamos recortes estaduais para o país. Quando a base é parcial, institucional ou setorial, isso é informado no próprio card e no link da pesquisa.",
+        card_narrativo: "Em 2024, o mercado pet brasileiro registrou R$ 75,4 bilhões. Em outra base, o IBGE registrou 6,28 bilhões de frangos abatidos em estabelecimentos sob inspeção sanitária em 2023. O Observatório aproxima esses dados sem tratá-los como equivalentes, tornando visíveis diferentes formas de relação humano-animal."
     },
-    
+
     pets: {
-        populacao: [
-            { especie: "Cães", valor: 68 },
-            { especie: "Aves", valor: 42 },
-            { especie: "Gatos", valor: 34 },
-            { especie: "Peixes", valor: 19.9 },
-            { especie: "Répteis/Pequenos", valor: 2.5 }
-        ],
         domicilios: [
-            { label: "Com pelo menos 1 pet", valor: "57,8%" },
-            { label: "Com cães", valor: "46,1%" },
-            { label: "Com gatos", valor: "19,3%" }
+            {
+                label: "com cães",
+                valor: "46,1%",
+                fonte: "IBGE · PNS 2019",
+                url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/28793-pns-2019-sete-em-cada-dez-pessoas-que-procuram-o-mesmo-servico-de-saude-vao-a-rede-publica"
+            },
+            {
+                label: "com gatos",
+                valor: "19,3%",
+                fonte: "IBGE · PNS 2019",
+                url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/28793-pns-2019-sete-em-cada-dez-pessoas-que-procuram-o-mesmo-servico-de-saude-vao-a-rede-publica"
+            },
+            {
+                label: "com cão ou gato",
+                valor: "39,4 mi",
+                fonte: "IBGE · PNS 2019",
+                url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/28793-pns-2019-sete-em-cada-dez-pessoas-que-procuram-o-mesmo-servico-de-saude-vao-a-rede-publica"
+            }
         ],
-        evolucao: [
-            { ano: 2013, caes: 52.2, gatos: 22.1 },
-            { ano: 2019, caes: 54.2, gatos: 24.0 },
-            { ano: 2021, caes: 55.9, gatos: 25.5 },
-            { ano: 2022, caes: 68.0, gatos: 34.0 }
+        populacao: [
+            { especie: "Cães", valor: 58.1 },
+            { especie: "Aves canoras", valor: 41.0 },
+            { especie: "Gatos", valor: 27.1 },
+            { especie: "Peixes ornamentais", valor: 20.8 },
+            { especie: "Pequenos répteis e mamíferos", valor: 2.5 }
+        ],
+        populacao_fonte: {
+            fonte: "Instituto Pet Brasil via CFMV",
+            ano: 2021,
+            url: "https://www.cfmv.gov.br/combater-os-maus-tratos-aos-animais-e-um-dever-de-todos/comunicacao/noticias/2023/05/04/"
+        },
+        evolucao_domicilios: [
+            {
+                especie: "Domicílios com cães",
+                inicial: "44,3%",
+                ano_inicial: 2013,
+                final: "46,1%",
+                ano_final: 2019,
+                fonte_inicial: "IBGE · PNS 2013",
+                url_inicial: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/10138-pns-2013-tres-em-cada-quatro-brasileiros-costumam-buscar-atendimento-medico-na-rede-publica-de-saude",
+                fonte_final: "IBGE · PNS 2019",
+                url_final: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/28793-pns-2019-sete-em-cada-dez-pessoas-que-procuram-o-mesmo-servico-de-saude-vao-a-rede-publica"
+            },
+            {
+                especie: "Domicílios com gatos",
+                inicial: "17,7%",
+                ano_inicial: 2013,
+                final: "19,3%",
+                ano_final: 2019,
+                fonte_inicial: "IBGE · PNS 2013",
+                url_inicial: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/10138-pns-2013-tres-em-cada-quatro-brasileiros-costumam-buscar-atendimento-medico-na-rede-publica-de-saude",
+                fonte_final: "IBGE · PNS 2019",
+                url_final: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/28793-pns-2019-sete-em-cada-dez-pessoas-que-procuram-o-mesmo-servico-de-saude-vao-a-rede-publica"
+            }
         ]
     },
 
     economia: {
+        faturamento_total: {
+            valor: "R$ 75,4 bilhões",
+            variacao: "+9,6% em relação a 2023",
+            fonte: "ABEMPET (Abinpet)",
+            ano: 2024,
+            url: "https://abinpet.org.br/informacoes-gerais-do-setor/"
+        },
         faturamento_2024: [
             { segmento: "Pet Food", valor: 40.8, porcent: "54,1%" },
-            { segmento: "Venda Animais", valor: 8.1, porcent: "10,8%" },
-            { segmento: "Prod. Vet", valor: 7.8, porcent: "10,4%" },
-            { segmento: "Serv. Vet", valor: 7.7, porcent: "10,2%" },
-            { segmento: "Acessórios", valor: 5.5, porcent: "7,3%" },
-            { segmento: "Banho/Tosa", valor: 5.5, porcent: "7,3%" }
+            { segmento: "Venda de animais por criadores", valor: 8.1, porcent: "10,8%" },
+            { segmento: "Produtos veterinários", valor: 7.8, porcent: "10,4%" },
+            { segmento: "Serviços veterinários", valor: 7.7, porcent: "10,2%" }
         ],
         cruzamentos: [
-            { title: "Crescimento vs PIB", text: "O mercado pet cresceu média de 14,2% ao ano (2013-23), superando o PIB de 3,8%, indicando resiliência extrema a ciclos econômicos." },
-            { title: "Paradoxo de Acesso", text: "Apesar dos R$ 75,4 bi, menos de 40% dos tutores levam animais ao veterinário regularmente, revelando desigualdade no acesso à saúde." }
+            {
+                title: "Crescimento em 2024",
+                text: "O faturamento de R$ 75,4 bilhões representou aumento de 9,6% em relação a 2023, segundo a entidade setorial.",
+                fonte: "ABEMPET (Abinpet)",
+                url: "https://abinpet.org.br/informacoes-gerais-do-setor/"
+            },
+            {
+                title: "Concentração em alimentação",
+                text: "Pet Food respondeu por R$ 40,8 bilhões, equivalentes a 54,1% do faturamento informado para o setor em 2024.",
+                fonte: "ABEMPET (Abinpet)",
+                url: "https://abinpet.org.br/informacoes-gerais-do-setor/"
+            }
         ]
     },
 
     abate: {
         dados_2023: [
-            { especie: "Frangos", valor: "6,28 Bilhões", variacao: "+2,8%" },
-            { especie: "Suínos", valor: "57,17 Milhões", variacao: "+1,3%" },
-            { especie: "Bovinos", valor: "34,06 Milhões", variacao: "+13,7%" }
+            {
+                especie: "Frangos",
+                valor: "6,28 bilhões",
+                variacao: "+2,8%",
+                fonte: "IBGE · Pesquisa Trimestral do Abate",
+                url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes"
+            },
+            {
+                especie: "Suínos",
+                valor: "57,17 milhões",
+                variacao: "+1,3%",
+                fonte: "IBGE · Pesquisa Trimestral do Abate",
+                url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes"
+            },
+            {
+                especie: "Bovinos",
+                valor: "34,06 milhões",
+                variacao: "+13,7%",
+                fonte: "IBGE · Pesquisa Trimestral do Abate",
+                url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes"
+            }
         ],
-        consumo_per_capita: [
-            { pais: "EUA", kg: 99 },
-            { pais: "Argentina", kg: 98 },
-            { pais: "Brasil", kg: 89 },
-            { pais: "França", kg: 83 },
-            { pais: "China", kg: 65 }
+        oferta_per_capita: [
+            { pais: "Estados Unidos", kg: 122.06 },
+            { pais: "Argentina", kg: 114.95 },
+            { pais: "Brasil", kg: 104.57 },
+            { pais: "China", kg: 73.54 }
         ],
-        analise_etica: "Frangos representam a maior concentração quantitativa de sofrimento: 6,28 bi de indivíduos vivendo em média 42 dias sob confinamento intensivo."
+        oferta_fonte: {
+            fonte: "FAO via Our World in Data",
+            ano: 2023,
+            url: "https://ourworldindata.org/grapher/meat-supply-per-person?tab=table&time=latest",
+            nota: "O indicador mede oferta disponível de carne per capita, e não ingestão efetivamente consumida."
+        },
+        analise_etica: "Na Pesquisa Trimestral do Abate, o número de frangos abatidos em 2023 (6,28 bilhões) é numericamente muito superior aos registros de suínos (57,17 milhões) e bovinos (34,06 milhões) em estabelecimentos sob inspeção sanitária.",
+        analise_url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes"
     },
 
     experimentacao: {
-        total_periodo: "11,3 Milhões (2019-2023)",
-        especies_relativo: [
-            { nome: "Camundongo", perc: "65%" },
-            { nome: "Rato", perc: "20%" },
-            { nome: "Peixe", perc: "10%" },
-            { nome: "Coelho", perc: "5%" }
+        total_periodo: "mais de 11,3 milhões (2019–2023)",
+        indicadores: [
+            {
+                titulo: "Relatório nacional",
+                valor: "> 11,3 mi",
+                texto: "O CONCEA publicou o relatório de uso de animais em atividades de ensino e pesquisa científica referente ao período de 2019 a 2023.",
+                fonte: "CONCEA/MCTI · Relatório 2019–2023",
+                url: "https://www.gov.br/mcti/pt-br/composicao/conselhos/concea/paginas/Destaques/relatorio-de-uso-animal-concea-2019_2023-1-1.pdf"
+            },
+            {
+                titulo: "Registro institucional",
+                valor: "Novo CIUCA",
+                texto: "O Novo CIUCA registra instituições que criam ou utilizam animais para ensino e pesquisa, protocolos e solicitações de credenciamento no CONCEA.",
+                fonte: "CONCEA/MCTI · Manual do Novo CIUCA",
+                url: "https://www.gov.br/mcti/pt-br/composicao/conselhos/concea/paginas/credenciamento-institucional/novo-ciuca"
+            },
+            {
+                titulo: "Capacitação obrigatória",
+                valor: "RN 49/2021",
+                texto: "Desde 31 de maio de 2023, a normativa exige comprovação de capacitação das pessoas envolvidas em atividades de ensino ou pesquisa científica que utilizam animais.",
+                fonte: "CONCEA/MCTI e CFBio · Nota Conjunta",
+                url: "https://www.gov.br/mcti/pt-br/composicao/conselhos/concea/nota-conjunta-concea-e-cfbio"
+            },
+            {
+                titulo: "Planejamento e redução",
+                valor: "ARRIVE + PREPARE",
+                texto: "O CONCEA recomenda ARRIVE e PREPARE como ferramentas complementares para melhorar o planejamento e contribuir para a redução do uso de animais.",
+                fonte: "CONCEA/MCTI",
+                url: "https://www.gov.br/mcti/pt-br/composicao/colegiados/concea/paginas/Destaques/concea-recomenda-o-uso-do-arrive-e-do-prepare"
+            }
         ],
-        finalidade: [
-            { label: "Pesquisa Básica", perc: "68%" },
-            { label: "Farmacologia", perc: "20%" },
-            { label: "Biomédica", perc: "10%" },
-            { label: "Ensino", perc: "2%" }
-        ],
-        limitacao: "Subnotificação crítica: Estima-se que apenas 40-60% das instituições estão registradas no CONCEA. Laboratórios privados não têm obrigação de registro."
+        limitacao: "O Observatório não apresenta percentuais próprios de distribuição por espécie ou finalidade quando eles não podem ser rastreados diretamente, de forma inequívoca, ao relatório oficial exibido."
     },
 
     maus_tratos: {
         estados: [
-            { uf: "Minas Gerais", casos: "3.774", variacao: "+48,7%", ano: 2021, link: "https://www.agenciaminas.mg.gov.br/noticia/denuncias-de-maus-tratos-contra-animais-aumentam-em-minas-gerais" },
-            { uf: "Rio de Janeiro", casos: "252", status: "Formais (ISP)", ano: 2022, link: "https://www.ispvisualizacao.rj.gov.br/" },
-            { uf: "Rio Grande do Norte", variacao: "+95,8%", periodo: "2021-23", link: "https://www.ssp.rn.gov.br/" }
+            {
+                uf: "Minas Gerais",
+                casos: "7.644",
+                status: "Ocorrências fiscalizadas FAU-33",
+                ano: 2023,
+                fonte: "SEMAD/MG · Diagnóstico Ambiental 2024",
+                link: "https://meioambiente.mg.gov.br/documents/d/semad/diagnostico_ambiental_do_estado-2024-pdf"
+            },
+            {
+                uf: "Rio de Janeiro",
+                casos: "252",
+                status: "Registros de crueldade e maus-tratos",
+                ano: 2022,
+                fonte: "Instituto de Segurança Pública do RJ",
+                link: "https://www.rj.gov.br/isp/node/669"
+            }
         ],
-        causa_abandono: [
-            { causa: "Financeiras", perc: "35%", ref: "CFMV Inquérito 2022" },
-            { causa: "Comportamento", perc: "20%", ref: "CFMV Inquérito 2022" },
-            { causa: "Mudança", perc: "15%", ref: "CFMV Inquérito 2022" }
+        nota: "Os recortes estaduais usam sistemas, conceitos e escopos diferentes; por isso, os valores não são somados nem extrapolados para uma estimativa nacional.",
+        lei: {
+            titulo: "Lei nº 14.064/2020 (Lei Sansão)",
+            texto: "Para maus-tratos contra cão ou gato, a Lei nº 14.064/2020 estabeleceu pena de reclusão de 2 a 5 anos, multa e proibição da guarda.",
+            fonte: "Presidência da República · Planalto",
+            url: "https://www.planalto.gov.br/ccivil_03/_ato2019-2022/2020/lei/l14064.htm"
+        }
+    },
+
+    abandono: {
+        titulo: "Animais abandonados ou resgatados sob tutela de organizações",
+        total: "184.960",
+        ano: 2021,
+        fonte: "Instituto Pet Brasil via CFMV",
+        url: "https://www.cfmv.gov.br/combater-os-maus-tratos-aos-animais-e-um-dever-de-todos/comunicacao/noticias/2023/05/04/",
+        indicadores: [
+            {
+                label: "Animais sob tutela",
+                value: "184.960",
+                desc: "Animais abandonados ou resgatados após maus-tratos que estavam sob tutela de ONGs ou grupos de protetores no levantamento citado pelo CFMV."
+            },
+            {
+                label: "Distribuição por espécie",
+                value: "96% cães · 4% gatos",
+                desc: "No mesmo recorte, 177.562 eram cães e 7.398 eram gatos."
+            },
+            {
+                label: "ONGs pesquisadas",
+                value: "400",
+                desc: "O estudo do Instituto Pet Brasil citado pelo CFMV reuniu informações de 400 organizações."
+            },
+            {
+                label: "Situação de origem",
+                value: "60% maus-tratos · 40% abandono",
+                desc: "Entre os animais do estudo, cerca de 60% foram vítimas de maus-tratos e 40% foram encontrados em situação de abandono."
+            }
         ],
-        nota: "O aumento nas denúncias reflete maior consciência social e o agravamento da Lei 14.064/2020 (Pena de 2 a 5 anos para cães e gatos)."
+        nota: "Este dado descreve o universo sob tutela das organizações e protetores incluídos no levantamento; não deve ser apresentado como estimativa do total de animais abandonados nas ruas do Brasil."
     },
 
     entretenimento: {
-        zoos: { total: 140, status: "Registrados (IBAMA/SISPASS)", link: "https://www.gov.br/ibama/pt-br/assuntos/biodiversidade-e-fauna" },
-        rodeios: { total: 2000, periodo: "Anual (Estimativa)", ref: "CNAR - Confederação Nacional do Rodeio", link: "https://cnar.com.br/" },
-        aquarios: { total: 12, principais: ["AquaRio", "Aquário de SP"], ref: "IBAMA" }
+        referencias: [
+            {
+                titulo: "Fauna silvestre em cativeiro",
+                valor: "SisFauna",
+                texto: "O SisFauna é o sistema eletrônico federal de gestão e controle de empreendimentos e atividades relacionados ao uso e manejo de fauna silvestre em cativeiro.",
+                fonte: "IBAMA · SisFauna",
+                url: "https://www.gov.br/ibama/pt-br/servicos/sistemas/sisfauna/mais-informacoes-sobre-o-sisfauna"
+            },
+            {
+                titulo: "Jardins zoológicos",
+                valor: "Categoria regulada",
+                texto: "O IBAMA inclui jardim zoológico entre as categorias de empreendimentos utilizadores de fauna silvestre e mantém normas específicas de autorização e controle.",
+                fonte: "IBAMA · Empreendimentos utilizadores de fauna",
+                url: "https://www.gov.br/ibama/pt-br/servicos/autorizacoes/fauna/empreendimentos-utilizadores-de-fauna-silvestre"
+            },
+            {
+                titulo: "Aquariofilia",
+                valor: "Base normativa IBAMA",
+                texto: "O IBAMA mantém uma página específica de normas e orientações para aquariofilia e biodiversidade aquática.",
+                fonte: "IBAMA · Aquariofilia",
+                url: "https://www.gov.br/ibama/pt-br/assuntos/biodiversidade/biodiversidade-aquatica/aquariofilia"
+            },
+            {
+                titulo: "Rodeios",
+                valor: "Lei nº 10.519/2002",
+                texto: "A Lei nº 10.519/2002 estabelece normas gerais para a realização de rodeios de animais e regras de defesa sanitária animal.",
+                fonte: "Presidência da República · Planalto",
+                url: "https://www.planalto.gov.br/ccivil_03/leis/2002/l10519.htm"
+            }
+        ],
+        nota: "Nesta versão, o Observatório prioriza bases regulatórias verificáveis em vez de publicar contagens nacionais de zoológicos, aquários ou rodeios sem uma série oficial atual e comparável."
     },
 
     pesquisa: {
@@ -211,9 +421,27 @@ window.OBSERVATORIO_DB = {
 
     educacao: {
         projetos: [
-            { nome: "Educação Humanitária na Base Escolar", alcance: "Estados como RS e SP possuem leis que inserem a proteção animal no currículo. Contudo, a ausência do tema como diretriz clara na BNCC (Base Nacional Comum Curricular) gera assimetria.", status: "Leis Estaduais em expansão", fonte: "Lei RS 15.254/19", link: "https://al-rs.jusbrasil.com.br/legislacao/667503738/lei-15254-19-rio-grande-do-sul-rs" },
-            { nome: "Institucionalização: OAB e Direito Animal", alcance: "O Conselho Federal da OAB e todas as suas 27 seccionais estaduais possuem agora Comissões de Defesa dos Animais, refletindo o boom do ensino da matéria nas IES de Direito.", status: "Consolidação Jurídica", fonte: "CFOAB", link: "https://www.oab.org.br/comissoes/comissao/102/comissao-nacional-de-protecao-e-defesa-dos-animais" },
-            { nome: "Ciências Agrárias: A Virada da Bioética", alcance: "Novas Diretrizes Curriculares (DCNs) do MEC, impulsionadas pelo CFMV, tornaram o ensino de Bem-Estar Animal obrigatório nas graduações de Medicina Veterinária.", status: "Diretrizes Nacionais do MEC", fonte: "CFMV e MEC", link: "https://www.cfmv.gov.br/" }
+            {
+                nome: "Projeto Escola Amiga dos Animais — Rio Grande do Sul",
+                alcance: "A Lei nº 15.337/2019 instituiu o Projeto Escola Amiga dos Animais na rede pública escolar estadual, com ações voltadas à educação ambiental, bem-estar de animais domésticos, adoção consciente e guarda responsável.",
+                status: "Lei estadual",
+                fonte: "Diário Oficial do Estado do RS · Lei nº 15.337/2019",
+                link: "https://www.pge.rs.gov.br/upload/arquivos/201910/03092402-doe-ultimo-03102019.pdf"
+            },
+            {
+                nome: "Articulação nacional da OAB em defesa dos animais",
+                alcance: "A Comissão Especial de Proteção e Defesa dos Animais do Conselho Federal da OAB realizou reunião com presidentes de comissões seccionais para alinhar estratégias e fortalecer a atuação nacional.",
+                status: "Articulação institucional",
+                fonte: "Conselho Federal da OAB",
+                link: "https://www.oab.org.br/noticia/63741/comissao-especial-da-oab-articula-acoes-nacionais-para-a-defesa-dos-direitos-dos-animais"
+            },
+            {
+                nome: "Bem-estar animal nas Diretrizes de Medicina Veterinária",
+                alcance: "A Resolução CNE/CES nº 3/2019 inclui, entre as competências da formação veterinária, avaliar o grau de bem-estar animal por indicadores e planejar estratégias de melhoria com ênfase na bioética.",
+                status: "Diretrizes Curriculares Nacionais",
+                fonte: "MEC/CNE · Resolução CNE/CES nº 3/2019",
+                link: "https://portal.mec.gov.br/docman/agosto-2019-pdf/120701-rces003-19/file"
+            }
         ],
         kpis: [
             { label: "Níveis de ensino separados", value: "2", desc: "Educação Básica / Escolar e Ensino Superior / Universidade são apresentados separadamente para evitar generalizações entre contextos pedagógicos distintos." },
@@ -335,17 +563,6 @@ window.OBSERVATORIO_DB = {
     },
 
     atlas_global: {
-        protecao: [
-            { pais: "Brasil", nota: "D", ref: "Animal Protection Index (WAP)", link: "https://api.worldanimalprotection.org/country/brazil" },
-            { pais: "Reino Unido", nota: "B", ref: "WAP API" },
-            { pais: "Alemanha", nota: "B", ref: "WAP API" },
-            { pais: "EUA", nota: "D", ref: "WAP API" }
-        ],
-        abate_global: [
-            { pais: "China", bi: 9.3, especie: "Frangos", fonte: "FAOSTAT 2022", link: "https://www.fao.org/faostat/en/#data/QCL" },
-            { pais: "Brasil", bi: 6.2, especie: "Frangos", fonte: "FAOSTAT 2022" },
-            { pais: "EUA", bi: 9.1, especie: "Frangos", fonte: "FAOSTAT 2022" }
-        ],
         organizacoes: [
             {
                 id: "cat-aspca",
@@ -662,20 +879,28 @@ window.OBSERVATORIO_DB = {
         {
             id: "X001",
             title: "Paradoxo Afetivo-Econômico",
-            data: "O Observatório coloca lado a lado o crescimento do investimento e do cuidado direcionado aos animais de companhia e a escala massiva de uso de outras espécies. O cruzamento torna visível uma assimetria ética que costuma aparecer fragmentada em bases econômicas, demográficas e de produção.",
-            link: "https://www.ibge.gov.br/estatisticas/economicas/agricultura-e-pecuaria/9203-pesquisas-trimestrais-do-abate-de-animais.html"
+            data: "O cruzamento coloca lado a lado dois recortes de naturezas diferentes: o faturamento de R$ 75,4 bilhões do setor pet em 2024 e o registro de 6,28 bilhões de frangos abatidos em 2023 em estabelecimentos sob inspeção sanitária. A aproximação é analítica e não transforma esses indicadores em uma mesma métrica.",
+            fontes: [
+                { label: "ABEMPET (Abinpet) · Mercado pet 2024", url: "https://abinpet.org.br/informacoes-gerais-do-setor/" },
+                { label: "IBGE · Pesquisa Trimestral do Abate 2023", url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes" }
+            ]
         },
         {
             id: "X009",
-            title: "A Gatificação das Cidades",
-            data: "O crescimento de 100% na população de gatos em 10 anos correlaciona-se com a verticalização urbana. Gatos ocupam 30% menos espaço e custo que cães em apartamentos.",
-            link: "https://www.ibge.gov.br/estatisticas/sociais/saude/9160-pesquisa-nacional-de-saude.html"
+            title: "Mudança na presença de cães e gatos nos domicílios",
+            data: "Entre a PNS 2013 e a PNS 2019, a proporção de domicílios com cães passou de 44,3% para 46,1%, enquanto a proporção de domicílios com gatos passou de 17,7% para 19,3%. O Observatório apresenta a mudança sem atribuir causalidade urbana ou econômica não demonstrada pelas pesquisas.",
+            fontes: [
+                { label: "IBGE · PNS 2013", url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/10138-pns-2013-tres-em-cada-quatro-brasileiros-costumam-buscar-atendimento-medico-na-rede-publica-de-saude" },
+                { label: "IBGE · PNS 2019", url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/28793-pns-2019-sete-em-cada-dez-pessoas-que-procuram-o-mesmo-servico-de-saude-vao-a-rede-publica" }
+            ]
         },
         {
             id: "X010",
-            title: "Exportação vs. Prato Brasileiro",
-            data: "Recordes de abate bovino (+13%) em 2023 não reduziram o consumo per capita interno, pois 30% da produção é drenada pelo mercado externo (China/EUA).",
-            link: "https://www.gov.br/agricultura/pt-br"
+            title: "Escala do abate formal em 2023",
+            data: "O IBGE registrou crescimento de 13,7% no abate de bovinos em 2023, além de recordes no abate de suínos e frangos. O cruzamento serve para comparar escalas entre espécies dentro da mesma pesquisa oficial, sem inferir consumo individual ou exportações a partir desses números.",
+            fontes: [
+                { label: "IBGE · Pesquisa Trimestral do Abate 2023", url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes" }
+            ]
         }
     ]
 };
@@ -711,11 +936,7 @@ window.OBSERVATORIO_DB = {
     db.pesquisa.dgp_meta = source.meta || {};
 
     const uniqueCount = new Set(source.grupos.map(group => group.id || group.nome)).size;
-    const kpi = db.visao_geral?.kpis?.find(item => item.label === 'Grupos de Pesquisa');
-    if (kpi) {
-        kpi.value = String(uniqueCount);
-        kpi.fonte = 'Base nominal AlterECO / DGP-CNPq';
-        kpi.ano = source.meta?.ano_referencia || 2023;
-        kpi.url = 'lattes.cnpq.br/web/dgp/censos2';
-    }
+    // O KPI nacional permanece vinculado ao Censo DGP 2023 (42.852 grupos).
+    // `uniqueCount` é usado apenas na seção Pesquisa para indicar a seleção temática AlterECO.
+    db.pesquisa.total_grupos_tematicos = uniqueCount;
 })();
