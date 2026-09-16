@@ -18,7 +18,7 @@ window.ALTERECO_DGP_2023 = {
         total_grupos_brasil: 42852,
         total_instituicoes_brasil: 587,
         fonte_censo: "CNPq · Censo DGP 2023",
-        fonte_censo_url: "https://lattes.cnpq.br/web/dgp/censos2",
+        fonte_censo_url: "https://www.gov.br/mcti/pt-br/acompanhe-o-mcti/indicadores/paginas/recursos-humanos/indicadores-dos-grupos-de-pesquisa/arquivos/tab_03_04_01_e_2023.pdf",
         consulta_corrente_url: "https://dgp.cnpq.br/dgp/faces/consulta/consulta_parametrizada.jsf",
         painel_2023_url: "https://app.powerbi.com/view?pageName=ReportSectionaf31612e05234cb0b779&r=eyJrIjoiYTg4MGFmNWQtMjQ4Yi00ZmFhLTgzMmMtMDFiMmI3YzFmNmEwIiwidCI6IjkyYzBjZmE5LTdlOTEtNGVhZC1hYzI5LWNkNDRhMjM4OWIwMSJ9",
         atualizado_em: "2026-08-20",
