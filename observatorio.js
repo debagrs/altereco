@@ -22,19 +22,19 @@ const OBS_SECTIONS = [
 ];
 
 const _obsDescriptions = {
-    visao:          'O paradoxo ético central: enquanto investimos R$ 75,4 bilhões em algumas espécies, institucionalizamos o sofrimento de bilhões de outras.',
-    pets:           'Mais de 149 milhões de animais domésticos no Brasil — a segunda maior população pet do mundo.',
-    economia:       'O mercado pet brasileiro movimentou R$ 75,4 bilhões em 2024, o 3º maior do mundo.',
-    abandono:       'Estima-se que 30 mil animais são abandonados por dia no Brasil — um colapso estrutural de tutoria responsável.',
-    consumo:        'O Brasil abateu 5,9 bilhões de animais em 2023. A escala torna o fenômeno praticamente invisível ao debate público.',
-    experimentacao: 'O CONCEA registrou uso de 3,89 milhões de animais no ensino e pesquisa entre 2019-2023.',
-    violencia:      'Registros estaduais indicam ~49 mil casos anuais de maus-tratos. Subnotificação estimada em mais de 50%.',
-    entretenimento: 'Do cativeiro em zoológicos às tradições dos rodeios — o Brasil apresenta diversidade de uso animal recreativo.',
-    pesquisa:       'Grupos de pesquisa, teses e produção acadêmica sobre bem-estar animal e bioética no Brasil.',
-    educacao:       'A base para a mudança de paradigma reside no sistema educacional, da alfabetização ao ensino superior.',
-    atlas:          'Posicionando o Brasil frente aos benchmarks internacionais de proteção, consumo e bem-estar animal.',
-    metodo:         'Como transformamos dados brutos em conhecimento ético? Fontes, curadoria e critérios metodológicos.',
-    assistente:     'Um agente de IA treinado com os dados do observatório para ajudar pesquisadores a identificar padrões e lacunas.',
+    visao:          'Indicadores de fontes oficiais e institucionais, com escopo e links de pesquisa visíveis em cada dado.',
+    pets:           'Presença de cães e gatos nos domicílios brasileiros e estimativas setoriais de população pet, sempre identificadas por fonte e ano.',
+    economia:       'Faturamento e composição do mercado pet brasileiro a partir da pesquisa setorial publicada pela ABEMPET/Abinpet.',
+    abandono:       'Recorte do levantamento do Instituto Pet Brasil sobre animais sob tutela de ONGs e grupos de protetores, sem extrapolação para o total nacional.',
+    consumo:        'Abate sob inspeção sanitária no Brasil e oferta de carne per capita em bases internacionais, com escopos explicitados.',
+    experimentacao: 'Relatório do CONCEA e normas oficiais sobre uso de animais em ensino e pesquisa científica.',
+    violencia:      'Recortes oficiais de registros e fiscalizações estaduais, apresentados sem soma ou extrapolação nacional.',
+    entretenimento: 'Bases regulatórias verificáveis sobre fauna em cativeiro, zoológicos, aquariofilia e rodeios.',
+    pesquisa:       'Diretório de Grupos de Pesquisa do CNPq e microdados oficiais de teses e dissertações da CAPES.',
+    educacao:       'Marcos legais e publicações acadêmicas em português, separados entre Educação Básica e Ensino Superior.',
+    atlas:          'Rede de organizações com endereço institucional, site oficial e fonte de verificação em cada modal.',
+    metodo:         'Fontes primárias, critérios de curadoria e limites metodológicos usados pelo Observatório.',
+    assistente:     'Agente de pesquisa que apresenta referências clicáveis e sinaliza quando não recupera fonte verificável.',
 };
 
 /* Map of Lucide icon names to Material Icons names */
@@ -119,27 +119,56 @@ function initObservatorio(container) {
 
 /**
  * Source attribution helpers
+ * Every factual indicator in the Observatório should point to a real,
+ * reviewable source. Generic homepages are deliberately avoided.
  */
+function obsNormalizeSourceUrl(url) {
+    const raw = String(url || '').trim();
+    if (!raw) return '';
+    try {
+        const parsed = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+        return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '';
+    } catch (_) {
+        return '';
+    }
+}
+
+function researchSourceLink(label, url, meta = '') {
+    const safeUrl = obsNormalizeSourceUrl(url);
+    if (!safeUrl) return '';
+    return `<a class="obs-research-link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">
+        <span class="material-icons" aria-hidden="true">open_in_new</span>
+        <span><strong>Ver pesquisa / fonte</strong>${label ? ` · ${obsEscapeHTML(label)}` : ''}${meta ? ` · ${obsEscapeHTML(meta)}` : ''}</span>
+    </a>`;
+}
+
+function researchSourceLinks(sources = []) {
+    const valid = sources.filter(source => source && obsNormalizeSourceUrl(source.url));
+    if (!valid.length) return '';
+    return `<div class="obs-research-links">${valid.map(source => researchSourceLink(source.label || source.fonte || 'Fonte verificada', source.url, source.meta || source.ano || '')).join('')}</div>`;
+}
+
 function sourceBadge(fonte, ano, url) {
-    const linkOpen  = url ? `<a href="https://${url.replace(/^https?:\/\//,'')}" target="_blank" rel="noopener" class="obs-source-link">` : '<span>';
-    const linkClose = url ? '</a>' : '</span>';
-    return `<div class="obs-source-badge">${linkOpen}<span class="material-icons obs-source-icon" aria-hidden="true" style="font-size:11px;">storage</span><strong>${fonte}</strong> · ${ano}${linkClose}</div>`;
+    const safeUrl = obsNormalizeSourceUrl(url);
+    if (!safeUrl) return `<div class="obs-source-badge"><span class="material-icons obs-source-icon" aria-hidden="true">verified</span><strong>${obsEscapeHTML(fonte)}</strong>${ano ? ` · ${obsEscapeHTML(ano)}` : ''}</div>`;
+    return `<div class="obs-source-badge"><a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="obs-source-link"><span class="material-icons obs-source-icon" aria-hidden="true">open_in_new</span><strong>Ver pesquisa / fonte</strong> · ${obsEscapeHTML(fonte)}${ano ? ` · ${obsEscapeHTML(ano)}` : ''}</a></div>`;
 }
 
 function sourcesFooter(sources) {
-    const items = sources.map(s =>
-        `<a href="${s.url || '#'}" target="_blank" rel="noopener" class="obs-footer-src-link">
-            <span class="material-icons" aria-hidden="true" style="font-size:12px;">open_in_new</span>
-            <strong>${s.label}</strong>${s.ano ? ' · ' + s.ano : ''}
+    const items = (sources || []).filter(s => obsNormalizeSourceUrl(s.url)).map(s =>
+        `<a href="${obsNormalizeSourceUrl(s.url)}" target="_blank" rel="noopener noreferrer" class="obs-footer-src-link">
+            <span class="material-icons" aria-hidden="true">open_in_new</span>
+            <strong>${obsEscapeHTML(s.label)}</strong>${s.ano ? ' · ' + obsEscapeHTML(s.ano) : ''}
         </a>`
     ).join('');
-    return `<div class="obs-sources-footer"><span class="obs-sources-label"><span class="material-icons" aria-hidden="true" style="font-size:13px;">verified</span> Fontes verificadas:</span>${items}</div>`;
+    return `<div class="obs-sources-footer"><span class="obs-sources-label"><span class="material-icons" aria-hidden="true">verified</span> Pesquisas e fontes verificadas:</span>${items}</div>`;
 }
 
 function microSource(fonte, ano, url) {
-    const content = url
-        ? `<a href="${url.startsWith('http') ? url : 'https://'+url}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">${fonte} · ${ano} <span class="material-icons" aria-hidden="true" style="font-size:13px;">open_in_new</span></a>`
-        : `${fonte} · ${ano}`;
+    const safeUrl = obsNormalizeSourceUrl(url);
+    const content = safeUrl
+        ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer"><span class="material-icons" aria-hidden="true">open_in_new</span><strong>Ver pesquisa / fonte</strong> · ${obsEscapeHTML(fonte)}${ano ? ` · ${obsEscapeHTML(ano)}` : ''}</a>`
+        : `${obsEscapeHTML(fonte)}${ano ? ` · ${obsEscapeHTML(ano)}` : ''}`;
     return `<div class="obs-micro-source">${content}</div>`;
 }
 
@@ -214,7 +243,7 @@ function renderObsAssistente(c) {
                     <div class="obs-grid-2" style="margin-bottom:2.5rem;">
                     <div class="obs-card obs-suggestion" onclick="obsAskSuggestion(this)" role="button" tabindex="0">
                         <h4 style="color:var(--primary-navy); margin-bottom:0.8rem; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem;"><span class="material-icons" aria-hidden="true" style="font-size:16px;">trending_up</span> Paradoxo Afetivo-Econômico</h4>
-                        <p style="font-size:0.88rem; color:var(--text-gray); line-height:1.5;">Como é possível que o Brasil invista R$ 68 bilhões no mercado pet enquanto abandona 30 mil animais por dia? Que fatores culturais e econômicos...</p>
+                        <p style="font-size:0.88rem; color:var(--text-gray); line-height:1.5;">Como os dados de mercado pet podem ser analisados ao lado de indicadores de abandono e proteção animal sem misturar recortes ou inventar causalidade?</p>
                     </div>
                     <div class="obs-card obs-suggestion" onclick="obsAskSuggestion(this)" role="button" tabindex="0">
                         <h4 style="color:var(--primary-navy); margin-bottom:0.8rem; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem;"><span class="material-icons" aria-hidden="true" style="font-size:16px;">biotech</span> Experimentação Animal</h4>
@@ -222,7 +251,7 @@ function renderObsAssistente(c) {
                     </div>
                     <div class="obs-card obs-suggestion" onclick="obsAskSuggestion(this)" role="button" tabindex="0">
                         <h4 style="color:var(--primary-navy); margin-bottom:0.8rem; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem;"><span class="material-icons" aria-hidden="true" style="font-size:16px;">restaurant</span> Senciência e Consumo</h4>
-                        <p style="font-size:0.88rem; color:var(--text-gray); line-height:1.5;">Se a Declaração de Cambridge (2012) reconhece a consciência em animais não-humanos, como isso se relaciona com os 5,9 bilhões de animais abatid...</p>
+                        <p style="font-size:0.88rem; color:var(--text-gray); line-height:1.5;">Como a literatura científica sobre consciência animal pode ser relacionada aos dados oficiais de abate, respeitando o escopo de cada fonte?</p>
                     </div>
                     <div class="obs-card obs-suggestion" onclick="obsAskSuggestion(this)" role="button" tabindex="0">
                         <h4 style="color:var(--primary-navy); margin-bottom:0.8rem; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem;"><span class="material-icons" aria-hidden="true" style="font-size:16px;">live_tv</span> Animais no Entretenimento</h4>
@@ -230,11 +259,11 @@ function renderObsAssistente(c) {
                     </div>
                     <div class="obs-card obs-suggestion" onclick="obsAskSuggestion(this)" role="button" tabindex="0">
                         <h4 style="color:var(--primary-navy); margin-bottom:0.8rem; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem;"><span class="material-icons" aria-hidden="true" style="font-size:16px;">balance</span> Lacunas Legislativas</h4>
-                        <p style="font-size:0.88rem; color:var(--text-gray); line-height:1.5;">Com 47 leis de proteção animal no Brasil e 42 mil denúncias formais de maus-tratos registradas, onde estão as principais falhas no sistema de...</p>
+                        <p style="font-size:0.88rem; color:var(--text-gray); line-height:1.5;">Quais lacunas legais e institucionais aparecem quando comparamos legislação de proteção animal, registros oficiais e literatura científica?</p>
                     </div>
                     <div class="obs-card obs-suggestion" onclick="obsAskSuggestion(this)" role="button" tabindex="0">
                         <h4 style="color:var(--primary-navy); margin-bottom:0.8rem; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem;"><span class="material-icons" aria-hidden="true" style="font-size:16px;">bar_chart</span> Subnotificação Estrutural</h4>
-                        <p style="font-size:0.88rem; color:var(--text-gray); line-height:1.5;">Três dos indicadores do observatório (maus-tratos, abandono, experimentação) têm subnotificação estimada acima de 50%. Que metodologias os...</p>
+                        <p style="font-size:0.88rem; color:var(--text-gray); line-height:1.5;">Como pesquisadores tratam subnotificação e bases incompletas em estudos sobre maus-tratos, abandono e uso de animais em pesquisa?</p>
                     </div>
                 </div>
 
@@ -296,8 +325,8 @@ function obsCollectLocalEvidence() {
             return;
         }
 
-        const url = node.url || node.link || '';
-        const source = node.fonte || node.ref || node.source || '';
+        const url = node.url || node.link || node.fonte_url || node.site || '';
+        const source = node.fonte || node.fonte_label || node.ref || node.source || '';
         const year = node.ano || node.year || '';
         const label = node.label || node.title || node.nome || node.especie || node.area || '';
         const value = node.value || node.valor || node.total || node.casos || node.perc || node.porcent || '';
@@ -426,347 +455,286 @@ async function obsSubmitQuestion() {
 }
 
 function renderObsMetodo(c) {
+    const fontes = [
+        { label: 'IBGE · Pesquisa Trimestral do Abate 2023', url: 'https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes' },
+        { label: 'IBGE · Pesquisa Nacional de Saúde 2019', url: 'https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/28793-pns-2019-sete-em-cada-dez-pessoas-que-procuram-o-mesmo-servico-de-saude-vao-a-rede-publica' },
+        { label: 'CONCEA/MCTI · Relatório de uso animal 2019–2023', url: 'https://www.gov.br/mcti/pt-br/composicao/conselhos/concea/paginas/Destaques/relatorio-de-uso-animal-concea-2019_2023-1-1.pdf' },
+        { label: 'ABEMPET (Abinpet) · Informações gerais do setor', url: 'https://abinpet.org.br/informacoes-gerais-do-setor/' },
+        { label: 'Instituto Pet Brasil via CFMV · população pet, abandono e maus-tratos', url: 'https://www.cfmv.gov.br/combater-os-maus-tratos-aos-animais-e-um-dever-de-todos/comunicacao/noticias/2023/05/04/' },
+        { label: 'ISP-RJ · registros de crueldade e maus-tratos 2022', url: 'https://www.rj.gov.br/isp/node/669' },
+        { label: 'MCTI/CNPq · Tabela 3.4.1 do Censo DGP 2023', url: 'https://www.gov.br/mcti/pt-br/acompanhe-o-mcti/indicadores/paginas/recursos-humanos/indicadores-dos-grupos-de-pesquisa/arquivos/tab_03_04_01_e_2023.pdf' },
+        { label: 'CAPES · Catálogo de Teses e Dissertações', url: 'https://dadosabertos.capes.gov.br/group/catalogo-de-teses-e-dissertacoes-brasil' },
+        { label: 'FAO via Our World in Data · oferta de carne per capita', url: 'https://ourworldindata.org/grapher/meat-supply-per-person?tab=table&time=latest' }
+    ];
+
     c.innerHTML = `
-         <div class="hero-white" style="background:var(--primary-navy); padding: 3.5rem; color:white; border-radius:var(--border-radius); margin-bottom:3rem;">
-            <span class="page-badge" style="background:rgba(255,255,255,0.1); color:var(--accent-yellow); font-size:0.8rem; font-weight:700; padding:6px 15px; border-radius:20px; margin-bottom:1.5rem; display:inline-block;">Metodologia</span>
-            <h1 style="font-size:3.2rem; margin-bottom:1.5rem; font-weight:800;">Como transformamos dados em conhecimento ético?</h1>
-            <p style="max-width:700px; opacity:0.8; font-size:1.15rem; line-height:1.6;">A transparência é fundamental para a credibilidade científica. Conheça as fontes, processos de curadoria e critérios utilizados neste observatório.</p>
+        <div class="hero-white" style="background:var(--primary-navy); padding:3.5rem; color:white; border-radius:var(--border-radius); margin-bottom:3rem;">
+            <span class="page-badge">Metodologia</span>
+            <h1>Como transformamos dados em conhecimento ético?</h1>
+            <p style="max-width:760px; opacity:.88;">A regra editorial do Observatório é simples: dado factual sem fonte rastreável não entra. Cada indicador publicado deve apontar para a pesquisa, relatório, legislação ou registro institucional usado.</p>
         </div>
 
-        <div style="background:var(--white); padding:5rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
-             <div style="margin-bottom:5rem;">
-                <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:2rem;">
-                    <span class="material-icons obs-section-icon" aria-hidden="true">database</span>
-                    <h2 style="font-size:1.8rem; color:var(--primary-navy); font-weight:800;">Fontes de Dados Primárias</h2>
+        <div class="obs-method-shell">
+            <section class="obs-method-section">
+                <div class="obs-section-heading-row">
+                    <div>
+                        <span class="obs-eyebrow">Rastreabilidade</span>
+                        <h2>Pesquisas e bases utilizadas</h2>
+                    </div>
                 </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem; color:var(--primary-navy); font-weight:600;">
-                    <div>• IBGE/ABATE: Pesquisa Trimestral do Abate</div>
-                    <div>• IBGE/PNS: Pesquisa Nacional de Saúde (Pets)</div>
-                    <div>• MAPA/SIF: Sistema de Inspeção Federal</div>
-                    <div>• CONCEA: Relatórios de Experimentação 2019-2023</div>
-                    <div>• ABINPET: Faturamento do Mercado Pet 2024</div>
-                    <div>• CFMV: Inquéritos de Bem-Estar e Abandono</div>
-                    <div>• FAOSTAT: Dados Globais de Consumo</div>
-                    <div>• SSPs: Registros de Maus-Tratos Estaduais</div>
-                </div>
-             </div>
+                <p>Os links abaixo levam diretamente às pesquisas e bases usadas nas páginas do Observatório — não a homepages genéricas.</p>
+                ${researchSourceLinks(fontes)}
+            </section>
 
-             <div style="margin-bottom:5rem;">
-                <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:2rem;">
-                    <span class="material-icons obs-section-icon" aria-hidden="true">description</span>
-                    <h2 style="font-size:1.8rem; color:var(--primary-navy); font-weight:800;">Tratamento e Subnotificação</h2>
+            <section class="obs-method-section">
+                <div class="obs-section-heading-row">
+                    <div>
+                        <span class="obs-eyebrow">Critério de curadoria</span>
+                        <h2>Escopo, comparação e ausência de dados</h2>
+                    </div>
                 </div>
-                <p style="color:var(--text-gray); line-height:1.8; font-size:1.25rem;">Os microdados passam por um processo de limpeza. Para indicadores onde há sabida subnotificação (como casos de crueldade ou abandono), aplicamos notas metodológicas específicas. A subnotificação estrutural é estimada em >50% para maus-tratos e abandono.</p>
-             </div>
+                <p>Não somamos recortes incompatíveis, não transformamos dados estaduais em estimativa nacional e não aplicamos fatores próprios de “correção” sem uma pesquisa publicada que os sustente. Quando uma fonte mede somente estabelecimentos inspecionados, organizações pesquisadas ou registros policiais, esse escopo permanece explícito.</p>
+            </section>
 
-             <div>
-                <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:2rem;">
-                    <span class="material-icons obs-section-icon" aria-hidden="true">balance</span>
-                    <h2 style="font-size:1.8rem; color:var(--primary-navy); font-weight:800;">Perspectiva de Senciência</h2>
+            <section class="obs-method-section">
+                <div class="obs-section-heading-row">
+                    <div>
+                        <span class="obs-eyebrow">Senciência</span>
+                        <h2>Referência conceitual</h2>
+                    </div>
                 </div>
-                <p style="color:var(--text-gray); line-height:1.8; margin-bottom:2rem; font-size:1.25rem;">Este observatório baseia-se na <strong>Declaração de Cambridge sobre Consciência (2012)</strong>. O objetivo é fomentar a reflexão crítica sobre a objetificação dos animais não humanos.</p>
-                
-                <div style="background:rgba(252,163,17,0.05); padding:3rem; border-radius:25px; border-left:10px solid var(--accent-orange);">
-                    <p style="font-size:1.2rem; font-style:italic; color:var(--primary-navy); margin-bottom:1rem; line-height:1.6;">"A ausência de neocórtex não parece impedir que um organismo experimente estados afetivos... animais não humanos possuem os substratos neuroanatômicos dos estados de consciência."</p>
-                    <p style="font-weight:700; color:var(--accent-yellow);">— The Cambridge Declaration on Consciousness</p>
-                </div>
-             </div>
-        </div>
-    `;
+                <p>A discussão sobre consciência e estados afetivos em animais não humanos toma como uma das referências históricas a <strong>Cambridge Declaration on Consciousness (2012)</strong>. O Observatório usa essa referência como enquadramento crítico, não como substituto para os dados empíricos de cada seção.</p>
+                ${researchSourceLink('Cambridge Declaration on Consciousness · PDF oficial da conferência', 'https://fcmconference.org/img/CambridgeDeclarationOnConsciousness.pdf', '2012')}
+            </section>
+        </div>`;
 }
 
 function renderObsVisao(c) {
     const db = window.OBSERVATORIO_DB.visao_geral;
     const kpisHTML = db.kpis.map(k => `
-        <div class="obs-kpi-card" style="background:#2C2C33; border-radius:20px; padding:1.5rem; text-align:left; border:1px solid rgba(255,255,255,0.05); position:relative; overflow:hidden;">
-            <div style="font-size:0.75rem; color:rgba(255,255,255,0.7); font-weight:700; text-transform:uppercase; margin-bottom:0.5rem; letter-spacing:1px;">${k.label}</div>
-            <div style="font-size:1.8rem; color:white; font-weight:800; font-family:'Source Serif 4';">${k.value}</div>
-            <div class="obs-micro-source">
-                <a href="https://${k.url}" target="_blank" rel="noopener" style="color:var(--accent-yellow);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;margin-top:8px;">
-                    <span class="material-icons" aria-hidden="true" style="font-size:14px;">${OBS_MATERIAL_ICONS[k.icon] || 'analytics'}</span> ${k.fonte} · ${k.ano} <span class="material-icons" aria-hidden="true" style="font-size:13px;">open_in_new</span>
-                </a>
-            </div>
-            <span class="material-icons" aria-hidden="true" style="position:absolute; right: -10px; bottom: -10px; font-size:80px; color:rgba(255,255,255,0.15); line-height:1;">${OBS_MATERIAL_ICONS[k.icon] || 'circle'}</span>
-        </div>
-    `).join('');
+        <article class="obs-kpi-card obs-kpi-card--sourced">
+            <div class="obs-kpi-label">${obsEscapeHTML(k.label)}</div>
+            <div class="obs-kpi-value">${obsEscapeHTML(k.value)}</div>
+            ${microSource(k.fonte, k.ano, k.url)}
+            <span class="material-icons obs-kpi-watermark" aria-hidden="true">${OBS_MATERIAL_ICONS[k.icon] || 'analytics'}</span>
+        </article>`).join('');
 
     c.innerHTML = `
-        <div style="background:var(--primary-navy); padding: 5rem 3.5rem; color:white; border-radius:30px; margin-bottom:2.5rem; border:1px solid rgba(255,255,255,0.05); position:relative; overflow:hidden;">
-            <div style="position:relative; z-index:2;">
-                <span class="page-badge" style="background:rgba(255,255,255,0.08); color:var(--accent-yellow); font-size:0.8rem; font-weight:700; padding:8px 20px; border-radius:30px; margin-bottom:1.5rem; display:inline-block;">Visão Geral — Paradoxo Ético</span>
-                <h1 style="font-size:3.2rem; line-height:1.1; margin-bottom:1.5rem; font-weight:800; max-width:850px;">O que a ciência nos diz sobre nossa relação ética com os animais?</h1>
-                <p style="font-size:1.25rem; opacity:0.85; max-width:750px; line-height:1.6; font-weight:400;">O observatório apresenta o paradoxo central: enquanto investimos R$ 75,4 bilhões no bem-estar de algumas espécies, institucionalizamos o uso e o sofrimento de bilhões de outras.</p>
-            </div>
-            <div style="position:absolute; right: -10%; top: -10%; width: 50% ; height:120% ; background: radial-gradient(circle, rgba(252,163,17,0.1) 0%, rgba(26,28,48,0) 70%); filter:blur(40px); z-index:1;"></div>
+        <div class="obs-overview-hero">
+            <span class="page-badge">Visão Geral — Paradoxo Ético</span>
+            <h1>O que diferentes pesquisas revelam sobre nossa relação com os animais?</h1>
+            <p>${obsEscapeHTML(db.card_narrativo)}</p>
+            ${researchSourceLinks([
+                {label:'ABEMPET (Abinpet) · mercado pet 2024', url:'https://abinpet.org.br/informacoes-gerais-do-setor/'},
+                {label:'IBGE · Pesquisa Trimestral do Abate 2023', url:'https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes'}
+            ])}
         </div>
 
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1.5rem; margin-bottom:3rem;">
-            ${kpisHTML}
-        </div>
+        <div class="obs-kpi-grid">${kpisHTML}</div>
 
-        <div style="background:var(--accent-yellow); color:var(--on-accent); padding:2rem 3rem; border-radius:20px; display:flex; align-items:center; justify-content:space-between; margin-bottom:3rem;">
+        <div class="obs-crossings-banner">
             <div>
-                 <h3 style="margin:0; font-weight:800; display:flex; align-items:center; gap:0.5rem;"><span class="material-icons" aria-hidden="true" style="font-size:22px;">search</span> Explorar Cruzamentos Inéditos</h3>
-                 <p style="margin:0.5rem 0 0; color:var(--on-accent); opacity:0.85;">Analises exclusivas do AlterECO correlacionando economia, demografia e ética.</p>
+                <h3><span class="material-icons" aria-hidden="true">search</span> Explorar cruzamentos com fontes</h3>
+                <p>As análises aproximam bases distintas e mostram, em cada card, quais pesquisas sustentam a comparação.</p>
             </div>
-            <button onclick="renderCruzamentosIneditos()" style="background:var(--primary-navy); color:white; border:none; padding:12px 30px; border-radius:15px; cursor:pointer; font-weight:700;">Ver Análises</button>
+            <button onclick="renderCruzamentosIneditos()">Ver análises</button>
         </div>
 
-        ${sourcesFooter([
-            {label:'ABINPET 2024', url:'https://abinpet.org.br', ano:2024},
-            {label:'IBGE/ABATE', url:'https://ibge.gov.br', ano:2023},
-            {label:'CONCEA', url:'https://gov.br/mcti', ano:'2019-23'},
-            {label:'CFMV', url:'https://cfmv.gov.br', ano:2022},
-            {label:'CNPq/Lattes', url:'https://cnpq.br', ano:2023}
-        ])}
-
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem; align-items:flex-start;">
-            <div style="background:var(--white); padding:3rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); box-shadow:0 10px 40px rgba(0,0,0,0.03);">
-                <h2 style="color:var(--primary-navy); margin-bottom:1.5rem; font-size:1.8rem; font-weight:800;">Nota Metodológica Global</h2>
-                <p style="color:var(--text-gray); line-height:1.8; font-size:1.05rem;">${db.nota_metodologica}</p>
-            </div>
-
-            <div style="background:#2C2C33; padding:3rem; border-radius:30px; color:white; display:flex; flex-direction:column; justify-content:center;">
-                <h2 style="color:var(--accent-yellow); margin-bottom:1.5rem; font-size:1.8rem; font-weight:800;">A ciência convida ao pensar</h2>
-                <p style="font-size:1.15rem; opacity:0.9; line-height:1.7;">${db.card_narrativo}</p>
+        <div class="obs-grid-2">
+            <article class="obs-card">
+                <span class="obs-eyebrow">Nota metodológica</span>
+                <h2>O que fazemos com os dados</h2>
+                <p>${obsEscapeHTML(db.nota_metodologica)}</p>
+                <button type="button" class="obs-secondary-action" onclick="renderObsSubpage('metodo')"><span class="material-icons" aria-hidden="true">description</span> Ver metodologia e fontes</button>
+            </article>
+            <article class="obs-card obs-card--dark">
+                <h2>A ciência convida ao pensar</h2>
+                <p>${obsEscapeHTML(db.card_narrativo)}</p>
                 <div class="obs-paradox-actions">
-                    <button type="button" class="obs-paradox-btn obs-paradox-btn--primary" onclick="openParadoxoX001()">
-                        <span class="material-icons" aria-hidden="true">travel_explore</span>
-                        <span>Explorar Paradoxo X001</span>
-                    </button>
-                    <button type="button" class="obs-paradox-btn obs-paradox-btn--secondary" onclick="renderObsSubpage('assistente')">
-                        <span class="material-icons" aria-hidden="true">smart_toy</span>
-                        <span>Falar com Assistente</span>
-                    </button>
+                    <button type="button" class="obs-paradox-btn obs-paradox-btn--primary" onclick="openParadoxoX001()"><span class="material-icons" aria-hidden="true">travel_explore</span><span>Explorar Paradoxo X001</span></button>
+                    <button type="button" class="obs-paradox-btn obs-paradox-btn--secondary" onclick="renderObsSubpage('assistente')"><span class="material-icons" aria-hidden="true">smart_toy</span><span>Falar com Assistente</span></button>
                 </div>
-            </div>
-        </div>
-    `;
+            </article>
+        </div>`;
 }
 
 function renderObsPets(c) {
     const db = window.OBSERVATORIO_DB.pets;
+    const maxPop = Math.max(...db.populacao.map(item => Number(item.valor) || 0), 1);
     c.innerHTML = `
-        <div style="background:var(--white); padding:3.5rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); margin-bottom:2rem;">
-            <h1 style="color:var(--primary-navy); font-size:2.5rem; font-weight:800;">Animais Domésticos no Brasil</h1>
-            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1.5rem; margin-top:3rem;">
+        <section class="obs-card obs-section-card">
+            <span class="obs-eyebrow">IBGE · Pesquisa Nacional de Saúde</span>
+            <h1>Animais de companhia nos domicílios brasileiros</h1>
+            <div class="obs-grid-3 obs-data-card-grid">
                 ${db.domicilios.map(d => `
-                    <div style="background:var(--bg-light); padding:1.5rem; border-radius:20px; text-align:center;">
-                        <div style="font-size:2.2rem; font-weight:800; color:var(--primary-navy);">${d.valor}</div>
-                        <div style="font-size:0.85rem; color:var(--text-gray); font-weight:700;">Domicílios ${d.label}</div>
-                    </div>
-                `).join('')}
+                    <article class="obs-data-card">
+                        <strong>${obsEscapeHTML(d.valor)}</strong>
+                        <h3>Domicílios ${obsEscapeHTML(d.label)}</h3>
+                        ${researchSourceLink(d.fonte, d.url, '2019')}
+                    </article>`).join('')}
             </div>
-            ${sourceBadge('IBGE/PNS', 2022, 'ibge.gov.br')}
-        </div>
+        </section>
 
-        <div style="display:grid; grid-template-columns: 1.5fr 1fr; gap:2rem;">
-            <div style="background:var(--white); padding:3rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
-                <h3 style="margin-bottom:2rem; font-weight:800; color:var(--primary-navy);">População Total (Milhões)</h3>
-                ${sourceBadge('IBGE/PNS', 2022, 'ibge.gov.br')}
+        <div class="obs-grid-2">
+            <section class="obs-card">
+                <span class="obs-eyebrow">Estimativa setorial · 2021</span>
+                <h2>População pet por grupo</h2>
                 ${db.populacao.map(p => `
-                    <div style="margin-bottom:1.5rem;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem; font-weight:700;">
-                            <span>${p.especie}</span>
-                            <span>${p.valor} mi</span>
-                        </div>
-                        <div style="height:12px; background:var(--bg-gray); border-radius:6px; overflow:hidden;">
-                            <div style="width:${(p.valor/68)*100}%; height:100%; background:var(--accent-orange);"></div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div style="background:var(--primary-navy); border-radius:30px; padding:3rem; color:white; display:flex; align-items:center;">
-                <div>
-                    <h3 style="color:var(--accent-yellow); margin-bottom:1.5rem; font-weight:800;">Evolução 2013-2022</h3>
-                    <p style="opacity:0.8; line-height:1.7; font-size:1.25rem;">O número de cães saltou de 52 mi para 68 mi em uma década. Gatos dobraram sua presença, evidenciando uma "gatificação" dos lares urbanos brasileiros.</p>
-                </div>
-            </div>
-        </div>
-    `;
+                    <div class="obs-bar-row">
+                        <div class="obs-bar-row-label"><span>${obsEscapeHTML(p.especie)}</span><strong>${obsEscapeHTML(p.valor)} mi</strong></div>
+                        <div class="obs-bar-track"><div class="obs-bar-fill" style="width:${(Number(p.valor)/maxPop)*100}%"></div></div>
+                    </div>`).join('')}
+                ${researchSourceLink(db.populacao_fonte.fonte, db.populacao_fonte.url, db.populacao_fonte.ano)}
+            </section>
+
+            <section class="obs-card obs-card--dark">
+                <span class="obs-eyebrow">PNS 2013 → PNS 2019</span>
+                <h2>Mudança na presença nos domicílios</h2>
+                ${db.evolucao_domicilios.map(item => `
+                    <div class="obs-evolution-row">
+                        <h3>${obsEscapeHTML(item.especie)}</h3>
+                        <p><strong>${obsEscapeHTML(item.inicial)}</strong> (${item.ano_inicial}) → <strong>${obsEscapeHTML(item.final)}</strong> (${item.ano_final})</p>
+                        ${researchSourceLinks([
+                            {label:item.fonte_inicial, url:item.url_inicial, meta:item.ano_inicial},
+                            {label:item.fonte_final, url:item.url_final, meta:item.ano_final}
+                        ])}
+                    </div>`).join('')}
+            </section>
+        </div>`;
 }
 
 function renderObsEconomia(c) {
     const db = window.OBSERVATORIO_DB.economia;
     c.innerHTML = `
-        <div style="display:grid; grid-template-columns: 2fr 1.2fr; gap:2rem; margin-bottom:2rem;">
-            <div style="background:var(--white); border-radius:30px; padding:4rem; border:1px solid rgba(128,128,128,0.15);">
-                <h1 style="color:var(--primary-navy); font-size:2.5rem; font-weight:800; margin-bottom:1rem;">Economia Pet 2024</h1>
-                <h2 style="color:var(--accent-yellow); font-size:4rem; font-weight:800; margin-bottom:3rem;">R$ 75,4 Bilhões</h2>
-                
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem;">
+        <div class="obs-grid-2 obs-economy-grid">
+            <section class="obs-card">
+                <span class="obs-eyebrow">Economia pet · 2024</span>
+                <h1>${obsEscapeHTML(db.faturamento_total.valor)}</h1>
+                <p class="obs-data-highlight">${obsEscapeHTML(db.faturamento_total.variacao)}</p>
+                ${researchSourceLink(db.faturamento_total.fonte, db.faturamento_total.url, db.faturamento_total.ano)}
+                <div class="obs-grid-2 obs-segment-grid">
                     ${db.faturamento_2024.map(s => `
-                        <div style="border-bottom:1px solid rgba(128,128,128,0.15); padding-bottom:1.2rem;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                                <span style="font-weight:800; font-size:1.4rem; color:var(--primary-navy);">${s.segmento}</span>
-                                <span style="color:var(--primary-navy); font-size:2.2rem; font-weight:900;">${s.porcent}</span>
-                            </div>
-                            <div style="color:var(--text-gray); font-size:1rem; font-weight:500;">Faturamento: R$ ${s.valor} bi</div>
-                        </div>
-                    `).join('')}
+                        <article class="obs-segment-card">
+                            <h3>${obsEscapeHTML(s.segmento)}</h3>
+                            <strong>${obsEscapeHTML(s.porcent)}</strong>
+                            <p>R$ ${obsEscapeHTML(s.valor)} bi</p>
+                            ${researchSourceLink(db.faturamento_total.fonte, db.faturamento_total.url, db.faturamento_total.ano)}
+                        </article>`).join('')}
                 </div>
-            </div>
-
-            <div style="display:flex; flex-direction:column; gap:1.5rem;">
+            </section>
+            <aside class="obs-stack">
                 ${db.cruzamentos.map(cr => `
-                    <div style="background:#2C2C33; color:white; padding:2.5rem; border-radius:25px; border-left:6px solid var(--accent-orange);">
-                        <h4 style="color:var(--accent-yellow); margin-bottom:1rem; font-size:1.2rem; font-weight:800;">${cr.title}</h4>
-                        <p style="font-size:1rem; line-height:1.6; opacity:0.9;">${cr.text}</p>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    `;
+                    <article class="obs-card obs-card--dark">
+                        <h3>${obsEscapeHTML(cr.title)}</h3>
+                        <p>${obsEscapeHTML(cr.text)}</p>
+                        ${researchSourceLink(cr.fonte, cr.url, 2024)}
+                    </article>`).join('')}
+            </aside>
+        </div>`;
 }
 
 function renderObsAbandono(c) {
-    const db = window.OBSERVATORIO_DB.maus_tratos;
+    const db = window.OBSERVATORIO_DB.abandono;
     c.innerHTML = `
-        <div style="background:#F2DEDE; color:#A94442; padding:3rem; border-radius:30px; margin-bottom:2rem; border:1px solid #EBCCD1;">
-             <h1 style="font-size:2.5rem; font-weight:800; margin-bottom:1rem;">Abandono Animal Estrutural</h1>
-             <p style="font-size:1.2rem; opacity:0.9;">Estima-se que 4,2% de todos os animais domesticados no Brasil sofrerão abandono em algum momento da vida.</p>
+        <section class="obs-card obs-section-card">
+            <span class="obs-eyebrow">Escopo do levantamento · ${obsEscapeHTML(db.ano)}</span>
+            <h1>Abandono e tutela por ONGs/protetores</h1>
+            <p>O dado publicado aqui é o recorte descrito pelo Instituto Pet Brasil e reproduzido pelo CFMV — não uma estimativa de todos os animais abandonados no país.</p>
+            ${researchSourceLink(db.fonte, db.url, db.ano)}
+        </section>
+        <div class="obs-grid-2 obs-data-card-grid">
+            ${db.indicadores.map(item => `
+                <article class="obs-data-card">
+                    <span class="obs-eyebrow">${obsEscapeHTML(item.label)}</span>
+                    <strong>${obsEscapeHTML(item.value)}</strong>
+                    <p>${obsEscapeHTML(item.desc)}</p>
+                    ${researchSourceLink(db.fonte, db.url, db.ano)}
+                </article>`).join('')}
         </div>
-
-        <div style="display:grid; grid-template-columns: 1fr 1.5fr; gap:2.5rem;">
-            <div style="background:var(--white); padding:3rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
-                <h3 style="color:var(--primary-navy); font-weight:800; margin-bottom:2rem;">Causas do Abandono</h3>
-                ${db.causa_abandono.map(ca => `
-                    <div style="margin-bottom:1.8rem;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:0.6rem;">
-                            <span>${ca.causa}</span>
-                            <span style="font-weight:800;">${ca.perc}</span>
-                        </div>
-                        <div style="height:10px; background:var(--bg-gray); border-radius:5px;">
-                            <div style="width:${ca.perc}; height:100%; background:#D32F2F;"></div>
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div style="background:var(--primary-navy); border-radius:30px; padding:4rem; color:white;">
-                <h2 style="color:var(--accent-yellow); margin-bottom:1.5rem; font-weight:800;">O Impacto da Pandemia</h2>
-                <p style="font-size:1.15rem; line-height:1.7; opacity:0.9;">O "boom" de adoções em 2020 foi seguido por uma onda de abandonos em 2021-22, refletindo a falta de preparo para a tutoria responsável e a precarização econômica pós-isolamento.</p>
-                <div style="margin-top:2.5rem; padding:1.5rem; background:rgba(255,255,255,0.05); border-radius:15px; font-size:0.9rem; border-left:4px solid white;">
-                    <strong>DADO CRÍTICO:</strong> Municípios com estrutura de controle populacional (castração pública) representam menos de 30% do total nacional.
-                </div>
-            </div>
-        </div>
-    `;
+        <div class="obs-data-note obs-data-note--prominent"><strong>Limite de interpretação:</strong> ${obsEscapeHTML(db.nota)}</div>`;
 }
 
 function renderObsConsumo(c) {
     const db = window.OBSERVATORIO_DB.abate;
     c.innerHTML = `
-        <div style="background:var(--white); padding:4rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); margin-bottom:2rem;">
-            <h1 style="color:var(--primary-navy); font-size:2.5rem; font-weight:800; margin-bottom:3rem;">Animais para Consumo (Abate 2023)</h1>
-            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1.5rem;">
+        <section class="obs-card obs-section-card">
+            <span class="obs-eyebrow">IBGE · 2023</span>
+            <h1>Abate de animais em estabelecimentos sob inspeção sanitária</h1>
+            <div class="obs-grid-3 obs-data-card-grid">
                 ${db.dados_2023.map(d => `
-                    <div style="background:var(--bg-light); padding:2.5rem; border-radius:20px; border:1px solid rgba(128,128,128,0.15); text-align:center;">
-                        <div style="font-size:0.9rem; color:var(--text-gray); font-weight:800; text-transform:uppercase;">${d.especie}</div>
-                        <div style="font-size:2.2rem; font-weight:900; color:var(--primary-navy); margin:1rem 0;">${d.valor}</div>
-                        <div style="display:inline-block; padding:5px 12px; background:rgba(211,47,47,0.1) ; color:#D32F2F; border-radius:10px; font-weight:800; font-size:0.85rem;">Variação: ${d.variacao}</div>
-                    </div>
-                `).join('')}
+                    <article class="obs-data-card">
+                        <h3>${obsEscapeHTML(d.especie)}</h3>
+                        <strong>${obsEscapeHTML(d.valor)}</strong>
+                        <p>Variação anual: ${obsEscapeHTML(d.variacao)}</p>
+                        ${researchSourceLink(d.fonte, d.url, 2023)}
+                    </article>`).join('')}
             </div>
-        </div>
+        </section>
 
-        <div style="display:grid; grid-template-columns: 1fr 1.2fr; gap:2.5rem;">
-            <div style="background:#2C2C33; color:white; padding:3rem; border-radius:30px;">
-                <h3 style="color:var(--accent-yellow); margin-bottom:2.5rem; font-weight:800;">Consumo per Capita Global</h3>
-                <div style="display:flex; flex-direction:column; gap:1.5rem;">
-                    ${db.consumo_per_capita.map(p => `
-                        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.8rem;">
-                            <span style="font-size:1.25rem;">${p.pais}</span>
-                            <span style="font-weight:900; color:var(--accent-yellow); font-size:1.2rem;">${p.kg} kg/ano</span>
-                        </div>
-                    `).join('')}
+        <div class="obs-grid-2">
+            <section class="obs-card obs-card--dark">
+                <span class="obs-eyebrow">Comparação internacional · 2023</span>
+                <h2>Oferta de carne per capita</h2>
+                <div class="obs-data-list">
+                    ${db.oferta_per_capita.map(p => `<div class="obs-data-list-row"><span>${obsEscapeHTML(p.pais)}</span><strong>${Number(p.kg).toLocaleString('pt-BR', {maximumFractionDigits:2})} kg/ano</strong></div>`).join('')}
                 </div>
-            </div>
-            
-            <div style="background:var(--white); padding:4rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); display:flex; flex-direction:column; justify-content:center;">
-                <h3 style="color:var(--primary-navy); margin-bottom:1.5rem; font-size:1.6rem; font-weight:800;">Escala e Invisibilidade</h3>
-                <p style="color:var(--text-gray); line-height:1.8; font-size:1.15rem;">${db.analise_etica}</p>
-                <div style="margin-top:2rem; padding:1.5rem; background:rgba(0,0,0,0.02); border-radius:15px; font-size:0.85rem; color:var(--text-gray);">
-                    <strong>Metodologia:</strong> Consumo aparente consolidado. A escala logarítmica é necessária para visualizar bovinos junto ao colossal volume de aves.
-                </div>
-            </div>
-        </div>
-    `;
+                ${researchSourceLink(db.oferta_fonte.fonte, db.oferta_fonte.url, db.oferta_fonte.ano)}
+                <p class="obs-data-note">${obsEscapeHTML(db.oferta_fonte.nota)}</p>
+            </section>
+            <section class="obs-card">
+                <span class="obs-eyebrow">Leitura de escala</span>
+                <h2>O que pode ser afirmado a partir da base</h2>
+                <p>${obsEscapeHTML(db.analise_etica)}</p>
+                ${researchSourceLink('IBGE · Pesquisa Trimestral do Abate', db.analise_url, 2023)}
+                <p class="obs-data-note"><strong>Importante:</strong> abate sob inspeção e oferta alimentar per capita são indicadores diferentes. Eles não devem ser somados nem tratados como ingestão individual observada.</p>
+            </section>
+        </div>`;
 }
 
 function renderObsExperimentacao(c) {
     const db = window.OBSERVATORIO_DB.experimentacao;
     c.innerHTML = `
-        <div style="background:#E5F8ED; padding:4rem; border-radius:30px; margin-bottom:2rem; border:1px solid #C8E6C9; position:relative;">
-            <div style="position:absolute; top:2rem; right:2rem;">
-                ${sourceBadge('CONCEA', '2019-2023', 'gov.br/mcti/pt-br/composicao/conselhos/concea/relatorios-de-uso-de-animais-em-ensino-e-pesquisa')}
-            </div>
-            <h1 style="color:#2E7D32; font-weight:800; font-size:2.5rem; margin-bottom:1rem;">Uso em Ensino e Pesquisa (Brasil)</h1>
-            <h2 style="color:#1B5E20 ; font-size:2rem; margin:0;">CONCEA: ${db.total_periodo} indivíduos</h2>
+        <section class="obs-card obs-section-card">
+            <span class="obs-eyebrow">CONCEA/MCTI · relatório oficial</span>
+            <h1>Uso de animais em ensino e pesquisa científica</h1>
+            <p class="obs-data-highlight">${obsEscapeHTML(db.total_periodo)}</p>
+            ${researchSourceLink('CONCEA/MCTI · Relatório de Uso Animal 2019–2023', db.indicadores[0].url, '2019–2023')}
+        </section>
+        <div class="obs-grid-2 obs-data-card-grid">
+            ${db.indicadores.map(item => `
+                <article class="obs-data-card">
+                    <span class="obs-eyebrow">${obsEscapeHTML(item.titulo)}</span>
+                    <strong>${obsEscapeHTML(item.valor)}</strong>
+                    <p>${obsEscapeHTML(item.texto)}</p>
+                    ${researchSourceLink(item.fonte, item.url)}
+                </article>`).join('')}
         </div>
-
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem;">
-             <div style="background:var(--white); padding:3.5rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
-                <h3 style="margin-bottom:2rem; font-weight:800; color:var(--primary-navy);">Distribuição por Espécie</h3>
-                ${db.especies_relativo.map(e => `
-                    <div style="margin-bottom:1.8rem;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:0.6rem;">
-                            <span style="font-weight:700;">${e.nome}</span>
-                            <span style="font-weight:800; color:var(--mint-teal);">${e.perc}</span>
-                        </div>
-                        <div style="height:10px; background:var(--bg-gray); border-radius:5px; overflow:hidden;">
-                            <div style="width:${e.perc}; height:100%; background:var(--mint-teal);"></div>
-                        </div>
-                    </div>
-                `).join('')}
-             </div>
-
-             <div style="background:var(--white); padding:3.5rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
-                <h3 style="margin-bottom:2.5rem; font-weight:800; color:var(--primary-navy);">Finalidade Declarada</h3>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem;">
-                    ${db.finalidade.map(f => `
-                        <div style="padding:2rem 1.5rem; background:var(--bg-light); border-radius:20px; text-align:center;">
-                            <div style="font-size:2.2rem; font-weight:900; color:var(--primary-navy);">${f.perc}</div>
-                            <div style="font-size:0.85rem; font-weight:800; color:var(--text-gray); text-transform:uppercase;">${f.label}</div>
-                        </div>
-                    `).join('')}
-                </div>
-                <div style="margin-top:2.5rem; padding:1.5rem; background:#FFF4E5; border-radius:15px; border-left:6px solid #FCA311;">
-                    <p style="font-size:0.9rem; color:#664d03; margin:0; line-height:1.5;"><strong>LIMITAÇÃO:</strong> ${db.limitacao}</p>
-                </div>
-             </div>
-        </div>
-    `;
+        <div class="obs-data-note obs-data-note--prominent"><strong>Critério de publicação:</strong> ${obsEscapeHTML(db.limitacao)}</div>`;
 }
 
 function renderObsViolencia(c) {
     const db = window.OBSERVATORIO_DB.maus_tratos;
     c.innerHTML = `
-        <div style="background:var(--white); padding:4rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); margin-bottom:2rem;">
-            <h1 style="color:var(--primary-navy); font-size:2.5rem; font-weight:800; margin-bottom:1rem;">Maus-Tratos e Insegurança Animal</h1>
-            <p style="color:var(--text-gray); font-size:1.15rem; margin-bottom:3.5rem;">Não existe base nacional consolidada. Os dados abaixo refletem recortes estaduais agregados.</p>
-            
-            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1.5rem;">
-                ${db.estados.map(e => `
-                    <div style="background:var(--bg-light); border:1px solid rgba(128,128,128,0.15); padding:2.5rem; border-radius:25px; display:flex; flex-direction:column;">
-                        <div style="font-size:0.85rem; font-weight:800; color:var(--text-gray); text-transform:uppercase; letter-spacing:1px;">${e.uf}</div>
-                        <div style="font-size:2.2rem; font-weight:900; color:var(--primary-navy); margin:1rem 0;">${e.casos || e.variacao}</div>
-                        <div style="font-size:0.8rem; color:#D32F2F; font-weight:800; margin-bottom:1.5rem;">${e.status || 'Cruzamento Histórico'}</div>
-                        ${e.link ? `<a href="${e.link}" target="_blank" rel="noopener" style="margin-top:auto; font-size:0.85rem; color:var(--primary-navy); font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><span class="material-icons" aria-hidden="true" style="font-size:14px;">open_in_new</span> Fonte de Dados</a>` : ''}
-                    </div>
-                `).join('')}
-            </div>
+        <section class="obs-card obs-section-card">
+            <span class="obs-eyebrow">Recortes oficiais · não comparáveis diretamente</span>
+            <h1>Maus-tratos: registros e fiscalizações</h1>
+            <p>${obsEscapeHTML(db.nota)}</p>
+        </section>
+        <div class="obs-grid-2 obs-data-card-grid">
+            ${db.estados.map(e => `
+                <article class="obs-data-card">
+                    <span class="obs-eyebrow">${obsEscapeHTML(e.uf)} · ${obsEscapeHTML(e.ano)}</span>
+                    <strong>${obsEscapeHTML(e.casos)}</strong>
+                    <h3>${obsEscapeHTML(e.status)}</h3>
+                    ${researchSourceLink(e.fonte, e.link, e.ano)}
+                </article>`).join('')}
         </div>
-        
-        <div style="background:var(--primary-navy); padding:4rem; border-radius:30px; color:white; border:1px solid rgba(255,255,255,0.05);">
-            <h2 style="color:var(--accent-yellow); margin-bottom:1.5rem; font-weight:800; font-size:1.8rem;">O Despertar Legislativo: Lei Sansão</h2>
-            <p style="font-size:1.2rem; line-height:1.7; opacity:0.9; max-width:850px;">A Lei 14.064/2020 elevou a pena para 2 a 5 anos de reclusão. Este rigor causou um aumento de 95% nas notificações formais em estados como RN, indicando que a sociedade está mais vigilante e os criminosos mais expostos.</p>
-            <div style="margin-top:2.5rem; padding:1.5rem; background:rgba(255,255,255,0.05); border-radius:15px; font-size:0.9rem; color:var(--text-gray);">
-                *Estimativa agregada de 49.275 registros anuais baseada em dados parciais das SSPs de 2022.
-            </div>
-        </div>
-    `;
+        <section class="obs-card obs-card--dark">
+            <span class="obs-eyebrow">Legislação federal</span>
+            <h2>${obsEscapeHTML(db.lei.titulo)}</h2>
+            <p>${obsEscapeHTML(db.lei.texto)}</p>
+            ${researchSourceLink(db.lei.fonte, db.lei.url, 2020)}
+        </section>`;
 }
 
 const OBS_ATLAS_CATEGORY_META = {
@@ -943,7 +911,7 @@ function obsAtlasRenderList() {
                 <div class="obs-atlas-list-actions">
                     <button type="button" class="obs-secondary-action" data-atlas-open="${item.id}">
                         <span class="material-icons" aria-hidden="true">info</span>
-                        Ver detalhes
+                        Ver detalhes e fonte
                     </button>
                 </div>
             </article>
@@ -1172,8 +1140,8 @@ function renderObsAtlas(c) {
                 </div>
                 <div class="obs-edu-kpi">
                     <strong>${continents}</strong>
-                    <h2>Continentes cobertos</h2>
-                    <p>Américas, Europa, África, Ásia e Oceania, com rede temática por categoria.</p>
+                    <h2>Regiões continentais</h2>
+                    <p>América do Norte, América do Sul, Europa, África, Ásia e Oceania na curadoria atual.</p>
                 </div>
                 <div class="obs-edu-kpi">
                     <strong>4</strong>
@@ -1261,37 +1229,20 @@ function renderObsAtlas(c) {
 function renderObsEntretenimento(c) {
     const db = window.OBSERVATORIO_DB.entretenimento;
     c.innerHTML = `
-        <div style="background:var(--white); padding:4rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); margin-bottom:2rem;">
-            <h1 style="color:var(--primary-navy); font-size:3rem; font-weight:800; margin-bottom:1rem;">Animais no Entretenimento</h1>
-            <p style="color:var(--text-gray); font-size:1.25rem; max-width:800px; margin-bottom:3rem;">Do cativeiro em zoológicos às tradições culturais dos rodeios, o Brasil apresenta uma diversidade de situações de uso animal recreativo.</p>
-            
-            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1.5rem;">
-                <div style="background:var(--bg-light); padding:2rem; border-radius:25px; text-align:center;">
-                    <div style="font-size:3.2rem; font-weight:900; color:var(--primary-navy);">${db.zoos.total}</div>
-                    <div style="font-size:1.05rem; font-weight:800; color:var(--text-gray);">Zoológicos e Criadouros</div>
-                    <a href="${db.zoos.link}" target="_blank" style="font-size:0.7rem; color:var(--primary-navy); text-decoration:underline; display:inline-block; margin-top:1rem;">Fonte: IBAMA/SISPASS <span class="material-icons" aria-hidden="true" style="font-size:13px;">open_in_new</span></a>
-                </div>
-                <div style="background:var(--bg-light); padding:2rem; border-radius:25px; text-align:center;">
-                    <div style="font-size:2.8rem; font-weight:900; color:var(--primary-navy);">${db.rodeios.total}</div>
-                    <div style="font-size:0.85rem; font-weight:800; color:var(--text-gray);">Rodeios Estimados/Ano</div>
-                    <a href="${db.rodeios.link}" target="_blank" style="font-size:0.7rem; color:var(--primary-navy); text-decoration:underline; display:inline-block; margin-top:1rem;">Fonte: CNAR <span class="material-icons" aria-hidden="true" style="font-size:13px;">open_in_new</span></a>
-                </div>
-                <div style="background:var(--bg-light); padding:2rem; border-radius:25px; text-align:center;">
-                    <div style="font-size:2.8rem; font-weight:900; color:var(--primary-navy);">${db.aquarios.total}</div>
-                    <div style="font-size:0.85rem; font-weight:800; color:var(--text-gray);">Aquários Principais</div>
-                    <p style="font-size:0.7rem; color:var(--text-gray); margin-top:1rem;">Ref: IBAMA (Grandes Estruturas)</p>
-                </div>
-            </div>
-        </div>
-
-        <div style="background:#2C2C33; color:white; padding:4rem; border-radius:30px;">
-            <h2 style="color:var(--accent-yellow); margin-bottom:2rem; font-weight:800;">Análise de Bem-Estar em Zoológicos</h2>
-            <p style="font-size:1.15rem; line-height:1.7; opacity:0.9; margin-bottom:2rem;">O conceito moderno de zoológico migrou da exibição puramente recreativa para a conservação e pesquisa. No entanto, o confinamento de espécies de largo território (grandes felinos, primatas e elefantes) continua sendo o ponto de maior tensão ética e científica.</p>
-            <div style="padding:20px; background:rgba(255,255,255,0.05); border-radius:20px; border-left:4px solid var(--accent-orange);">
-                <strong>Controversia:</strong> Modelos virtuais e realidade aumentada estão sendo propostos como substitutos para a exibição de animais vivos em ambientes confinados.
-            </div>
-        </div>
-    `;
+        <section class="obs-card obs-section-card">
+            <span class="obs-eyebrow">Bases regulatórias verificáveis</span>
+            <h1>Animais, cativeiro e entretenimento</h1>
+            <p>${obsEscapeHTML(db.nota)}</p>
+        </section>
+        <div class="obs-grid-2 obs-data-card-grid">
+            ${db.referencias.map(item => `
+                <article class="obs-data-card">
+                    <span class="obs-eyebrow">${obsEscapeHTML(item.titulo)}</span>
+                    <strong>${obsEscapeHTML(item.valor)}</strong>
+                    <p>${obsEscapeHTML(item.texto)}</p>
+                    ${researchSourceLink(item.fonte, item.url)}
+                </article>`).join('')}
+        </div>`;
 }
 
 const CAPES_BTD_RESOURCES = [
@@ -1728,6 +1679,7 @@ function renderObsPesquisa(c) {
                         <span><strong>${obsEscapeHTML(db.dgp_meta?.total_grupos_brasil || '42.852')}</strong> grupos no Brasil · Censo DGP ${obsEscapeHTML(db.dgp_meta?.ano_referencia || 2023)}</span>
                         <span><strong>${obsEscapeHTML(window.ALTERECO_DGP_2023?.grupos?.length || 0)}</strong> grupos únicos na base nominal temática AlterECO</span>
                     </div>
+                    ${researchSourceLink(db.dgp_meta?.fonte_censo || 'CNPq · Censo DGP 2023', db.dgp_meta?.fonte_censo_url || 'https://lattes.cnpq.br/web/dgp/censos2', db.dgp_meta?.ano_referencia || 2023)}
                     <div class="obs-cnpq-metrics">
                         ${db.grupos.map((g, index) => `
                             <button class="obs-cnpq-metric" type="button" data-cnpq-index="${index}" aria-label="Ver ${obsEscapeHTML(g.total)} grupos catalogados em ${obsEscapeHTML(g.area)}">
@@ -1851,6 +1803,7 @@ function renderObsEducacao(c) {
                     </article>
                 `).join('')}
             </div>
+            <a class="obs-secondary-action" href="#obs-edu-publicacoes-title"><span class="material-icons" aria-hidden="true">library_books</span> Ver as ${pubs.length} referências e seus links abaixo</a>
 
             <section class="obs-edu-milestones" aria-labelledby="obs-edu-marcos-title">
                 <div class="obs-section-heading-row">
@@ -1918,33 +1871,27 @@ window.openParadoxoX001 = function() {
 function renderCruzamentosIneditos() {
     const main = document.getElementById('obs-display');
     const db = window.OBSERVATORIO_DB.cruzamentos_ineditos;
-    
     main.innerHTML = `
-        <div style="background:var(--white); padding:4rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15);">
-            <div style="display:flex; align-items:center; gap:1.5rem; margin-bottom:3rem;">
-                <button onclick="renderObsSubpage('visao')" style="background:var(--bg-light); border:none; width:55px; height:55px; border-radius:50%; cursor:pointer;" aria-label="Voltar para visão geral"><span class="material-icons" aria-hidden="true">arrow_back</span></button>
-                <h1 style="color:var(--primary-navy); font-size:2.8rem; font-weight:800; margin:0;">Cruzamentos Científicos Inéditos</h1>
+        <section class="obs-card obs-section-card">
+            <div class="obs-section-heading-row">
+                <button type="button" class="obs-secondary-action" onclick="renderObsSubpage('visao')"><span class="material-icons" aria-hidden="true">arrow_back</span> Voltar</button>
+                <div>
+                    <span class="obs-eyebrow">Comparações rastreáveis</span>
+                    <h1>Cruzamentos Científicos</h1>
+                </div>
             </div>
-
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:2.5rem;">
-                ${db.map(c => `
-                    <div class="obs-cross-card" data-cross-id="${c.id}" tabindex="-1" style="background:var(--bg-light); padding:3rem; border-radius:30px; border:1px solid rgba(128,128,128,0.15); position:relative; overflow:hidden;">
-                        <span style="position:absolute; top:20px; right:20px; font-weight:900; color:rgba(0,0,0,0.05); font-size:4rem;">${c.id}</span>
-                        <h3 style="color:var(--primary-navy); font-size:1.8rem; font-weight:800; margin-bottom:1.5rem; position:relative; z-index:2;">${c.title}</h3>
-                        <p style="color:var(--text-gray); line-height:1.7; font-size:1.2rem; margin-bottom:2rem; position:relative; z-index:2;">${c.data}</p>
-                        <a href="${c.link}" target="_blank" style="color:var(--primary-navy); font-size:1.1rem; font-weight:800; text-decoration:underline; display:flex; align-items:center; gap:0.5rem;">
-                            <span class="material-icons" aria-hidden="true">open_in_new</span> Acessar Base Primária
-                        </a>
-                    </div>
-                `).join('')}
-            </div>
-            
-            <div style="margin-top:3rem; background:var(--primary-navy); color:white; padding:3rem; border-radius:30px; text-align:center;">
-                <h2 style="color:var(--accent-yellow); margin-bottom:1rem;">Nossa Metodologia de Cruzamento</h2>
-                <p style="opacity:0.8; max-width:750px; margin:0 auto; line-height:1.6;">Utilizamos técnicas de triângulação de dados entre censos demográficos (IBGE), registros de faturamento (ABINPET) e indicadores de bem-estar animal para identificar tendências invisíveis em relatórios isolados.</p>
-            </div>
+            <p>As relações abaixo são apresentadas com as pesquisas que sustentam cada variável. Quando as fontes têm escopos diferentes, isso é explicitado no texto em vez de ser ocultado pela visualização.</p>
+        </section>
+        <div class="obs-grid-3 obs-cross-grid">
+            ${db.map(item => `
+                <article class="obs-cross-card obs-data-card" data-cross-id="${obsEscapeHTML(item.id)}" tabindex="-1">
+                    <span class="obs-eyebrow">${obsEscapeHTML(item.id)}</span>
+                    <h3>${obsEscapeHTML(item.title)}</h3>
+                    <p>${obsEscapeHTML(item.data)}</p>
+                    ${researchSourceLinks((item.fontes || []).map(source => ({label:source.label, url:source.url})))}
+                </article>`).join('')}
         </div>
-    `;
+        <div class="obs-data-note obs-data-note--prominent"><strong>Critério:</strong> cruzamento não significa causalidade. O Observatório aproxima indicadores para formular questões comparativas, preservando a fonte e o escopo de cada série.</div>`;
 }
 
 function renderObsPlaceholder(main, title) {
