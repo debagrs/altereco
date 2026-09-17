@@ -132,6 +132,18 @@ window.OBSERVATORIO_DB = {
             { segmento: "Produtos veterinários", valor: 7.8, porcent: "10,4%" },
             { segmento: "Serviços veterinários", valor: 7.7, porcent: "10,2%" }
         ],
+        historico_faturamento: [
+            { ano: 2013, valor: 24.3 }, { ano: 2014, valor: 26.7 }, { ano: 2015, valor: 28.9 },
+            { ano: 2016, valor: 31.1 }, { ano: 2017, valor: 32.9 }, { ano: 2018, valor: 34.4 },
+            { ano: 2019, valor: 35.3 }, { ano: 2020, valor: 40.9 }, { ano: 2021, valor: 51.7 },
+            { ano: 2022, valor: 60.2 }, { ano: 2023, valor: 68.7 }, { ano: 2024, valor: 75.4 }
+        ],
+        historico_fonte: {
+            fonte: "ABEMPET/Abinpet · Dados de Mercado",
+            url: "https://abinpet.org.br/wp-content/uploads/2024/10/abinpet_apresentacao_dados_mercado_2024_completo_draft5.pdf",
+            complemento_url: "https://abinpet.org.br/informacoes-gerais-do-setor/",
+            nota: "Série de 2013 a 2023 publicada pela Abinpet; 2024 atualizado pela ABEMPET. Valores nominais em bilhões de reais."
+        },
         cruzamentos: [
             {
                 title: "Crescimento em 2024",
@@ -172,6 +184,27 @@ window.OBSERVATORIO_DB = {
                 url: "https://agenciadenoticias.ibge.gov.br/agencia-sala-de-imprensa/2013-agencia-de-noticias/releases/39452-em-2023-abate-de-bovinos-cresce-e-o-de-suinos-e-frangos-atingem-recordes"
             }
         ],
+        frangos_uf_2025_t3: [
+            {uf:"RO", nome:"Rondônia", valor:4549582}, {uf:"AC", nome:"Acre", valor:null},
+            {uf:"AM", nome:"Amazonas", valor:null}, {uf:"RR", nome:"Roraima", valor:null},
+            {uf:"PA", nome:"Pará", valor:13073558}, {uf:"AP", nome:"Amapá", valor:0},
+            {uf:"TO", nome:"Tocantins", valor:6525231}, {uf:"MA", nome:"Maranhão", valor:294848},
+            {uf:"PI", nome:"Piauí", valor:1707304}, {uf:"CE", nome:"Ceará", valor:10155931},
+            {uf:"RN", nome:"Rio Grande do Norte", valor:null}, {uf:"PB", nome:"Paraíba", valor:7247187},
+            {uf:"PE", nome:"Pernambuco", valor:19771590}, {uf:"AL", nome:"Alagoas", valor:null},
+            {uf:"SE", nome:"Sergipe", valor:null}, {uf:"BA", nome:"Bahia", valor:34652159},
+            {uf:"MG", nome:"Minas Gerais", valor:125355848}, {uf:"ES", nome:"Espírito Santo", valor:15001102},
+            {uf:"RJ", nome:"Rio de Janeiro", valor:8822269}, {uf:"SP", nome:"São Paulo", valor:190618828},
+            {uf:"PR", nome:"Paraná", valor:578989973}, {uf:"SC", nome:"Santa Catarina", valor:231979000},
+            {uf:"RS", nome:"Rio Grande do Sul", valor:183923726}, {uf:"MS", nome:"Mato Grosso do Sul", valor:46522075},
+            {uf:"MT", nome:"Mato Grosso", valor:54739970}, {uf:"GO", nome:"Goiás", valor:135683657},
+            {uf:"DF", nome:"Distrito Federal", valor:null}
+        ],
+        frangos_uf_fonte: {
+            fonte: "IBGE · Pesquisa Trimestral do Abate de Animais · 3º trimestre de 2025",
+            url: "https://ftp.ibge.gov.br/Producao_Pecuaria/Fasciculo_Indicadores_IBGE/abate-leite-couro-ovos_202503caderno.pdf",
+            nota: "X = dado desidentificado por sigilo estatístico; Amapá não possuía registro de abate de frangos sob inspeção sanitária no período. Dados de 2025 preliminares."
+        },
         oferta_per_capita: [
             { pais: "Estados Unidos", kg: 122.06 },
             { pais: "Argentina", kg: 114.95 },
@@ -220,7 +253,19 @@ window.OBSERVATORIO_DB = {
                 url: "https://www.gov.br/mcti/pt-br/composicao/colegiados/concea/paginas/Destaques/concea-recomenda-o-uso-do-arrive-e-do-prepare"
             }
         ],
-        limitacao: "O Observatório não apresenta percentuais próprios de distribuição por espécie ou finalidade quando eles não podem ser rastreados diretamente, de forma inequívoca, ao relatório oficial exibido."
+        ciuca_regioes_2025: [
+            {regiao:"Centro-Oeste", credenciadas:61, total:103},
+            {regiao:"Nordeste", credenciadas:74, total:150},
+            {regiao:"Norte", credenciadas:42, total:76},
+            {regiao:"Sudeste", credenciadas:382, total:574},
+            {regiao:"Sul", credenciadas:138, total:194}
+        ],
+        ciuca_fonte: {
+            fonte: "MCTI · Relatório Integrado de Gestão 2024 / CIUCA",
+            url: "https://www.gov.br/mcti/pt-br/acesso-a-informacao/prestacao-de-contas/2024/2025-04-18_rgi-mcti-2024_parte-i_vf.pdf",
+            nota: "Dados extraídos do Power BI em 21/03/2025. São instituições cadastradas/credenciadas no CIUCA, não quantidade de animais utilizados."
+        },
+        limitacao: "O total de animais utilizados é apresentado nacionalmente no relatório do CONCEA. Para recorte territorial, o Observatório usa a distribuição de instituições do CIUCA, porque não foi localizada no relatório oficial uma série pública comparável de animais utilizados por UF."
     },
 
     maus_tratos: {
@@ -313,7 +358,11 @@ window.OBSERVATORIO_DB = {
                 url: "https://www.planalto.gov.br/ccivil_03/leis/2002/l10519.htm"
             }
         ],
-        nota: "Nesta versão, o Observatório prioriza bases regulatórias verificáveis em vez de publicar contagens nacionais de zoológicos, aquários ou rodeios sem uma série oficial atual e comparável."
+        bases_plantel: [
+            { nome: "SisFauna · Plantel Exato", tipo: "Contagem precisa", url: "https://dadosabertos.ibama.gov.br/dataset/sisfauna-plantel-exato", descricao: "Registra plantel de criadouros, zoológicos e comerciantes quando a contagem individual é possível." },
+            { nome: "SisFauna · Plantel Estimado", tipo: "Contagem estimada", url: "https://dadosabertos.ibama.gov.br/dataset/sisfauna-plantel-estimado", descricao: "Registra plantel quando as características do recinto ou manejo impedem a contagem precisa." }
+        ],
+        nota: "O IBAMA disponibiliza bases públicas de plantel exato e estimado. Elas incluem zoológicos, criadouros e comerciantes; por isso, não é metodologicamente correto somar tudo e chamar o resultado de 'animais em entretenimento'. O Observatório mantém os links das bases e só publicará um total por UF após filtrar especificamente a categoria de jardim zoológico/empreendimento recreativo."
     },
 
     pesquisa: {
