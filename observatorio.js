@@ -603,138 +603,154 @@ function renderObsPets(c) {
         </div>`;
 }
 
+
+const OBS_UF_TILE_POSITIONS = {
+    AC:[0,3], AM:[1,2], RR:[2,0], AP:[5,0], PA:[4,2], RO:[2,4], TO:[5,4],
+    MA:[7,2], PI:[8,3], CE:[10,2], RN:[12,2], PB:[12,3], PE:[11,4], AL:[11,5], SE:[10,6], BA:[8,6],
+    MT:[4,6], MS:[4,8], GO:[6,7], DF:[7,7], MG:[8,8], ES:[10,8], RJ:[9,9], SP:[7,9],
+    PR:[6,10], SC:[6,11], RS:[5,12]
+};
+
+function obsFormatCompact(value) {
+    if (value === null || value === undefined) return 'Sigilo/X';
+    const n = Number(value);
+    if (!Number.isFinite(n)) return String(value);
+    if (n >= 1e9) return `${(n/1e9).toLocaleString('pt-BR',{maximumFractionDigits:2})} bi`;
+    if (n >= 1e6) return `${(n/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1})} mi`;
+    if (n >= 1e3) return `${(n/1e3).toLocaleString('pt-BR',{maximumFractionDigits:1})} mil`;
+    return n.toLocaleString('pt-BR');
+}
+
+function obsSvgLineChart(series, {valueSuffix='', ariaLabel='Gráfico de linha'} = {}) {
+    const width = 760, height = 260, padX = 46, padY = 30;
+    const values = series.map(d => Number(d.valor));
+    const min = Math.min(...values), max = Math.max(...values);
+    const range = Math.max(max-min, 1);
+    const x = i => padX + i * ((width-padX*2)/Math.max(series.length-1,1));
+    const y = v => height-padY - ((v-min)/range)*(height-padY*2);
+    const points = series.map((d,i)=>`${x(i)},${y(Number(d.valor))}`).join(' ');
+    return `<svg class="obs-line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${obsEscapeHTML(ariaLabel)}">
+        <line x1="${padX}" y1="${height-padY}" x2="${width-padX}" y2="${height-padY}" class="obs-chart-axis" />
+        <polyline points="${points}" class="obs-chart-line" />
+        ${series.map((d,i)=>`<g class="obs-chart-point"><circle cx="${x(i)}" cy="${y(Number(d.valor))}" r="5"><title>${d.ano}: ${String(d.valor).replace('.',',')}${valueSuffix}</title></circle><text x="${x(i)}" y="${height-8}" text-anchor="middle">${String(d.ano).slice(-2)}</text></g>`).join('')}
+    </svg>`;
+}
+
+function obsStateTileMap(data, {valueKey='valor', label='Dados por UF', missingLabel='Sem dado comparável'} = {}) {
+    const byUf = Object.fromEntries((data||[]).map(item => [item.uf, item]));
+    const vals = (data||[]).map(item => item[valueKey]).filter(v => Number.isFinite(Number(v))).map(Number);
+    const max = Math.max(...vals, 1);
+    const cells = Object.entries(OBS_UF_TILE_POSITIONS).map(([uf,[col,row]]) => {
+        const item = byUf[uf];
+        const value = item?.[valueKey];
+        const has = Number.isFinite(Number(value));
+        const intensity = has ? Math.max(.16, Number(value)/max) : 0;
+        const text = item ? (item.nome || uf) : uf;
+        const detail = has ? obsFormatCompact(value) : (value === 0 ? '0' : missingLabel);
+        return `<g class="obs-tile-state ${has ? 'has-data' : 'no-data'}" transform="translate(${col*48+8},${row*38+8})" tabindex="0" role="button" data-uf="${uf}" style="--tile-opacity:${intensity}">
+            <rect width="42" height="32" rx="7"><title>${obsEscapeHTML(text)}: ${obsEscapeHTML(detail)}</title></rect>
+            <text x="21" y="21" text-anchor="middle">${uf}</text>
+        </g>`;
+    }).join('');
+    return `<svg class="obs-brazil-tile-map" viewBox="0 0 650 520" role="img" aria-label="${obsEscapeHTML(label)}">${cells}</svg>`;
+}
+
+function obsHorizontalBars(data, {valueKey='valor', nameKey='nome', limit=40, unit=''} = {}) {
+    const valid = (data||[]).filter(d => Number.isFinite(Number(d[valueKey]))).sort((a,b)=>Number(b[valueKey])-Number(a[valueKey])).slice(0,limit);
+    const max = Math.max(...valid.map(d=>Number(d[valueKey])),1);
+    return `<div class="obs-ranked-bars">${valid.map(d=>`<div class="obs-ranked-row" data-ranked-uf="${d.uf||''}"><div class="obs-ranked-label"><span>${obsEscapeHTML(d[nameKey]||d.uf||'')}</span><strong>${obsFormatCompact(d[valueKey])}${unit}</strong></div><div class="obs-ranked-track"><div class="obs-ranked-fill" style="width:${Number(d[valueKey])/max*100}%"></div></div></div>`).join('')}</div>`;
+}
+
+function obsFilterAbateState(uf) {
+    document.querySelectorAll('[data-ranked-uf]').forEach(row => {
+        row.hidden = !!uf && row.dataset.rankedUf !== uf;
+    });
+    document.querySelectorAll('.obs-tile-state').forEach(node => {
+        node.classList.toggle('is-selected', !!uf && node.dataset.uf === uf);
+        node.classList.toggle('is-muted', !!uf && node.dataset.uf !== uf);
+    });
+}
+
+function obsFilterCiucaRegion(region) {
+    document.querySelectorAll('[data-ciuca-region]').forEach(row => {
+        row.hidden = !!region && row.dataset.ciucaRegion !== region;
+    });
+    document.querySelectorAll('[data-ciuca-filter]').forEach(btn => btn.classList.toggle('active', btn.dataset.ciucaFilter === region));
+}
 function renderObsEconomia(c) {
     const db = window.OBSERVATORIO_DB.economia;
     c.innerHTML = `
+        <section class="obs-card obs-section-card">
+            <span class="obs-eyebrow">Economia pet · série nacional</span>
+            <h1>Faturamento do mercado pet brasileiro</h1>
+            <p>Além do recorte de 2024, o gráfico abaixo mantém a série histórica pública divulgada pela Abinpet/ABEMPET.</p>
+            <div class="obs-chart-shell">
+                ${obsSvgLineChart(db.historico_faturamento, {valueSuffix:' bi', ariaLabel:'Evolução do faturamento do mercado pet brasileiro entre 2013 e 2024'})}
+            </div>
+            ${researchSourceLinks([
+                {label:db.historico_fonte.fonte, url:db.historico_fonte.url, meta:'2013–2023'},
+                {label:'ABEMPET · 2024', url:db.historico_fonte.complemento_url, meta:'2024'}
+            ])}
+            <p class="obs-data-note">${obsEscapeHTML(db.historico_fonte.nota)}</p>
+        </section>
         <div class="obs-grid-2 obs-economy-grid">
             <section class="obs-card">
                 <span class="obs-eyebrow">Economia pet · 2024</span>
-                <h1>${obsEscapeHTML(db.faturamento_total.valor)}</h1>
+                <h2>${obsEscapeHTML(db.faturamento_total.valor)}</h2>
                 <p class="obs-data-highlight">${obsEscapeHTML(db.faturamento_total.variacao)}</p>
                 ${researchSourceLink(db.faturamento_total.fonte, db.faturamento_total.url, db.faturamento_total.ano)}
                 <div class="obs-grid-2 obs-segment-grid">
-                    ${db.faturamento_2024.map(s => `
-                        <article class="obs-segment-card">
-                            <h3>${obsEscapeHTML(s.segmento)}</h3>
-                            <strong>${obsEscapeHTML(s.porcent)}</strong>
-                            <p>R$ ${obsEscapeHTML(s.valor)} bi</p>
-                            ${researchSourceLink(db.faturamento_total.fonte, db.faturamento_total.url, db.faturamento_total.ano)}
-                        </article>`).join('')}
+                    ${db.faturamento_2024.map(s => `<article class="obs-segment-card"><h3>${obsEscapeHTML(s.segmento)}</h3><strong>${obsEscapeHTML(s.porcent)}</strong><p>R$ ${obsEscapeHTML(s.valor)} bi</p></article>`).join('')}
                 </div>
             </section>
-            <aside class="obs-stack">
-                ${db.cruzamentos.map(cr => `
-                    <article class="obs-card obs-card--dark">
-                        <h3>${obsEscapeHTML(cr.title)}</h3>
-                        <p>${obsEscapeHTML(cr.text)}</p>
-                        ${researchSourceLink(cr.fonte, cr.url, 2024)}
-                    </article>`).join('')}
-            </aside>
-        </div>`;
+            <aside class="obs-stack">${db.cruzamentos.map(cr => `<article class="obs-card"><h3>${obsEscapeHTML(cr.title)}</h3><p>${obsEscapeHTML(cr.text)}</p>${researchSourceLink(cr.fonte, cr.url, 2024)}</article>`).join('')}</aside>
+        </div>
+        <div class="obs-data-note obs-data-note--prominent"><strong>Recorte territorial:</strong> a ABEMPET informa publicamente a série nacional e os segmentos. O detalhamento de mercado por UF não está aberto nessa fonte; por isso o Observatório não inventa um ranking estadual.</div>`;
 }
 
 function renderObsAbandono(c) {
     const db = window.OBSERVATORIO_DB.abandono;
     c.innerHTML = `
-        <section class="obs-card obs-section-card">
-            <span class="obs-eyebrow">Escopo do levantamento · ${obsEscapeHTML(db.ano)}</span>
-            <h1>Abandono e tutela por ONGs/protetores</h1>
-            <p>O dado publicado aqui é o recorte descrito pelo Instituto Pet Brasil e reproduzido pelo CFMV — não uma estimativa de todos os animais abandonados no país.</p>
-            ${researchSourceLink(db.fonte, db.url, db.ano)}
-        </section>
-        <div class="obs-grid-2 obs-data-card-grid">
-            ${db.indicadores.map(item => `
-                <article class="obs-data-card">
-                    <span class="obs-eyebrow">${obsEscapeHTML(item.label)}</span>
-                    <strong>${obsEscapeHTML(item.value)}</strong>
-                    <p>${obsEscapeHTML(item.desc)}</p>
-                    ${researchSourceLink(db.fonte, db.url, db.ano)}
-                </article>`).join('')}
+        <section class="obs-card obs-section-card"><span class="obs-eyebrow">Escopo do levantamento · ${obsEscapeHTML(db.ano)}</span><h1>Abandono e tutela por ONGs/protetores</h1><p>O dado publicado aqui é o recorte descrito pelo Instituto Pet Brasil e reproduzido pelo CFMV — não uma estimativa de todos os animais abandonados no país.</p>${researchSourceLink(db.fonte, db.url, db.ano)}</section>
+        <div class="obs-grid-2 obs-data-card-grid">${db.indicadores.map(item => `<article class="obs-data-card"><span class="obs-eyebrow">${obsEscapeHTML(item.label)}</span><strong>${obsEscapeHTML(item.value)}</strong><p>${obsEscapeHTML(item.desc)}</p>${researchSourceLink(db.fonte, db.url, db.ano)}</article>`).join('')}</div>
+        <div class="obs-grid-2">
+            <section class="obs-card"><span class="obs-eyebrow">Distribuição por espécie</span><h2>Animais sob tutela no levantamento</h2>${obsHorizontalBars([{nome:'Cães',valor:177562},{nome:'Gatos',valor:7398}],{limit:2})}${researchSourceLink(db.fonte,db.url,db.ano)}</section>
+            <section class="obs-card"><span class="obs-eyebrow">Situação de origem</span><h2>Origem dos casos no recorte</h2>${obsHorizontalBars([{nome:'Maus-tratos',valor:60},{nome:'Abandono',valor:40}],{limit:2,unit:'%'})}${researchSourceLink(db.fonte,db.url,db.ano)}</section>
         </div>
         <div class="obs-data-note obs-data-note--prominent"><strong>Limite de interpretação:</strong> ${obsEscapeHTML(db.nota)}</div>`;
 }
 
 function renderObsConsumo(c) {
     const db = window.OBSERVATORIO_DB.abate;
+    const stateOptions = db.frangos_uf_2025_t3.filter(d=>Number.isFinite(Number(d.valor))).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR'));
     c.innerHTML = `
+        <section class="obs-card obs-section-card"><span class="obs-eyebrow">IBGE · 2023</span><h1>Abate de animais em estabelecimentos sob inspeção sanitária</h1><div class="obs-grid-3 obs-data-card-grid">${db.dados_2023.map(d => `<article class="obs-data-card"><h3>${obsEscapeHTML(d.especie)}</h3><strong>${obsEscapeHTML(d.valor)}</strong><p>Variação anual: ${obsEscapeHTML(d.variacao)}</p>${researchSourceLink(d.fonte,d.url,2023)}</article>`).join('')}</div></section>
         <section class="obs-card obs-section-card">
-            <span class="obs-eyebrow">IBGE · 2023</span>
-            <h1>Abate de animais em estabelecimentos sob inspeção sanitária</h1>
-            <div class="obs-grid-3 obs-data-card-grid">
-                ${db.dados_2023.map(d => `
-                    <article class="obs-data-card">
-                        <h3>${obsEscapeHTML(d.especie)}</h3>
-                        <strong>${obsEscapeHTML(d.valor)}</strong>
-                        <p>Variação anual: ${obsEscapeHTML(d.variacao)}</p>
-                        ${researchSourceLink(d.fonte, d.url, 2023)}
-                    </article>`).join('')}
-            </div>
+            <div class="obs-section-heading-row"><div><span class="obs-eyebrow">IBGE · 3º trimestre de 2025</span><h2>Frangos abatidos por Unidade da Federação</h2><p>Ranking e mapa dos estabelecimentos sob inspeção sanitária. Valores protegidos por sigilo estatístico aparecem como “X” e não são estimados.</p></div><label class="obs-inline-filter">Estado<select onchange="obsFilterAbateState(this.value)"><option value="">Todos</option>${stateOptions.map(d=>`<option value="${d.uf}">${d.nome}</option>`).join('')}</select></label></div>
+            <div class="obs-viz-grid"><div>${obsHorizontalBars(db.frangos_uf_2025_t3,{limit:27})}</div><div class="obs-map-shell">${obsStateTileMap(db.frangos_uf_2025_t3,{label:'Mapa por UF do abate de frangos no terceiro trimestre de 2025'})}<p class="obs-data-note">Passe o cursor ou foque cada UF para ver o valor. Este é um mapa esquemático em SVG para comparação, não uma malha cartográfica.</p></div></div>
+            ${researchSourceLink(db.frangos_uf_fonte.fonte,db.frangos_uf_fonte.url,'2025.III')}<p class="obs-data-note">${obsEscapeHTML(db.frangos_uf_fonte.nota)}</p>
         </section>
-
-        <div class="obs-grid-2">
-            <section class="obs-card obs-card--dark">
-                <span class="obs-eyebrow">Comparação internacional · 2023</span>
-                <h2>Oferta de carne per capita</h2>
-                <div class="obs-data-list">
-                    ${db.oferta_per_capita.map(p => `<div class="obs-data-list-row"><span>${obsEscapeHTML(p.pais)}</span><strong>${Number(p.kg).toLocaleString('pt-BR', {maximumFractionDigits:2})} kg/ano</strong></div>`).join('')}
-                </div>
-                ${researchSourceLink(db.oferta_fonte.fonte, db.oferta_fonte.url, db.oferta_fonte.ano)}
-                <p class="obs-data-note">${obsEscapeHTML(db.oferta_fonte.nota)}</p>
-            </section>
-            <section class="obs-card">
-                <span class="obs-eyebrow">Leitura de escala</span>
-                <h2>O que pode ser afirmado a partir da base</h2>
-                <p>${obsEscapeHTML(db.analise_etica)}</p>
-                ${researchSourceLink('IBGE · Pesquisa Trimestral do Abate', db.analise_url, 2023)}
-                <p class="obs-data-note"><strong>Importante:</strong> abate sob inspeção e oferta alimentar per capita são indicadores diferentes. Eles não devem ser somados nem tratados como ingestão individual observada.</p>
-            </section>
-        </div>`;
+        <div class="obs-grid-2"><section class="obs-card obs-card--dark"><span class="obs-eyebrow">Comparação internacional · 2023</span><h2>Oferta de carne per capita</h2><div class="obs-data-list">${db.oferta_per_capita.map(p=>`<div class="obs-data-list-row"><span>${obsEscapeHTML(p.pais)}</span><strong>${Number(p.kg).toLocaleString('pt-BR',{maximumFractionDigits:2})} kg/ano</strong></div>`).join('')}</div>${researchSourceLink(db.oferta_fonte.fonte,db.oferta_fonte.url,db.oferta_fonte.ano)}<p class="obs-data-note">${obsEscapeHTML(db.oferta_fonte.nota)}</p></section><section class="obs-card"><span class="obs-eyebrow">Leitura de escala</span><h2>O que pode ser afirmado a partir da base</h2><p>${obsEscapeHTML(db.analise_etica)}</p>${researchSourceLink('IBGE · Pesquisa Trimestral do Abate',db.analise_url,2023)}<p class="obs-data-note"><strong>Importante:</strong> abate sob inspeção e oferta alimentar per capita são indicadores diferentes.</p></section></div>`;
 }
 
 function renderObsExperimentacao(c) {
     const db = window.OBSERVATORIO_DB.experimentacao;
+    const maxTotal = Math.max(...db.ciuca_regioes_2025.map(d=>d.total));
     c.innerHTML = `
-        <section class="obs-card obs-section-card">
-            <span class="obs-eyebrow">CONCEA/MCTI · relatório oficial</span>
-            <h1>Uso de animais em ensino e pesquisa científica</h1>
-            <p class="obs-data-highlight">${obsEscapeHTML(db.total_periodo)}</p>
-            ${researchSourceLink('CONCEA/MCTI · Relatório de Uso Animal 2019–2023', db.indicadores[0].url, '2019–2023')}
-        </section>
-        <div class="obs-grid-2 obs-data-card-grid">
-            ${db.indicadores.map(item => `
-                <article class="obs-data-card">
-                    <span class="obs-eyebrow">${obsEscapeHTML(item.titulo)}</span>
-                    <strong>${obsEscapeHTML(item.valor)}</strong>
-                    <p>${obsEscapeHTML(item.texto)}</p>
-                    ${researchSourceLink(item.fonte, item.url)}
-                </article>`).join('')}
-        </div>
+        <section class="obs-card obs-section-card"><span class="obs-eyebrow">CONCEA/MCTI · relatório oficial</span><h1>Uso de animais em ensino e pesquisa científica</h1><p class="obs-data-highlight">${obsEscapeHTML(db.total_periodo)}</p>${researchSourceLink('CONCEA/MCTI · Relatório de Uso Animal 2019–2023',db.indicadores[0].url,'2019–2023')}</section>
+        <div class="obs-grid-2 obs-data-card-grid">${db.indicadores.map(item=>`<article class="obs-data-card"><span class="obs-eyebrow">${obsEscapeHTML(item.titulo)}</span><strong>${obsEscapeHTML(item.valor)}</strong><p>${obsEscapeHTML(item.texto)}</p>${researchSourceLink(item.fonte,item.url)}</article>`).join('')}</div>
+        <section class="obs-card obs-section-card"><div class="obs-section-heading-row"><div><span class="obs-eyebrow">CIUCA · recorte territorial</span><h2>Instituições cadastradas por região</h2><p>O filtro territorial usa instituições do CIUCA. Ele não deve ser lido como quantidade de animais utilizados.</p></div></div><div class="obs-filter-pills"><button class="active" data-ciuca-filter="" onclick="obsFilterCiucaRegion('')">Nacional</button>${db.ciuca_regioes_2025.map(d=>`<button data-ciuca-filter="${d.regiao}" onclick="obsFilterCiucaRegion('${d.regiao}')">${d.regiao}</button>`).join('')}</div><div class="obs-ranked-bars">${db.ciuca_regioes_2025.map(d=>`<div class="obs-ranked-row" data-ciuca-region="${d.regiao}"><div class="obs-ranked-label"><span>${d.regiao}</span><strong>${d.total} cadastradas · ${d.credenciadas} credenciadas</strong></div><div class="obs-ranked-track"><div class="obs-ranked-fill" style="width:${d.total/maxTotal*100}%"></div></div></div>`).join('')}</div>${researchSourceLink(db.ciuca_fonte.fonte,db.ciuca_fonte.url,'21/03/2025')}<p class="obs-data-note">${obsEscapeHTML(db.ciuca_fonte.nota)}</p></section>
         <div class="obs-data-note obs-data-note--prominent"><strong>Critério de publicação:</strong> ${obsEscapeHTML(db.limitacao)}</div>`;
 }
 
 function renderObsViolencia(c) {
     const db = window.OBSERVATORIO_DB.maus_tratos;
+    const mapData = [{uf:'MG',nome:'Minas Gerais',valor:7644},{uf:'RJ',nome:'Rio de Janeiro',valor:252}];
     c.innerHTML = `
-        <section class="obs-card obs-section-card">
-            <span class="obs-eyebrow">Recortes oficiais · não comparáveis diretamente</span>
-            <h1>Maus-tratos: registros e fiscalizações</h1>
-            <p>${obsEscapeHTML(db.nota)}</p>
-        </section>
-        <div class="obs-grid-2 obs-data-card-grid">
-            ${db.estados.map(e => `
-                <article class="obs-data-card">
-                    <span class="obs-eyebrow">${obsEscapeHTML(e.uf)} · ${obsEscapeHTML(e.ano)}</span>
-                    <strong>${obsEscapeHTML(e.casos)}</strong>
-                    <h3>${obsEscapeHTML(e.status)}</h3>
-                    ${researchSourceLink(e.fonte, e.link, e.ano)}
-                </article>`).join('')}
-        </div>
-        <section class="obs-card obs-card--dark">
-            <span class="obs-eyebrow">Legislação federal</span>
-            <h2>${obsEscapeHTML(db.lei.titulo)}</h2>
-            <p>${obsEscapeHTML(db.lei.texto)}</p>
-            ${researchSourceLink(db.lei.fonte, db.lei.url, 2020)}
-        </section>`;
+        <section class="obs-card obs-section-card"><span class="obs-eyebrow">Recortes oficiais · não comparáveis diretamente</span><h1>Maus-tratos: registros e fiscalizações</h1><p>${obsEscapeHTML(db.nota)}</p></section>
+        <div class="obs-grid-2 obs-data-card-grid">${db.estados.map(e=>`<article class="obs-data-card"><span class="obs-eyebrow">${obsEscapeHTML(e.uf)} · ${obsEscapeHTML(e.ano)}</span><strong>${obsEscapeHTML(e.casos)}</strong><h3>${obsEscapeHTML(e.status)}</h3>${researchSourceLink(e.fonte,e.link,e.ano)}</article>`).join('')}</div>
+        <section class="obs-card obs-section-card"><span class="obs-eyebrow">SVG · disponibilidade de recortes estaduais</span><h2>Mapa dos dados oficiais localizados</h2><p>O mapa destaca apenas UFs para as quais o Observatório localizou um recorte oficial com escopo documentado. Os números <strong>não são comparáveis entre si</strong> e não formam um total nacional.</p><div class="obs-map-centered">${obsStateTileMap(mapData,{label:'Mapa esquemático das UFs com recortes oficiais de maus-tratos localizados',missingLabel:'Sem recorte oficial comparável nesta versão'})}</div>${researchSourceLinks(db.estados.map(e=>({label:e.fonte,url:e.link,meta:e.ano})))}</section>
+        <section class="obs-card"><span class="obs-eyebrow">Legislação federal</span><h2>${obsEscapeHTML(db.lei.titulo)}</h2><p>${obsEscapeHTML(db.lei.texto)}</p>${researchSourceLink(db.lei.fonte,db.lei.url,2020)}</section>`;
 }
 
 const OBS_ATLAS_CATEGORY_META = {
@@ -832,13 +848,26 @@ function obsAtlasDestroyMap() {
     };
 }
 
+function obsAtlasPawIcon(category, className='obs-species-paw') {
+    const label = OBS_ATLAS_CATEGORY_META[category]?.label || 'Categoria animal';
+    const shapes = {
+        companheiros: `<ellipse cx="24" cy="28" rx="10" ry="8"/><circle cx="12" cy="16" r="4"/><circle cx="20" cy="11" r="4"/><circle cx="29" cy="11" r="4"/><circle cx="36" cy="17" r="4"/>`,
+        alimentacao: `<path d="M24 8v19M24 27L11 38M24 27l13 11M24 27l-2 14" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`,
+        pesquisa: `<ellipse cx="24" cy="29" rx="10" ry="8"/><ellipse cx="14" cy="15" rx="4" ry="7" transform="rotate(-18 14 15)"/><ellipse cx="23" cy="11" rx="4" ry="7"/><ellipse cx="32" cy="15" rx="4" ry="7" transform="rotate(18 32 15)"/>`,
+        entretenimento: `<ellipse cx="24" cy="28" rx="13" ry="10"/><circle cx="9" cy="15" r="5"/><circle cx="19" cy="10" r="5"/><circle cx="30" cy="10" r="5"/><circle cx="40" cy="15" r="5"/>`
+    };
+    const body = shapes[category] || shapes.companheiros;
+    const fillAttr = category === 'alimentacao' ? '' : 'fill="currentColor"';
+    return `<svg class="${className}" viewBox="0 0 48 48" role="img" aria-label="${obsEscapeHTML(label)}" ${fillAttr}>${body}</svg>`;
+}
+
 function obsAtlasCreateMarkerIcon(category) {
     const meta = OBS_ATLAS_CATEGORY_META[category] || OBS_ATLAS_CATEGORY_META.companheiros;
     return window.L.divIcon({
         className: 'obs-atlas-div-icon-wrapper',
         html: `
             <div class="obs-atlas-div-icon" style="--obs-marker-color:${meta.color};">
-                <span class="material-icons obs-atlas-div-icon-animal" aria-hidden="true">${meta.marker}</span>
+                ${obsAtlasPawIcon(category, 'obs-atlas-div-icon-animal')}
             </div>
         `,
         iconSize: [42, 42],
@@ -863,9 +892,8 @@ function obsAtlasRenderLegend(data) {
             <strong>${data.length}</strong>
         </button>
         ${Object.entries(OBS_ATLAS_CATEGORY_META).map(([key, meta]) => `
-            <button type="button" class="obs-atlas-filter-chip ${obsAtlasController.activeCategory === key ? 'active' : ''}" data-atlas-filter="${key}" style="--atlas-chip-color:${meta.color};">
-                <span class="material-icons obs-atlas-filter-icon" aria-hidden="true">${meta.icon}</span>
-                <span>${meta.label}</span>
+            <button type="button" class="obs-atlas-filter-chip obs-atlas-filter-chip--icon ${obsAtlasController.activeCategory === key ? 'active' : ''}" data-atlas-filter="${key}" style="--atlas-chip-color:${meta.color};" aria-label="${meta.label}: ${counts[key] || 0} organizações" title="${meta.label}">
+                ${obsAtlasPawIcon(key, 'obs-atlas-filter-paw')}
                 <strong>${counts[key] || 0}</strong>
             </button>
         `).join('')}
@@ -899,7 +927,7 @@ function obsAtlasRenderList() {
         return `
             <article class="obs-atlas-list-card" data-atlas-org-card="${item.id}">
                 <div class="obs-atlas-list-topline">
-                    <span class="obs-atlas-list-badge" style="--atlas-badge-color:${meta.color};"><span class="material-icons" aria-hidden="true">${meta.icon}</span>${meta.short}</span>
+                    <span class="obs-atlas-list-badge obs-atlas-list-badge--icon" style="--atlas-badge-color:${meta.color};" title="${meta.label}" aria-label="${meta.label}">${obsAtlasPawIcon(item.categoria, 'obs-atlas-card-paw')}</span>
                     <span class="obs-atlas-list-country">${item.pais}</span>
                 </div>
                 <h3>${item.nome}</h3>
@@ -1146,17 +1174,12 @@ function renderObsAtlas(c) {
                 <div class="obs-edu-kpi">
                     <strong>4</strong>
                     <h2>Camadas temáticas</h2>
-                    <p>Pata de gato, galinha, coelho e elefante para navegar rapidamente pelos tipos de organização.</p>
+                    <p>Quatro ícones de patas distinguem as camadas sem depender apenas de cor.</p>
                 </div>
             </div>
 
-            <div class="obs-atlas-legend-text">
-                ${Object.values(OBS_ATLAS_CATEGORY_META).map(meta => `
-                    <div class="obs-atlas-legend-card" style="--atlas-card-color:${meta.color};">
-                        <strong><span class="material-icons" aria-hidden="true">${meta.icon}</span>${meta.short}</strong>
-                        <p>${meta.description}</p>
-                    </div>
-                `).join('')}
+            <div class="obs-atlas-icon-key" aria-label="Legenda das camadas do mapa">
+                ${Object.entries(OBS_ATLAS_CATEGORY_META).map(([key, meta]) => `<span class="obs-atlas-key-icon" style="--atlas-card-color:${meta.color};" title="${meta.label}" aria-label="${meta.label}">${obsAtlasPawIcon(key, 'obs-atlas-key-paw')}</span>`).join('')}
             </div>
 
             <div class="obs-atlas-filters" id="obs-atlas-filters" aria-label="Filtrar mapa por categoria"></div>
@@ -1229,20 +1252,9 @@ function renderObsAtlas(c) {
 function renderObsEntretenimento(c) {
     const db = window.OBSERVATORIO_DB.entretenimento;
     c.innerHTML = `
-        <section class="obs-card obs-section-card">
-            <span class="obs-eyebrow">Bases regulatórias verificáveis</span>
-            <h1>Animais, cativeiro e entretenimento</h1>
-            <p>${obsEscapeHTML(db.nota)}</p>
-        </section>
-        <div class="obs-grid-2 obs-data-card-grid">
-            ${db.referencias.map(item => `
-                <article class="obs-data-card">
-                    <span class="obs-eyebrow">${obsEscapeHTML(item.titulo)}</span>
-                    <strong>${obsEscapeHTML(item.valor)}</strong>
-                    <p>${obsEscapeHTML(item.texto)}</p>
-                    ${researchSourceLink(item.fonte, item.url)}
-                </article>`).join('')}
-        </div>`;
+        <section class="obs-card obs-section-card"><span class="obs-eyebrow">Bases regulatórias verificáveis</span><h1>Animais, cativeiro e entretenimento</h1><p>${obsEscapeHTML(db.nota)}</p></section>
+        <div class="obs-grid-2 obs-data-card-grid">${db.referencias.map(item=>`<article class="obs-data-card"><span class="obs-eyebrow">${obsEscapeHTML(item.titulo)}</span><strong>${obsEscapeHTML(item.valor)}</strong><p>${obsEscapeHTML(item.texto)}</p>${researchSourceLink(item.fonte,item.url)}</article>`).join('')}</div>
+        <section class="obs-card obs-section-card"><span class="obs-eyebrow">IBAMA · dados abertos</span><h2>Plantel de fauna silvestre em cativeiro</h2><p>O IBAMA disponibiliza separadamente bases de plantel exato e estimado. Elas incluem mais categorias do que entretenimento; portanto, o Observatório não soma o conjunto bruto como se fosse “animais mantidos para entretenimento”.</p><div class="obs-grid-2">${db.bases_plantel.map(base=>`<article class="obs-segment-card"><span class="material-icons obs-big-data-icon" aria-hidden="true">dataset</span><h3>${obsEscapeHTML(base.nome)}</h3><strong>${obsEscapeHTML(base.tipo)}</strong><p>${obsEscapeHTML(base.descricao)}</p>${researchSourceLink('IBAMA · Dados Abertos',base.url)}</article>`).join('')}</div><div class="obs-data-note obs-data-note--prominent"><strong>Próximo nível de precisão:</strong> para publicar “quantos animais em zoológicos por UF”, é necessário filtrar os microdados do SisFauna pela categoria do empreendimento e combinar plantel exato + estimado sem dupla contagem. Como o portal não oferece esse agregado pronto e verificável, não estou fabricando o número.</div></section>`;
 }
 
 const CAPES_BTD_RESOURCES = [
