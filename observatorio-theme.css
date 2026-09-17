@@ -1636,3 +1636,108 @@ body.obs-atlas-modal-open {
     border-color: #8F793E !important;
     color: #FFE39A !important;
 }
+
+/* ===== Observatório · contraste e visualizações 2026-09-16 ===== */
+[data-theme="light"] .obs2-wrapper .obs-card--dark,
+[data-theme="light"] .obs2-wrapper .obs-capes-hero-card {
+    background: #2C2C33 !important;
+    color: #FFFFFF !important;
+    border-color: #444854 !important;
+}
+[data-theme="light"] .obs2-wrapper .obs-card--dark h1,
+[data-theme="light"] .obs2-wrapper .obs-card--dark h2,
+[data-theme="light"] .obs2-wrapper .obs-card--dark h3,
+[data-theme="light"] .obs2-wrapper .obs-card--dark p,
+[data-theme="light"] .obs2-wrapper .obs-card--dark strong,
+[data-theme="light"] .obs2-wrapper .obs-card--dark span:not(.material-icons),
+[data-theme="light"] .obs2-wrapper .obs-capes-hero-card h1,
+[data-theme="light"] .obs2-wrapper .obs-capes-hero-card h2,
+[data-theme="light"] .obs2-wrapper .obs-capes-hero-card h3,
+[data-theme="light"] .obs2-wrapper .obs-capes-hero-card p,
+[data-theme="light"] .obs2-wrapper .obs-capes-hero-card strong {
+    color: #F7F8FA !important;
+}
+[data-theme="light"] .obs2-wrapper .obs-card--dark .obs-eyebrow,
+[data-theme="light"] .obs2-wrapper .obs-capes-hero-card .obs-eyebrow {
+    color: #FFD25F !important;
+}
+[data-theme="light"] .obs2-wrapper .obs-card--dark .obs-data-list-row {
+    color: #F7F8FA !important;
+    border-color: #5C6270 !important;
+}
+[data-theme="light"] .obs2-wrapper .obs-card--dark .obs-data-list-row strong {
+    color: #FFD25F !important;
+}
+[data-theme="light"] .obs2-wrapper .obs-card--dark .obs-research-link,
+[data-theme="light"] .obs2-wrapper .obs-capes-hero-card a {
+    background: #FFF8E3 !important;
+    border-color: #A37D20 !important;
+    color: #3D2E00 !important;
+}
+
+.obs-chart-shell,
+.obs-map-shell,
+.obs-map-centered {
+    margin: 1rem 0;
+    padding: 1rem;
+    border: 1px solid var(--obs-border);
+    border-radius: 18px;
+    background: var(--obs-surface-muted);
+}
+.obs-line-chart { width:100%; height:auto; min-height:220px; }
+.obs-chart-axis { stroke: var(--obs-border); stroke-width: 1.5; }
+.obs-chart-line { fill:none; stroke: var(--accent-yellow); stroke-width:4; stroke-linecap:round; stroke-linejoin:round; }
+.obs-chart-point circle { fill: var(--accent-yellow); stroke: var(--obs-text); stroke-width:2; }
+.obs-chart-point text { fill: var(--obs-muted); font-family:var(--font-ui); font-size:12px; }
+
+.obs-viz-grid { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr); gap:1rem; align-items:start; margin-top:1rem; }
+.obs-ranked-bars { display:grid; gap:.72rem; }
+.obs-ranked-row { transition:opacity .15s ease; }
+.obs-ranked-row[hidden] { display:none !important; }
+.obs-ranked-label { display:flex; justify-content:space-between; gap:1rem; align-items:baseline; margin-bottom:.32rem; color:var(--obs-text); }
+.obs-ranked-label span { font-weight:600; }
+.obs-ranked-label strong { font-size:.9rem; color:var(--obs-muted); }
+.obs-ranked-track { height:10px; border-radius:999px; overflow:hidden; background:var(--obs-border); }
+.obs-ranked-fill { height:100%; border-radius:inherit; background:var(--accent-yellow); }
+
+.obs-inline-filter { display:grid; gap:.35rem; min-width:220px; color:var(--obs-text); font-weight:600; }
+.obs-inline-filter select { min-height:44px; border:1px solid var(--obs-border); border-radius:10px; background:var(--obs-surface); color:var(--obs-text); padding:.55rem .7rem; }
+.obs-filter-pills { display:flex; flex-wrap:wrap; gap:.55rem; margin:1rem 0; }
+.obs-filter-pills button { min-height:42px; border:1px solid var(--obs-border); border-radius:999px; background:var(--obs-surface-muted); color:var(--obs-text); padding:.55rem .8rem; cursor:pointer; }
+.obs-filter-pills button.active { background:var(--accent-yellow); color:#231B00; border-color:#A37D20; font-weight:700; }
+
+.obs-brazil-tile-map { width:100%; max-width:650px; height:auto; display:block; margin:auto; }
+.obs-tile-state rect { fill:var(--obs-border); stroke:var(--obs-surface); stroke-width:2; transition:.15s ease; }
+.obs-tile-state.has-data rect { fill:color-mix(in srgb, var(--accent-yellow) calc(var(--tile-opacity) * 100%), var(--obs-border)); }
+.obs-tile-state text { fill:var(--obs-text); font-family:var(--font-ui); font-size:11px; font-weight:700; pointer-events:none; }
+.obs-tile-state:focus rect,
+.obs-tile-state:hover rect,
+.obs-tile-state.is-selected rect { stroke:var(--obs-text); stroke-width:3; filter:brightness(.96); }
+.obs-tile-state.is-muted { opacity:.25; }
+.obs-map-centered { display:grid; place-items:center; }
+
+.obs-big-data-icon { font-size:2.1rem !important; color:var(--accent-yellow) !important; margin-bottom:.5rem; }
+
+/* Atlas: ícones de patas próprios, sem texto visual “Pata de...” */
+.obs-species-paw,
+.obs-atlas-filter-paw,
+.obs-atlas-card-paw,
+.obs-atlas-key-paw,
+.obs-atlas-div-icon-animal { width:24px; height:24px; color:currentColor; display:block; }
+.obs-atlas-div-icon-animal { width:26px; height:26px; transform:rotate(45deg); }
+.obs-atlas-filter-chip--icon { width:auto; min-width:58px; justify-content:center; padding-inline:.72rem; }
+.obs-atlas-filter-chip--icon > strong { min-width:1.6rem; }
+.obs-atlas-list-badge--icon { width:42px; height:42px; display:grid !important; place-items:center; padding:0 !important; }
+.obs-atlas-list-badge--icon .obs-atlas-card-paw { width:23px; height:23px; }
+.obs-atlas-icon-key { display:flex; flex-wrap:wrap; gap:.7rem; margin:0 0 1rem; }
+.obs-atlas-key-icon { width:48px; height:48px; border:1px solid var(--obs-border); border-left:4px solid var(--atlas-card-color); border-radius:14px; display:grid; place-items:center; background:var(--obs-surface-muted); color:var(--obs-text); }
+.obs-atlas-key-paw { width:26px; height:26px; }
+
+@media (max-width: 900px) {
+    .obs-viz-grid { grid-template-columns:1fr; }
+    .obs-inline-filter { width:100%; min-width:0; }
+}
+@media (max-width: 760px) {
+    .obs-ranked-label { align-items:flex-start; flex-direction:column; gap:.15rem; }
+    .obs-chart-shell,.obs-map-shell,.obs-map-centered { padding:.65rem; }
+}
