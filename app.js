@@ -88,6 +88,15 @@ const CURADORES_DATA = [
         tags: ["Bioética", "Autoridade Científica"]
     },
     {
+        id: "nina-disconzi",
+        name: "Nina Trícia Disconzi Rodrigues",
+        image: "https://i1.rgstatic.net/ii/profile.image/11431281205293340-1700171465360_Q128/Nina-Disconzi.jpg",
+        desc: "Professora do Departamento de Direito e do Programa de Pós-Graduação em Direito da UFSM, atua em Direito Constitucional, direitos emergentes e Direito Animal. Coordena o Grupo de Pesquisa em Direito dos Animais (GPDA/UFSM) e desenvolve pesquisa, ensino e articulação acadêmica voltados à proteção jurídica dos animais não humanos.",
+        tags: ["Direito dos Animais", "Direito Constitucional", "Bioética", "Políticas Públicas", "UFSM"],
+        fullBio: "Professora do Departamento de Direito e do Programa de Pós-Graduação em Direito da Universidade Federal de Santa Maria (UFSM), onde leciona Direito Constitucional dos Animais. Doutora em Direito do Estado pela USP e mestra em Direito pela UFSC, coordena o Grupo de Pesquisa em Direito dos Animais (GPDA/UFSM) e o GPDECON. Sua atuação articula Direito Constitucional, direitos emergentes, democracia e Direito Animal, com produção acadêmica e formação voltadas à proteção jurídica dos animais não humanos, à crítica da crueldade e à construção de políticas e marcos normativos mais éticos. Integra a Asociación Latino Americana de Derecho Animal (ALDA) e preside o Instituto Abolicionista Animal (IAA).",
+        sourceUrl: "https://ufsmpublica.ufsm.br/docente/17794"
+    },
+    {
         id: "thales",
         name: "Thales Tréz",
         image: "assets/tales.png",
@@ -666,7 +675,7 @@ function renderPage(pageId) {
 function renderHomePage(container) {
     const cards = [
         { page: 'publicacoes', icon: 'assets/publicações.png', title: 'Acesse o repositório de Publicações', text: 'Acesse uma seleção de publicações sobre métodos substitutivos, incluindo livros, artigos científicos, notícias e conteúdos atualizados, organizados por tema e tipo de material.' },
-        { page: 'metodos', icon: 'assets/métodos_validados.png', title: 'Acesse o repositório de Métodos', text: 'Explore um repositório aberto e colaborativo com métodos substitutivos ao uso de animais no ensino e na pesquisa, organizado por área, nível de ensino e tipo de recurso.' },
+        { page: 'metodos', icon: 'assets/metodos.png', title: 'Acesse o repositório de Métodos', text: 'Explore um repositório aberto e colaborativo com métodos substitutivos ao uso de animais no ensino e na pesquisa, organizado por área, nível de ensino e tipo de recurso.' },
         { page: 'materiais', icon: 'assets/materiais.png', title: 'Busque Materiais Didáticos', text: 'Encontre materiais didáticos como simuladores, jogos e experiências interativas voltados à substituição animal, organizados por área, tipo e nível de ensino.' },
         { page: 'bases-dados', icon: 'assets/base_internacional_(1).png', title: 'Pesquise bases de dados nacionais e internacionais', text: 'Pesquise bases de dados nacionais e internacionais sobre métodos substitutivos e amplie o acesso a recursos validados e atualizados ao redor do mundo.' },
         { page: 'legislacao', icon: 'assets/leis.png', title: 'Acompanhe a Legislação', text: 'Acompanhe legislações, normas e diretrizes relacionadas aos métodos substitutivos, com foco no ensino, pesquisa e ética no uso animal.' },
@@ -1084,7 +1093,8 @@ function renderCuradoriaPage(c) {
                     src="${cur.image}"
                     alt="Retrato de ${cur.name}"
                     loading="lazy"
-                    onerror="this.src='assets/debora.jpg'; this.style.opacity='0.45';"
+                    referrerpolicy="no-referrer"
+                    onerror="this.onerror=null; this.src='assets/eco.png'; this.style.objectFit='contain'; this.style.padding='18px';"
                 >
             </div>
 
@@ -1217,7 +1227,8 @@ function renderCuradorProfilePage(id, container) {
                         <img
                             src="${cur.image}"
                             alt="Retrato de ${cur.name}"
-                            onerror="this.src='assets/debora.jpg'; this.style.opacity='0.45';"
+                            referrerpolicy="no-referrer"
+                            onerror="this.onerror=null; this.src='assets/eco.png'; this.style.objectFit='contain'; this.style.padding='22px';"
                         >
                     </div>
 
