@@ -42,6 +42,8 @@ type SearchResult = {
   section: string;
   scope: "nacional" | "internacional" | "misto";
   tags?: string[];
+  curator_area?: string;
+  curator_tags?: string[];
 };
 
 type ProviderStatus = { provider: string; ok: boolean; count: number; note?: string };
@@ -429,11 +431,31 @@ async function persistRun(userId: string, section: SectionConfig, scope: Scope, 
   } catch (_) { return null; }
 }
 
-function areaForResult(section: SectionConfig, item: SearchResult) {
-  if (section.id === "metodos") return "metodos";
+const ALLOWED_CONTENT_AREAS = new Set(["metodos","materiais","publicacoes","legislacao","bases-dados","eventos"]);
+
+function normalizeCuratorArea(value: unknown): string | null {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "bases") return "bases-dados";
+  return ALLOWED_CONTENT_AREAS.has(normalized) ? normalized : null;
+}
+
+function inferEditorialArea(section: SectionConfig, item: SearchResult) {
+  const manual = normalizeCuratorArea(item.curator_area);
+  if (manual) return manual;
+
+  const haystack = clean([item.title, item.snippet, item.source, ...(item.tags || [])].filter(Boolean).join(" "), 3000).toLowerCase();
+  if (/\b(lei|leis|legisla|regula|regulament|resolu[cç][aã]o|norma|normativ|decreto|portaria|jur[ií]dic|direito animal|policy|law|regulation)\b/.test(haystack)) return "legislacao";
   if (item.kind === "dataset" || item.kind === "repository" || item.kind === "official-data") return "bases-dados";
+  if (section.id === "metodos") return "metodos";
   if (section.id === "educacao") return "materiais";
-  return section.area || "publicacoes";
+  return normalizeCuratorArea(section.area) || "publicacoes";
+}
+
+function normalizedEditorialTags(item: SearchResult, section: SectionConfig): string[] {
+  const source = Array.isArray(item.curator_tags) ? item.curator_tags : (Array.isArray(item.tags) ? item.tags : []);
+  const cleaned = source.map((tag) => clean(tag, 80)).filter(Boolean);
+  if (!cleaned.length) cleaned.push(section.label);
+  return [...new Set(cleaned)].slice(0,20);
 }
 
 async function submitItems(userId: string, sectionId: string, items: SearchResult[]) {
@@ -444,11 +466,12 @@ async function submitItems(userId: string, sectionId: string, items: SearchResul
     if (!url || !title) { skipped.push({title,reason:"registro incompleto"}); continue; }
     const { data: exists } = await admin.from("content_items").select("id,title").eq("external_url",url).limit(1);
     if (Array.isArray(exists) && exists.length) { skipped.push({title,reason:"já existe na curadoria"}); continue; }
-    const tags = [...new Set([section.label, item.provider, item.kind, ...(item.tags || [])].filter(Boolean))].slice(0,20);
+    const tags = normalizedEditorialTags(item, section);
+    const editorialArea = inferEditorialArea(section,item);
     const payload = {
       title,
       author_name: clean(item.authors || item.source || item.provider,250) || "Fonte externa",
-      area: areaForResult(section,item),
+      area: editorialArea,
       tags,
       description: clean(item.snippet || `Resultado localizado por ${item.provider} para a seção ${section.label}.`,1200),
       long_description: clean(`${item.snippet || ""}\n\nOrigem: ${item.provider}. Fonte: ${item.source}. ${item.year ? `Ano: ${item.year}.` : ""}`,3500),
@@ -457,8 +480,19 @@ async function submitItems(userId: string, sectionId: string, items: SearchResul
       status:"pending",
       submitted_by:userId,
       source_type:"observatorio_api",
-      source_metadata:{ section:section.id, provider:item.provider, source:item.source, kind:item.kind, year:item.year || null, doi:item.doi || null, country:item.country || null, scope:item.scope },
-      verification_note:"Achado automaticamente pela API interna do Observatório. Revisar fonte primária, escopo, resumo e pertinência antes de aprovar."
+      source_metadata:{
+        section:section.id,
+        provider:item.provider,
+        source:item.source,
+        kind:item.kind,
+        year:item.year || null,
+        doi:item.doi || null,
+        country:item.country || null,
+        scope:item.scope,
+        curator_area:editorialArea,
+        curator_tags:tags
+      },
+      verification_note:`Achado automaticamente pela API interna do Observatório. Destino editorial revisável: ${editorialArea}. Revisar fonte primária, escopo, resumo e pertinência antes de aprovar.`
     };
     const { data, error } = await admin.from("content_items").insert(payload).select("id,title").single();
     if (error) skipped.push({title,reason:error.message}); else created.push(data);
