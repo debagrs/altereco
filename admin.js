@@ -480,7 +480,7 @@ function renderLogin(role) {
                 </button>
             </form>
 
-            <div style="display:flex; justify-content:center; margin-top:1.5rem; font-size:0.9rem; font-weight:500;">
+            <div style="display:flex; justify-content:center; gap:1rem; flex-wrap:wrap; margin-top:1.5rem; font-size:0.9rem; font-weight:500;">
                 <a
                     href="#"
                     onclick="event.preventDefault(); renderResetPassword('${role}');"
@@ -488,6 +488,14 @@ function renderLogin(role) {
                 >
                     Esqueci minha senha
                 </a>
+                ${role === 'curador' ? `
+                <a
+                    href="#"
+                    onclick="event.preventDefault(); renderFirstAccess();"
+                    style="color:var(--primary-navy); text-decoration:underline;"
+                >
+                    Primeiro acesso
+                </a>` : ''}
             </div>
         </div>
     </div>
@@ -496,6 +504,105 @@ function renderLogin(role) {
     if (window.lucide) window.lucide.createIcons();
     window.scrollTo(0, 0);
 }
+
+window.renderFirstAccess = function() {
+    const c = document.getElementById('content-area');
+
+    c.innerHTML = `
+    <div style="min-height:80vh; display:flex; align-items:center; justify-content:center; background:var(--bg-light); padding:2rem;">
+        <div style="background:var(--white); padding:clamp(2rem, 6vw, 4rem); border-radius:var(--border-radius); box-shadow:var(--shadow); max-width:480px; width:100%;">
+            <div style="text-align:center; margin-bottom:2rem;">
+                <i data-lucide="badge-check" style="width:64px; height:64px; color:var(--mint-teal);" aria-hidden="true"></i>
+                <h2 style="color:var(--primary-navy); margin-top:1rem;">Primeiro acesso da curadoria</h2>
+                <p style="color:var(--text-gray); font-size:0.92rem; line-height:1.55;">
+                    Use o e-mail institucional ou pessoal autorizado pela coordenação e crie sua senha individual.
+                </p>
+            </div>
+
+            <form onsubmit="processFirstAccess(event)" style="display:flex; flex-direction:column; gap:1.25rem;">
+                <div>
+                    <label for="first-email" style="font-weight:bold; display:block; margin-bottom:0.5rem;">E-mail autorizado</label>
+                    <input type="email" id="first-email" autocomplete="email" required placeholder="seuemail@instituicao.br" style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;">
+                </div>
+                <div>
+                    <label for="first-password" style="font-weight:bold; display:block; margin-bottom:0.5rem;">Criar senha</label>
+                    <input type="password" id="first-password" minlength="12" autocomplete="new-password" required placeholder="Mínimo de 12 caracteres" style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;">
+                </div>
+                <div>
+                    <label for="first-password-confirm" style="font-weight:bold; display:block; margin-bottom:0.5rem;">Confirmar senha</label>
+                    <input type="password" id="first-password-confirm" minlength="12" autocomplete="new-password" required style="width:100%; padding:0.9rem; border:1px solid rgba(128,128,128,0.2); border-radius:8px;">
+                </div>
+                <button type="submit" style="width:100%; padding:1rem; border:none; cursor:pointer; font-weight:bold; font-size:1.05rem; background:var(--primary-navy); color:white; border-radius:8px;">
+                    Criar meu acesso
+                </button>
+            </form>
+
+            <p style="color:var(--text-gray); font-size:0.82rem; line-height:1.45; margin-top:1.25rem;">
+                Apenas e-mails previamente autorizados recebem perfil ativo de curadoria. Outros cadastros permanecem sem acesso ao painel.
+            </p>
+
+            <button onclick="renderLogin('curador')" style="width:100%; padding:0.8rem; background:none; border:none; color:var(--text-gray); font-weight:bold; cursor:pointer; margin-top:.5rem; text-decoration:underline;">
+                Voltar ao login
+            </button>
+        </div>
+    </div>`;
+
+    if (window.lucide) window.lucide.createIcons();
+    window.scrollTo(0, 0);
+};
+
+window.processFirstAccess = async function(event) {
+    event.preventDefault();
+
+    const email = document.getElementById('first-email').value.trim().toLowerCase();
+    const password = document.getElementById('first-password').value;
+    const confirmation = document.getElementById('first-password-confirm').value;
+    const submitButton = event.submitter;
+
+    if (password !== confirmation) {
+        alert('As duas senhas não são iguais.');
+        return;
+    }
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Criando acesso...';
+    }
+
+    try {
+        const supabaseClient = getSupabaseClient();
+        const redirectTo = `${window.location.origin}${window.location.pathname}`;
+
+        const { data, error } = await supabaseClient.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: redirectTo }
+        });
+
+        if (error) throw error;
+
+        if (data?.session) {
+            const verifiedSession = await getVerifiedAccess('curator');
+            if (!verifiedSession) throw new Error('Não foi possível confirmar o acesso de curadoria.');
+            await renderCuradorDashboard();
+            return;
+        }
+
+        alert('Cadastro iniciado. Verifique seu e-mail para confirmar a conta e, depois, entre no Painel da Curadoria.');
+        renderLogin('curador');
+    } catch (error) {
+        console.error('Erro no primeiro acesso da curadoria:', error);
+        const message = /already registered|already been registered|user already/i.test(error.message || '')
+            ? 'Esse e-mail já possui conta. Use “Esqueci minha senha” para criar ou recuperar a senha.'
+            : error.message;
+        alert(`Não foi possível criar o acesso.\n\n${message}`);
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Criar meu acesso';
+        }
+    }
+};
 
 window.renderResetPassword = function(role) {
     const c = document.getElementById('content-area');
