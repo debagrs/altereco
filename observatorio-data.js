@@ -367,9 +367,9 @@ window.OBSERVATORIO_DB = {
 
     pesquisa: {
         grupos: [
-            { area: "Bem-estar Animal", total: 47, fonte: "levantamento AlterECO a partir do DGP/CNPq 2023" },
-            { area: "Direito Animal", total: 22, fonte: "levantamento AlterECO a partir do DGP/CNPq 2023" },
-            { area: "Ética e Senciência", total: 20, fonte: "levantamento AlterECO a partir do DGP/CNPq 2023" }
+            { area: "Bem-estar Animal", total: 13, fonte: "base nominal temática AlterECO · referência DGP/CNPq 2023" },
+            { area: "Direito Animal", total: 7, fonte: "base nominal temática AlterECO · referência DGP/CNPq 2023" },
+            { area: "Ética e Senciência", total: 10, fonte: "base nominal temática AlterECO · referência DGP/CNPq 2023" }
         ],
         grupos_catalogo: {
             "Bem-estar Animal": [
