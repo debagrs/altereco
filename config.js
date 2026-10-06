@@ -7,8 +7,9 @@
 const CONFIG = {
     AI: {
         FUNCTION_NAME: "ai-eco",
-        CURATOR_FUNCTION_NAME: "ai-curator",
+        CURATOR_FUNCTION_NAME: "ai-eco",
         OBSERVATORY_FUNCTION_NAME: "ai-observatorio",
+        OBSERVATORY_API_FUNCTION_NAME: "observatorio-api",
         MODEL_LABEL: "Gemini 3.5 Flash",
         MAX_MESSAGE_CHARS: 3000
     },
