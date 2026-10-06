@@ -1734,6 +1734,61 @@ const ALTERECO_OBSERVATORY_API_SECTIONS = [
     { id: 'metodos', label: 'Métodos substitutivos', icon: 'hub', text: 'NAMs, in vitro, in silico, organoides, organ-on-chip e alternativas didáticas.' }
 ];
 
+const ALTERECO_OBSERVATORY_API_AREAS = [
+    { id: 'publicacoes', label: 'Publicações' },
+    { id: 'legislacao', label: 'Legislação' },
+    { id: 'metodos', label: 'Métodos substitutivos' },
+    { id: 'materiais', label: 'Materiais didáticos' },
+    { id: 'bases-dados', label: 'Bases de dados' },
+    { id: 'eventos', label: 'Eventos' }
+];
+
+function inferObservatoryApiArea(item = {}) {
+    const explicit = normalizeContentArea(item.curator_area || '');
+    if (item.curator_area && ALTERECO_CONTENT_AREAS.has(explicit)) return explicit;
+
+    const haystack = [item.title, item.snippet, item.source, ...(Array.isArray(item.tags) ? item.tags : [])]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+    if (/\b(lei|leis|legisla|regula|regulament|resolu[cç][aã]o|norma|normativ|decreto|portaria|jur[ií]dic|direito animal|policy|law|regulation)\b/.test(haystack)) return 'legislacao';
+    if (item.kind === 'dataset' || item.kind === 'repository' || item.kind === 'official-data') return 'bases-dados';
+    if (alterecoObservatoryApiState.section === 'metodos') return 'metodos';
+    if (alterecoObservatoryApiState.section === 'educacao') return 'materiais';
+    if (alterecoObservatoryApiState.section === 'atlas') return 'bases-dados';
+    return 'publicacoes';
+}
+
+function defaultObservatoryApiTags(item = {}) {
+    const section = ALTERECO_OBSERVATORY_API_SECTIONS.find(s => s.id === alterecoObservatoryApiState.section);
+    const sourceTags = normalizeTags(item.curator_tags || item.tags || []);
+    const semantic = [];
+    if (section?.label) semantic.push(section.label);
+    if (item.country === 'BR' || item.scope === 'nacional') semantic.push('Brasil');
+    return normalizeTags([...sourceTags, ...semantic]);
+}
+
+function initializeObservatoryApiEditorialMetadata(item = {}) {
+    return {
+        ...item,
+        curator_area: item.curator_area || inferObservatoryApiArea(item),
+        curator_tags: defaultObservatoryApiTags(item)
+    };
+}
+
+window.updateObservatoryApiResultArea = function(index, value) {
+    const item = alterecoObservatoryApiState.results[Number(index)];
+    if (!item) return;
+    item.curator_area = normalizeContentArea(value);
+};
+
+window.updateObservatoryApiResultTags = function(index, value) {
+    const item = alterecoObservatoryApiState.results[Number(index)];
+    if (!item) return;
+    item.curator_tags = normalizeTags(value);
+};
+
 async function invokeObservatoryAPI(payload) {
     const session = await getVerifiedAccess('admin');
     if (!session) throw new Error('Sessão administrativa não encontrada.');
@@ -1830,7 +1885,8 @@ function renderObservatoryApiProviderStatus(providers = []) {
 }
 
 function renderObservatoryApiResults(data) {
-    const results = Array.isArray(data?.results) ? data.results : [];
+    const rawResults = Array.isArray(data?.results) ? data.results : [];
+    const results = rawResults.map(initializeObservatoryApiEditorialMetadata);
     alterecoObservatoryApiState.results = results;
     alterecoObservatoryApiState.runId = data?.runId || null;
     alterecoObservatoryApiState.section = data?.section?.id || alterecoObservatoryApiState.section;
@@ -1841,19 +1897,32 @@ function renderObservatoryApiResults(data) {
     const cards = results.map((item, index) => {
         const url = normalizeExternalUrl(item.url);
         const sourceLine = [item.provider, item.source, item.year, item.country].filter(Boolean).join(' · ');
+        const areaOptions = ALTERECO_OBSERVATORY_API_AREAS.map(area => `<option value="${area.id}" ${item.curator_area === area.id ? 'selected' : ''}>${escapeHtml(area.label)}</option>`).join('');
+        const editableTags = normalizeTags(item.curator_tags || []).join(', ');
         return `
-        <article style="display:grid; grid-template-columns:auto minmax(0,1fr); gap:.9rem; padding:1rem 0; border-bottom:1px solid rgba(128,128,128,.13);">
+        <article style="display:grid; grid-template-columns:auto minmax(0,1fr); gap:.9rem; padding:1.15rem 0; border-bottom:1px solid rgba(128,128,128,.13);">
             <input type="checkbox" class="obs-api-check" data-index="${index}" checked aria-label="Selecionar ${escapeHtml(item.title || '')}" style="margin-top:.28rem; width:19px; height:19px; accent-color:#176A61;">
             <div>
-                <div style="display:flex; gap:.45rem; flex-wrap:wrap; margin-bottom:.45rem;">
-                    <span style="font-size:.68rem; font-weight:800; padding:.25rem .48rem; border-radius:999px; background:#EAFBF8; color:#176A61;">${escapeHtml(item.kind || 'resultado')}</span>
-                    <span style="font-size:.68rem; font-weight:800; padding:.25rem .48rem; border-radius:999px; background:var(--bg-light); color:var(--text-gray);">${escapeHtml(item.scope || '')}</span>
+                <div style="display:flex; gap:.45rem; flex-wrap:wrap; align-items:center; margin-bottom:.55rem;">
+                    <label style="display:inline-flex; align-items:center; gap:.35rem; font-size:.68rem; font-weight:800; color:#176A61;">
+                        <span>Destino</span>
+                        <select aria-label="Destino editorial de ${escapeHtml(item.title || '')}" onchange="updateObservatoryApiResultArea(${index}, this.value)" style="font:inherit; font-weight:800; padding:.32rem .55rem; border-radius:999px; border:1px solid rgba(23,106,97,.22); background:#EAFBF8; color:#176A61; cursor:pointer;">
+                            ${areaOptions}
+                        </select>
+                    </label>
+                    <span title="Tipo técnico recuperado da fonte" style="font-size:.68rem; font-weight:800; padding:.25rem .48rem; border-radius:999px; background:#F3F4F6; color:#4B5563;">tipo: ${escapeHtml(item.kind || 'resultado')}</span>
+                    <span title="Abrangência do resultado" style="font-size:.68rem; font-weight:800; padding:.25rem .48rem; border-radius:999px; background:var(--bg-light); color:var(--text-gray);">${escapeHtml(item.scope || '')}</span>
                 </div>
                 <h4 style="color:var(--primary-navy); margin:0 0 .35rem; line-height:1.35;">${escapeHtml(item.title || 'Sem título')}</h4>
                 <div style="font-size:.78rem; color:#176A61; font-weight:700; margin-bottom:.5rem;">${escapeHtml(sourceLine)}</div>
                 ${item.authors ? `<div style="font-size:.78rem; color:var(--text-gray); margin-bottom:.45rem;">${escapeHtml(item.authors)}</div>` : ''}
                 ${item.snippet ? `<p style="font-size:.84rem; color:var(--text-gray); line-height:1.55; margin:.3rem 0;">${escapeHtml(item.snippet)}</p>` : ''}
-                ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:.45rem; font-size:.78rem; color:var(--primary-navy); font-weight:800;">Abrir fonte ↗</a>` : ''}
+                <div style="margin-top:.75rem; padding:.75rem; border-radius:12px; background:#F8FCFB; border:1px solid rgba(23,106,97,.12);">
+                    <label for="obs-api-tags-${index}" style="display:block; color:var(--primary-navy); font-size:.73rem; font-weight:900; margin-bottom:.35rem;">Tags editoriais</label>
+                    <input id="obs-api-tags-${index}" type="text" value="${escapeHtml(editableTags)}" oninput="updateObservatoryApiResultTags(${index}, this.value)" placeholder="Ex.: legislação, Lei Arouca, experimentação animal" style="width:100%; padding:.62rem .72rem; border:1px solid rgba(128,128,128,.22); border-radius:10px; background:white; color:var(--primary-navy); font:inherit; font-size:.78rem;" />
+                    <small style="display:block; margin-top:.3rem; color:var(--text-gray); line-height:1.35;">Você pode reclassificar o destino e editar as tags antes de enviar. Separe tags por vírgulas.</small>
+                </div>
+                ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:.55rem; font-size:.78rem; color:var(--primary-navy); font-weight:800;">Abrir fonte ↗</a>` : ''}
             </div>
         </article>`;
     }).join('');
@@ -1864,6 +1933,7 @@ function renderObservatoryApiResults(data) {
                 <div>
                     <h3 style="color:var(--primary-navy); margin:0;">${escapeHtml(data?.section?.label || 'Resultados')}</h3>
                     <p style="color:var(--text-gray); margin:.35rem 0 0; font-size:.84rem;">${results.length} achados deduplicados · busca: ${escapeHtml(data?.query || '')}</p>
+                    <p style="color:#176A61; margin:.4rem 0 0; font-size:.76rem; font-weight:800;">Classificação editável: altere “Destino” e as tags de cada achado antes de enviar para a curadoria.</p>
                 </div>
                 <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
                     <button onclick="toggleAllObservatoryApiResults(true)" style="border:1px solid rgba(128,128,128,.2); background:white; padding:.65rem .8rem; border-radius:10px; font-weight:700; cursor:pointer;">Selecionar todos</button>
