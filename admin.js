@@ -1707,6 +1707,265 @@ window.restoreCuratorAIRun = function(id) {
     document.getElementById('curator-ai-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
+
+
+/* ════════════ API OBSERVATÓRIO — AGREGAÇÃO NACIONAL + INTERNACIONAL ════════════ */
+
+const alterecoObservatoryApiState = {
+    section: 'metodos',
+    scope: 'ambos',
+    runId: null,
+    results: [],
+    catalog: null
+};
+
+const ALTERECO_OBSERVATORY_API_SECTIONS = [
+    { id: 'visao', label: 'Visão geral', icon: 'monitoring', text: 'Relações humano-animal, bem-estar e políticas públicas.' },
+    { id: 'pets', label: 'Animais de companhia', icon: 'pets', text: 'Cães, gatos, tutela responsável, bem-estar e abandono.' },
+    { id: 'economia', label: 'Economia e mercado', icon: 'payments', text: 'Mercado pet, indústria animal e economia do cuidado.' },
+    { id: 'consumo', label: 'Consumo e abate', icon: 'restaurant', text: 'Abate, pecuária, consumo, produção e senciência.' },
+    { id: 'experimentacao', label: 'Experimentação animal', icon: 'biotech', text: 'Uso de animais em pesquisa, 3Rs, ética e regulação.' },
+    { id: 'violencia', label: 'Maus-tratos e violência', icon: 'gavel', text: 'Crueldade, violência, proteção e legislação.' },
+    { id: 'abandono', label: 'Abandono e proteção', icon: 'home', text: 'Animais em situação de rua, abrigos, adoção e políticas.' },
+    { id: 'entretenimento', label: 'Entretenimento e cativeiro', icon: 'theater_comedy', text: 'Zoológicos, aquários, circos, fauna e bem-estar.' },
+    { id: 'pesquisa', label: 'Pesquisa e grupos', icon: 'science', text: 'Produção científica, grupos, projetos e redes de pesquisa.' },
+    { id: 'educacao', label: 'Educação', icon: 'school', text: 'Educação humanitária e alternativas ao uso de animais no ensino.' },
+    { id: 'atlas', label: 'Atlas global', icon: 'public', text: 'Políticas, organizações e evidências internacionais comparadas.' },
+    { id: 'metodos', label: 'Métodos substitutivos', icon: 'hub', text: 'NAMs, in vitro, in silico, organoides, organ-on-chip e alternativas didáticas.' }
+];
+
+async function invokeObservatoryAPI(payload) {
+    const session = await getVerifiedAccess('admin');
+    if (!session) throw new Error('Sessão administrativa não encontrada.');
+
+    const client = getSupabaseClient();
+    const functionName = window.CONFIG?.AI?.OBSERVATORY_API_FUNCTION_NAME || 'observatorio-api';
+    const { data, error } = await client.functions.invoke(functionName, { body: payload });
+
+    if (error) {
+        let message = error.message || 'Falha ao chamar a API do Observatório.';
+        try {
+            if (error.context && typeof error.context.json === 'function') {
+                const details = await error.context.json();
+                if (details?.error) message = details.error;
+            }
+        } catch (_) {}
+        throw new Error(message);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+}
+
+window.renderObservatoryAPIWorkspace = function() {
+    const cards = ALTERECO_OBSERVATORY_API_SECTIONS.map(section => `
+        <button type="button" onclick="selectObservatoryApiSection('${section.id}')" id="obs-api-section-${section.id}" style="text-align:left; border:1px solid rgba(128,128,128,.17); background:${section.id === alterecoObservatoryApiState.section ? '#EAFBF8' : 'var(--white)'}; border-radius:16px; padding:1rem; cursor:pointer; min-height:135px; transition:.2s;">
+            <span class="material-icons" aria-hidden="true" style="font-size:28px; color:${section.id === 'metodos' ? '#176A61' : 'var(--primary-navy)'};">${section.icon}</span>
+            <strong style="display:block; color:var(--primary-navy); margin:.65rem 0 .35rem; font-size:.96rem;">${escapeHtml(section.label)}</strong>
+            <span style="display:block; color:var(--text-gray); font-size:.8rem; line-height:1.45;">${escapeHtml(section.text)}</span>
+        </button>`).join('');
+
+    return `
+    <section id="observatory-api-workspace" style="background:var(--white); border-radius:22px; border:1px solid rgba(128,128,128,.15); box-shadow:var(--shadow); overflow:hidden;">
+        <div style="padding:clamp(1.35rem,3vw,2.2rem); border-bottom:1px solid rgba(128,128,128,.14); background:linear-gradient(135deg, rgba(64,248,226,.12), rgba(250,205,95,.12));">
+            <div style="display:flex; gap:1rem; justify-content:space-between; align-items:flex-start; flex-wrap:wrap;">
+                <div>
+                    <div class="page-badge" style="display:inline-block; margin-bottom:.5rem; background:#176A61; color:white;">API INTERNA · ADMIN</div>
+                    <h3 style="font-size:1.5rem; color:var(--primary-navy); margin:0;">API do Observatório AlterECO</h3>
+                    <p style="color:var(--text-gray); margin:.45rem 0 0; max-width:850px; line-height:1.55;">Busca cada eixo do Observatório em APIs científicas, repositórios e bases oficiais nacionais e internacionais. Os resultados não são publicados automaticamente: você seleciona o que entra na sua fila de curadoria.</p>
+                </div>
+                <div id="obs-api-status" style="font-size:.78rem; color:#176A61; font-weight:800; padding:.6rem .85rem; border-radius:999px; background:white; border:1px solid rgba(23,106,97,.2);">9 conectores · nacional + internacional</div>
+            </div>
+        </div>
+
+        <div style="padding:clamp(1.25rem,3vw,2rem);">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:.75rem; margin-bottom:1.5rem;">${cards}</div>
+
+            <div style="background:var(--bg-light); border-radius:18px; padding:1.2rem; border:1px solid rgba(128,128,128,.12);">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:.8rem; align-items:end;">
+                    <div>
+                        <label for="obs-api-scope" style="display:block; font-weight:800; color:var(--primary-navy); margin-bottom:.45rem;">Abrangência</label>
+                        <select id="obs-api-scope" style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:12px; background:white; font:inherit;">
+                            <option value="ambos">Brasil + internacional</option>
+                            <option value="brasil">Somente Brasil</option>
+                            <option value="internacional">Somente internacional</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="obs-api-query" style="display:block; font-weight:800; color:var(--primary-navy); margin-bottom:.45rem;">Complemento opcional da busca</label>
+                        <input id="obs-api-query" type="search" maxlength="300" placeholder="Ex.: veterinária, direito animal, organ-on-chip, Rio Grande do Sul..." style="width:100%; padding:.9rem; border:1px solid rgba(128,128,128,.2); border-radius:12px; background:white; font:inherit;">
+                    </div>
+                </div>
+                <div style="display:flex; gap:.7rem; flex-wrap:wrap; margin-top:1rem;">
+                    <button id="obs-api-search-btn" onclick="runObservatoryApiSearch()" style="background:var(--primary-navy); color:white; border:none; padding:.95rem 1.2rem; border-radius:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.45rem;"><i data-lucide="search" style="width:18px;"></i> Buscar neste eixo</button>
+                    <button onclick="loadObservatoryApiHistory()" style="background:white; color:var(--primary-navy); border:1px solid rgba(128,128,128,.2); padding:.95rem 1.2rem; border-radius:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.45rem;"><i data-lucide="history" style="width:18px;"></i> Histórico</button>
+                </div>
+            </div>
+
+            <div style="margin-top:1rem; padding:1rem; border-radius:14px; background:#F8FCFB; border:1px solid rgba(23,106,97,.12); color:var(--text-gray); font-size:.82rem; line-height:1.55;">
+                <strong style="color:#176A61;">Conectores ativos:</strong> OpenAlex · OpenAIRE Graph · SciELO/ArticleMeta · Europe PMC/PubMed · Crossref · DataCite · Zenodo · NIH RePORTER · IBGE SIDRA. Fontes institucionais como CONCEA, RENAMA, IBAMA, CNPq, FAO e legislação aparecem junto aos eixos correspondentes para conferência.
+            </div>
+
+            <div id="obs-api-results" style="margin-top:1.5rem;"></div>
+            <div id="obs-api-history" style="margin-top:1.2rem;"></div>
+        </div>
+    </section>`;
+};
+
+window.selectObservatoryApiSection = function(sectionId) {
+    alterecoObservatoryApiState.section = sectionId;
+    ALTERECO_OBSERVATORY_API_SECTIONS.forEach(section => {
+        const el = document.getElementById(`obs-api-section-${section.id}`);
+        if (!el) return;
+        el.style.background = section.id === sectionId ? '#EAFBF8' : 'var(--white)';
+        el.style.borderColor = section.id === sectionId ? 'rgba(23,106,97,.38)' : 'rgba(128,128,128,.17)';
+    });
+    const query = document.getElementById('obs-api-query');
+    if (query) query.focus();
+};
+
+function renderObservatoryApiProviderStatus(providers = []) {
+    if (!Array.isArray(providers) || !providers.length) return '';
+    return `<div style="display:flex; flex-wrap:wrap; gap:.4rem; margin:.75rem 0 1rem;">${providers.map(p => `
+        <span style="font-size:.72rem; padding:.35rem .55rem; border-radius:999px; background:${p.ok ? '#EAFBF8' : '#FFF0F0'}; color:${p.ok ? '#176A61' : '#A22727'}; border:1px solid ${p.ok ? 'rgba(23,106,97,.16)' : 'rgba(162,39,39,.14)'};">${escapeHtml(p.provider)} · ${Number(p.count || 0)}</span>`).join('')}</div>`;
+}
+
+function renderObservatoryApiResults(data) {
+    const results = Array.isArray(data?.results) ? data.results : [];
+    alterecoObservatoryApiState.results = results;
+    alterecoObservatoryApiState.runId = data?.runId || null;
+    alterecoObservatoryApiState.section = data?.section?.id || alterecoObservatoryApiState.section;
+    alterecoObservatoryApiState.scope = data?.scope || 'ambos';
+
+    if (!results.length) return `<div style="padding:2rem; text-align:center; background:var(--bg-light); border-radius:16px; color:var(--text-gray);">Nenhum resultado estruturado foi recuperado nesta rodada. Tente acrescentar um termo ou mudar a abrangência.</div>`;
+
+    const cards = results.map((item, index) => {
+        const url = normalizeExternalUrl(item.url);
+        const sourceLine = [item.provider, item.source, item.year, item.country].filter(Boolean).join(' · ');
+        return `
+        <article style="display:grid; grid-template-columns:auto minmax(0,1fr); gap:.9rem; padding:1rem 0; border-bottom:1px solid rgba(128,128,128,.13);">
+            <input type="checkbox" class="obs-api-check" data-index="${index}" checked aria-label="Selecionar ${escapeHtml(item.title || '')}" style="margin-top:.28rem; width:19px; height:19px; accent-color:#176A61;">
+            <div>
+                <div style="display:flex; gap:.45rem; flex-wrap:wrap; margin-bottom:.45rem;">
+                    <span style="font-size:.68rem; font-weight:800; padding:.25rem .48rem; border-radius:999px; background:#EAFBF8; color:#176A61;">${escapeHtml(item.kind || 'resultado')}</span>
+                    <span style="font-size:.68rem; font-weight:800; padding:.25rem .48rem; border-radius:999px; background:var(--bg-light); color:var(--text-gray);">${escapeHtml(item.scope || '')}</span>
+                </div>
+                <h4 style="color:var(--primary-navy); margin:0 0 .35rem; line-height:1.35;">${escapeHtml(item.title || 'Sem título')}</h4>
+                <div style="font-size:.78rem; color:#176A61; font-weight:700; margin-bottom:.5rem;">${escapeHtml(sourceLine)}</div>
+                ${item.authors ? `<div style="font-size:.78rem; color:var(--text-gray); margin-bottom:.45rem;">${escapeHtml(item.authors)}</div>` : ''}
+                ${item.snippet ? `<p style="font-size:.84rem; color:var(--text-gray); line-height:1.55; margin:.3rem 0;">${escapeHtml(item.snippet)}</p>` : ''}
+                ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:.45rem; font-size:.78rem; color:var(--primary-navy); font-weight:800;">Abrir fonte ↗</a>` : ''}
+            </div>
+        </article>`;
+    }).join('');
+
+    return `
+        <div style="background:var(--white); border:1px solid rgba(128,128,128,.15); border-radius:18px; padding:1.2rem;">
+            <div style="display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; align-items:flex-start;">
+                <div>
+                    <h3 style="color:var(--primary-navy); margin:0;">${escapeHtml(data?.section?.label || 'Resultados')}</h3>
+                    <p style="color:var(--text-gray); margin:.35rem 0 0; font-size:.84rem;">${results.length} achados deduplicados · busca: ${escapeHtml(data?.query || '')}</p>
+                </div>
+                <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                    <button onclick="toggleAllObservatoryApiResults(true)" style="border:1px solid rgba(128,128,128,.2); background:white; padding:.65rem .8rem; border-radius:10px; font-weight:700; cursor:pointer;">Selecionar todos</button>
+                    <button onclick="toggleAllObservatoryApiResults(false)" style="border:1px solid rgba(128,128,128,.2); background:white; padding:.65rem .8rem; border-radius:10px; font-weight:700; cursor:pointer;">Limpar</button>
+                </div>
+            </div>
+            ${renderObservatoryApiProviderStatus(data?.providers)}
+            <div>${cards}</div>
+            <div style="display:flex; gap:.7rem; flex-wrap:wrap; margin-top:1.2rem;">
+                <button id="obs-api-submit-btn" onclick="sendObservatoryApiSelectedToCuration()" style="background:var(--accent-orange); color:var(--primary-navy); border:none; padding:.95rem 1.2rem; border-radius:12px; font-weight:900; cursor:pointer; display:inline-flex; gap:.45rem; align-items:center;"><i data-lucide="inbox" style="width:18px;"></i> Enviar selecionados para minha curadoria</button>
+                <span id="obs-api-submit-status" style="align-self:center; color:var(--text-gray); font-size:.82rem;"></span>
+            </div>
+        </div>`;
+}
+
+window.runObservatoryApiSearch = async function() {
+    const scope = document.getElementById('obs-api-scope')?.value || 'ambos';
+    const query = document.getElementById('obs-api-query')?.value?.trim() || '';
+    const resultEl = document.getElementById('obs-api-results');
+    const statusEl = document.getElementById('obs-api-status');
+    const btn = document.getElementById('obs-api-search-btn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-circle" style="width:18px;"></i> Consultando APIs...'; }
+    if (statusEl) statusEl.textContent = 'Consultando bases nacionais e internacionais...';
+    if (resultEl) resultEl.innerHTML = '<div style="padding:2rem; background:var(--bg-light); border-radius:16px; color:var(--text-gray);"><strong>Busca em andamento.</strong><br>O AlterECO está consultando as APIs compatíveis com este eixo e deduplicando os resultados.</div>';
+    if (window.lucide) window.lucide.createIcons();
+    try {
+        const data = await invokeObservatoryAPI({ action: 'search', section: alterecoObservatoryApiState.section, scope, query });
+        if (statusEl) statusEl.textContent = `${data.total || 0} achados · ${Array.isArray(data.providers) ? data.providers.filter(p => p.ok).length : 0} conectores responderam`;
+        if (resultEl) resultEl.innerHTML = renderObservatoryApiResults(data);
+    } catch (error) {
+        console.error('API Observatório:', error);
+        if (statusEl) statusEl.textContent = 'API Observatório · erro';
+        if (resultEl) resultEl.innerHTML = `<div style="padding:1.2rem; border-radius:14px; background:#FFF0F0; color:#A22727;"><strong>Não foi possível completar a busca.</strong><br>${escapeHtml(error.message)}</div>`;
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="search" style="width:18px;"></i> Buscar neste eixo'; }
+        if (window.lucide) window.lucide.createIcons();
+    }
+};
+
+window.toggleAllObservatoryApiResults = function(checked) {
+    document.querySelectorAll('.obs-api-check').forEach(el => { el.checked = !!checked; });
+};
+
+window.sendObservatoryApiSelectedToCuration = async function() {
+    const selected = [...document.querySelectorAll('.obs-api-check:checked')]
+        .map(el => alterecoObservatoryApiState.results[Number(el.dataset.index)])
+        .filter(Boolean);
+    if (!selected.length) return alert('Selecione pelo menos um achado.');
+    const btn = document.getElementById('obs-api-submit-btn');
+    const status = document.getElementById('obs-api-submit-status');
+    if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
+    try {
+        const data = await invokeObservatoryAPI({ action: 'submit', section: alterecoObservatoryApiState.section, items: selected });
+        const created = Array.isArray(data.created) ? data.created.length : 0;
+        const skipped = Array.isArray(data.skipped) ? data.skipped.length : 0;
+        if (status) status.textContent = `${created} enviado(s) à curadoria${skipped ? ` · ${skipped} duplicado(s)/ignorado(s)` : ''}.`;
+        if (created) alert(`${created} achado${created === 1 ? '' : 's'} enviado${created === 1 ? '' : 's'} para a sua fila de Curadoria. Nada foi publicado automaticamente.`);
+    } catch (error) {
+        if (status) status.textContent = error.message;
+        alert(`Não foi possível enviar para a curadoria.\n\n${error.message}`);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="inbox" style="width:18px;"></i> Enviar selecionados para minha curadoria'; }
+        if (window.lucide) window.lucide.createIcons();
+    }
+};
+
+window.loadObservatoryApiHistory = async function() {
+    const el = document.getElementById('obs-api-history');
+    if (!el) return;
+    el.innerHTML = '<div style="color:var(--text-gray);">Carregando histórico...</div>';
+    try {
+        const data = await invokeObservatoryAPI({ action: 'history' });
+        const runs = Array.isArray(data.runs) ? data.runs : [];
+        window.__alterecoObservatoryApiHistory = runs;
+        if (!runs.length) { el.innerHTML = '<div style="color:var(--text-gray);">Ainda não há pesquisas salvas.</div>'; return; }
+        el.innerHTML = `<details open style="background:var(--bg-light); border-radius:14px; padding:1rem;"><summary style="cursor:pointer; font-weight:800; color:var(--primary-navy);">Pesquisas recentes</summary><div style="display:grid; gap:.55rem; margin-top:.8rem;">${runs.map(run => {
+            const section = ALTERECO_OBSERVATORY_API_SECTIONS.find(s => s.id === run.section);
+            return `<button onclick="restoreObservatoryApiRun('${run.id}')" style="text-align:left; background:white; border:1px solid rgba(128,128,128,.14); border-radius:12px; padding:.8rem; cursor:pointer;"><strong style="color:var(--primary-navy);">${escapeHtml(section?.label || run.section)}</strong><br><small style="color:var(--text-gray);">${escapeHtml(run.scope || 'ambos')} · ${Number(run.result_count || 0)} resultados · ${escapeHtml(formatContentDate(run.created_at))}</small></button>`;
+        }).join('')}</div></details>`;
+    } catch (error) {
+        el.innerHTML = `<div style="color:#A22727;">${escapeHtml(error.message)}</div>`;
+    }
+};
+
+window.restoreObservatoryApiRun = function(id) {
+    const runs = window.__alterecoObservatoryApiHistory || [];
+    const run = runs.find(item => item.id === id);
+    if (!run) return;
+    alterecoObservatoryApiState.section = run.section || 'visao';
+    alterecoObservatoryApiState.scope = run.scope || 'ambos';
+    const scopeEl = document.getElementById('obs-api-scope');
+    if (scopeEl) scopeEl.value = alterecoObservatoryApiState.scope;
+    const queryEl = document.getElementById('obs-api-query');
+    if (queryEl) queryEl.value = '';
+    selectObservatoryApiSection(alterecoObservatoryApiState.section);
+    const section = ALTERECO_OBSERVATORY_API_SECTIONS.find(s => s.id === run.section) || {};
+    const resultEl = document.getElementById('obs-api-results');
+    if (resultEl) resultEl.innerHTML = renderObservatoryApiResults({ ...run, section: { id: run.section, label: section.label || run.section }, total: run.result_count });
+    resultEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (window.lucide) window.lucide.createIcons();
+};
+
 window.sendCommandToCurator = async function() {
     await renderAdminDashboard('ai-curator');
 };
@@ -1787,6 +2046,7 @@ window.renderAdminDashboard = async function(tab = 'pending') {
             <button onclick="renderAdminDashboard('approved')" style="border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold; ${tab === 'approved' ? 'background:var(--primary-navy); color:white;' : 'background:var(--bg-light); color:var(--text-gray);'}">Publicados (${approved.length})</button>
             <button onclick="renderAdminDashboard('new')" style="background:var(--accent-orange); color:white; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Novo conteúdo</button>
             <button onclick="renderAdminDashboard('ai-curator')" style="${tab === 'ai-curator' ? 'background:#DDF9F4; color:#176A61;' : 'background:var(--bg-light); color:var(--text-gray);'} border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">IA Curadoria</button>
+            <button onclick="renderAdminDashboard('observatory-api')" style="${tab === 'observatory-api' ? 'background:#DDF9F4; color:#176A61;' : 'background:var(--bg-light); color:var(--text-gray);'} border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">API Observatório</button>
             <button onclick="renderAdminDashboard('forum')" style="background:var(--bg-light); color:var(--text-gray); border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Fórum</button>
             <button onclick="renderAdminSettings()" style="background:var(--bg-light); color:var(--text-gray); border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Segurança</button>
             <button onclick="logout()" style="background:#FFF0F0; color:#D32F2F; border:none; padding:10px 16px; border-radius:10px; cursor:pointer; font-weight:bold;">Sair</button>
@@ -1796,7 +2056,7 @@ window.renderAdminDashboard = async function(tab = 'pending') {
     <div style="max-width:1400px; margin:0 auto; padding:2rem; display:grid; grid-template-columns:minmax(0,2fr) minmax(300px,1fr); gap:2rem; align-items:start;">
         <main>
             <h2 style="font-size:1.8rem; color:var(--primary-navy); margin-bottom:2rem;">
-                ${tab === 'pending' ? 'Aprovação de conteúdos' : tab === 'approved' ? 'Conteúdos publicados' : tab === 'new' ? 'Novo conteúdo' : tab === 'ai-curator' ? 'Pesquisa e curadoria assistida por IA' : 'Moderação do fórum'}
+                ${tab === 'pending' ? 'Aprovação de conteúdos' : tab === 'approved' ? 'Conteúdos publicados' : tab === 'new' ? 'Novo conteúdo' : tab === 'ai-curator' ? 'Pesquisa e curadoria assistida por IA' : tab === 'observatory-api' ? 'Busca estruturada do Observatório' : 'Moderação do fórum'}
             </h2>
             <div id="admin-main-list">
                 ${tab === 'forum'
@@ -1805,7 +2065,9 @@ window.renderAdminDashboard = async function(tab = 'pending') {
                         ? renderManualEntryForm()
                         : tab === 'ai-curator'
                             ? renderAICuratorWorkspace()
-                            : contentHTML}
+                            : tab === 'observatory-api'
+                                ? renderObservatoryAPIWorkspace()
+                                : contentHTML}
             </div>
         </main>
 
@@ -1814,12 +2076,12 @@ window.renderAdminDashboard = async function(tab = 'pending') {
                 <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem;">
                     <img src="assets/eco.png" alt="" style="width:40px; height:40px; border-radius:50%; object-fit:cover;">
                     <div>
-                        <h3 style="font-size:1.1rem; color:var(--primary-navy);">ECO CURADORIA</h3>
-                        <span style="font-size:.75rem; color:#4DB6AC;">Gemini · Google Search · uso interno</span>
+                        <h3 style="font-size:1.1rem; color:var(--primary-navy);">${tab === 'observatory-api' ? 'API OBSERVATÓRIO' : 'ECO CURADORIA'}</h3>
+                        <span style="font-size:.75rem; color:#4DB6AC;">${tab === 'observatory-api' ? 'APIs científicas · uso interno' : 'Gemini · pesquisa · uso interno'}</span>
                     </div>
                 </div>
-                <p style="color:var(--text-gray); line-height:1.6; font-size:.9rem;">Este robô é exclusivo da administração: pesquisa CONCEA, InterNICHE, artigos, repositórios e web; depois prepara um rascunho com fontes para sua revisão.</p>
-                <button onclick="sendCommandToCurator()" style="width:100%; margin-top:1rem; background:var(--primary-navy); color:white; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:bold;">Abrir pesquisa da curadoria</button>
+                <p style="color:var(--text-gray); line-height:1.6; font-size:.9rem;">${tab === 'observatory-api' ? 'A API agrega resultados nacionais e internacionais por eixo do Observatório, deduplica os achados e envia somente o que você selecionar para a fila de curadoria.' : 'Este robô é exclusivo da administração: pesquisa fontes científicas e institucionais e prepara rascunhos com referências para sua revisão.'}</p>
+                <button onclick="${tab === 'observatory-api' ? "document.getElementById('observatory-api-workspace')?.scrollIntoView({behavior:'smooth'})" : 'sendCommandToCurator()'}" style="width:100%; margin-top:1rem; background:var(--primary-navy); color:white; border:none; padding:14px; border-radius:12px; cursor:pointer; font-weight:bold;">${tab === 'observatory-api' ? 'Ver conectores e buscar' : 'Abrir pesquisa da curadoria'}</button>
             </div>
         </aside>
     </div>`;
