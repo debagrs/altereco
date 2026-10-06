@@ -1741,3 +1741,122 @@ body.obs-atlas-modal-open {
     .obs-ranked-label { align-items:flex-start; flex-direction:column; gap:.15rem; }
     .obs-chart-shell,.obs-map-shell,.obs-map-centered { padding:.65rem; }
 }
+
+/* =========================================================
+   Observatório · correção de contraste / acessibilidade 2026-10-06
+   Resolve superfícies claras com texto claro quando o tema está no
+   estado padrão (sem data-theme="light") e mantém WCAG AA.
+   ========================================================= */
+
+/* Cartões deliberadamente escuros: independem do atributo de tema. */
+.obs2-wrapper .obs-card.obs-card--dark,
+.obs2-wrapper .obs-capes-hero-card {
+    background: #2C2C33 !important;
+    border-color: #444854 !important;
+    color: #FFFFFF !important;
+}
+
+.obs2-wrapper .obs-card.obs-card--dark h1,
+.obs2-wrapper .obs-card.obs-card--dark h2,
+.obs2-wrapper .obs-card.obs-card--dark h3,
+.obs2-wrapper .obs-card.obs-card--dark h4,
+.obs2-wrapper .obs-card.obs-card--dark p,
+.obs2-wrapper .obs-card.obs-card--dark strong,
+.obs2-wrapper .obs-card.obs-card--dark span:not(.material-icons),
+.obs2-wrapper .obs-capes-hero-card h1,
+.obs2-wrapper .obs-capes-hero-card h2,
+.obs2-wrapper .obs-capes-hero-card h3,
+.obs2-wrapper .obs-capes-hero-card h4,
+.obs2-wrapper .obs-capes-hero-card p,
+.obs2-wrapper .obs-capes-hero-card strong {
+    color: #F7F8FA !important;
+    opacity: 1 !important;
+}
+
+.obs2-wrapper .obs-card.obs-card--dark .obs-eyebrow,
+.obs2-wrapper .obs-capes-hero-card .obs-eyebrow {
+    color: #FFD25F !important;
+}
+
+.obs2-wrapper .obs-card.obs-card--dark .obs-evolution-row {
+    border-color: #5C6270 !important;
+}
+
+.obs2-wrapper .obs-card.obs-card--dark .obs-research-link,
+.obs2-wrapper .obs-capes-hero-card a {
+    background: #FFF8E3 !important;
+    border-color: #A37D20 !important;
+    color: #3D2E00 !important;
+}
+
+/* No tema claro/padrão, nunca permitir texto lavado em cartões claros. */
+body:not([data-theme="dark"]) .obs2-wrapper .obs-research-shell,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-education-shell,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-kpi,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-milestone-card,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-pub-card,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-group-card,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-context-grid > div {
+    color: #1A1A1A !important;
+}
+
+body:not([data-theme="dark"]) .obs2-wrapper .obs-research-shell h1,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-research-shell h2,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-research-shell h3,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-education-shell h1,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-education-shell h2,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-education-shell h3,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-kpi strong,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-authors,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-metric,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-metric strong,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-summary > span,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-context-grid strong {
+    color: #1A1A1A !important;
+    opacity: 1 !important;
+}
+
+body:not([data-theme="dark"]) .obs2-wrapper .obs-research-intro,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-data-note,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-kpi p,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-milestone-card p,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-pub-card p,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-group-card p,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-context-grid span,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-eyebrow,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-modal-kicker {
+    color: #3D3D3D !important;
+    opacity: 1 !important;
+}
+
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-pub-link,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-edu-milestone-card > a,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-section-heading-row > a,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-capes-results-header > a,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-source a {
+    color: #4A3600 !important;
+    text-decoration-thickness: 1.5px;
+}
+
+/* Contadores CNPq: superfície e foco claros, sem depender dos tokens antigos. */
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-summary > span {
+    background: #FFF4D6 !important;
+    border: 1px solid #D8B34B;
+}
+
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-metric {
+    background: transparent !important;
+    border-bottom-color: #C7CDD2 !important;
+}
+
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-metric:hover,
+body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-metric:focus-visible {
+    background: #F4F6F8 !important;
+}
+
+/* Links de fonte: alvo mínimo e leitura consistente. */
+.obs2-wrapper .obs-research-link {
+    min-height: 44px;
+    align-items: center;
+    line-height: 1.35;
+}
