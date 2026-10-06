@@ -1604,9 +1604,9 @@ window.openCNPqModal = function(area) {
             </div>
 
             <div class="obs-cnpq-context-grid">
-                <div><strong>${obsEscapeHTML(meta.total_grupos_brasil || '42.852')}</strong><span>grupos no Brasil no Censo DGP 2023</span></div>
-                <div><strong>${obsEscapeHTML(meta.total_instituicoes_brasil || '587')}</strong><span>instituições no Censo DGP 2023</span></div>
-                <div><strong>${obsEscapeHTML(groups.length)}</strong><span>grupos desta seleção temática nominal</span></div>
+                <div><strong>${Number(meta.total_grupos_brasil || 42852).toLocaleString('pt-BR')}</strong><span>grupos no Brasil no Censo DGP 2023</span></div>
+                <div><strong>${Number(meta.total_instituicoes_brasil || 587).toLocaleString('pt-BR')}</strong><span>instituições no Censo DGP 2023</span></div>
+                <div><strong>${Number(groups.length).toLocaleString('pt-BR')}</strong><span>grupos desta seleção temática nominal</span></div>
             </div>
 
             <div class="obs-cnpq-notice">
@@ -1671,8 +1671,28 @@ if (!window.__alterecoObsModalEscapeBound) {
     });
 }
 
+function getAlterEcoCnpqLiveMetrics() {
+    const source = window.ALTERECO_DGP_2023 || {};
+    const groups = Array.isArray(source.grupos) ? source.grupos : [];
+    const areas = Array.isArray(source.areas) && source.areas.length
+        ? source.areas
+        : ["Bem-estar Animal", "Direito Animal", "Ética e Senciência"];
+
+    return {
+        source,
+        groups,
+        uniqueCount: new Set(groups.map(group => group.id || group.nome).filter(Boolean)).size,
+        metrics: areas.map(area => ({
+            area,
+            total: groups.filter(group => Array.isArray(group.areas) && group.areas.includes(area)).length
+        }))
+    };
+}
+
 function renderObsPesquisa(c) {
     const db = window.OBSERVATORIO_DB.pesquisa;
+    const cnpqLive = getAlterEcoCnpqLiveMetrics();
+    const dgpMeta = cnpqLive.source?.meta || db.dgp_meta || {};
     c.innerHTML = `
         <div class="obs-research-shell">
             <h1>Pesquisa e Academia</h1>
@@ -1687,21 +1707,22 @@ function renderObsPesquisa(c) {
                         </div>
                         <a href="https://lattes.cnpq.br/web/dgp" target="_blank" rel="noopener noreferrer">Base Corrente <span class="material-icons" aria-hidden="true">north_east</span></a>
                     </div>
-                    <div class="obs-cnpq-summary">
-                        <span><strong>${obsEscapeHTML(db.dgp_meta?.total_grupos_brasil || '42.852')}</strong> grupos no Brasil · Censo DGP ${obsEscapeHTML(db.dgp_meta?.ano_referencia || 2023)}</span>
-                        <span><strong>${obsEscapeHTML(window.ALTERECO_DGP_2023?.grupos?.length || 0)}</strong> grupos únicos na base nominal temática AlterECO</span>
+                    <div class="obs-cnpq-summary" aria-label="Resumo do Censo DGP e da seleção temática AlterECO">
+                        <span><strong>${Number(dgpMeta.total_grupos_brasil || 42852).toLocaleString('pt-BR')}</strong> grupos no Brasil · Censo DGP ${obsEscapeHTML(dgpMeta.ano_referencia || 2023)}</span>
+                        <span><strong>${Number(dgpMeta.total_instituicoes_brasil || 587).toLocaleString('pt-BR')}</strong> instituições no Censo</span>
+                        <span><strong>${cnpqLive.uniqueCount.toLocaleString('pt-BR')}</strong> grupos únicos verificados na seleção temática AlterECO</span>
                     </div>
-                    ${researchSourceLink(db.dgp_meta?.fonte_censo || 'CNPq · Censo DGP 2023', db.dgp_meta?.fonte_censo_url || 'https://lattes.cnpq.br/web/dgp/censos2', db.dgp_meta?.ano_referencia || 2023)}
+                    ${researchSourceLink(dgpMeta.fonte_censo || 'CNPq · Censo DGP 2023', dgpMeta.fonte_censo_url || 'https://lattes.cnpq.br/web/dgp/censos2', dgpMeta.ano_referencia || 2023)}
                     <div class="obs-cnpq-metrics">
-                        ${db.grupos.map((g, index) => `
-                            <button class="obs-cnpq-metric" type="button" data-cnpq-index="${index}" aria-label="Ver ${obsEscapeHTML(g.total)} grupos catalogados em ${obsEscapeHTML(g.area)}">
+                        ${cnpqLive.metrics.map(g => `
+                            <button class="obs-cnpq-metric" type="button" data-cnpq-area="${obsEscapeHTML(g.area)}" aria-label="Ver ${obsEscapeHTML(g.total)} grupos verificados em ${obsEscapeHTML(g.area)}">
                                 <span>${obsEscapeHTML(g.area)}</span>
-                                <strong>${obsEscapeHTML(g.total)} <small>grupos catalogados</small></strong>
+                                <strong>${obsEscapeHTML(g.total)} <small>grupos verificados</small></strong>
                                 <span class="material-icons" aria-hidden="true">arrow_forward</span>
                             </button>
                         `).join('')}
                     </div>
-                    <p class="obs-data-note"><strong>Nota metodológica:</strong> os números acima correspondem à base nominal temática efetivamente listada no modal — não a estimativas. A referência nacional é o Censo DGP 2023. A base temática é expansível e deriva de uma única lista verificável, portanto o contador se atualiza automaticamente quando um grupo é acrescentado.</p>
+                    <p class="obs-data-note"><strong>Nota metodológica:</strong> o Censo DGP 2023 informa o total nacional de 42.852 grupos em 587 instituições, mas não publica um total pronto para estas três categorias temáticas do AlterECO. Por isso, os contadores de Bem-estar Animal, Direito Animal e Ética e Senciência são calculados diretamente da lista nominal verificável exibida no modal. O número do card e a quantidade de grupos listados passam a ser sempre o mesmo.</p>
                 </section>
 
                 <aside class="obs-capes-hero-card">
@@ -1767,11 +1788,10 @@ function renderObsPesquisa(c) {
         </div>
     `;
 
-    c.querySelectorAll('[data-cnpq-index]').forEach(button => {
+    c.querySelectorAll('[data-cnpq-area]').forEach(button => {
         button.addEventListener('click', () => {
-            const index = Number(button.dataset.cnpqIndex);
-            const groupMetric = db.grupos[index];
-            if (groupMetric) window.openCNPqModal(groupMetric.area);
+            const area = button.dataset.cnpqArea;
+            if (area) window.openCNPqModal(area);
         });
     });
 
