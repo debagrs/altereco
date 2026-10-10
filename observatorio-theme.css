@@ -1860,3 +1860,87 @@ body:not([data-theme="dark"]) .obs2-wrapper .obs-cnpq-metric:focus-visible {
     align-items: center;
     line-height: 1.35;
 }
+
+/* =========================================================
+   Observatório · hardening de acessibilidade claro/escuro 2026-10-10
+   Corrige herança de cor em links/botões aninhados e aumenta a
+   legibilidade/tamanho dos alvos no mobile.
+   ========================================================= */
+
+/*
+ * Alguns componentes usam <span>/<strong> dentro de links. Regras globais
+ * do tema escuro e dos cartões escuros aplicavam cor diretamente nesses
+ * filhos, anulando a cor acessível definida no próprio link.
+ */
+.obs2-wrapper .obs-card.obs-card--dark .obs-research-link > span:not(.material-icons),
+.obs2-wrapper .obs-card.obs-card--dark .obs-research-link strong,
+.obs2-wrapper .obs-capes-hero-card .obs-research-link > span:not(.material-icons),
+.obs2-wrapper .obs-capes-hero-card .obs-research-link strong {
+    color: #3D2E00 !important;
+    opacity: 1 !important;
+}
+
+[data-theme="dark"] .obs2-wrapper .obs-research-link > span:not(.material-icons),
+[data-theme="dark"] .obs2-wrapper .obs-research-link strong {
+    color: inherit !important;
+    opacity: 1 !important;
+}
+
+/* CTAs dentro de cartões escuros devem herdar a cor do próprio botão. */
+.obs2-wrapper .obs-card.obs-card--dark .obs-paradox-btn > span:not(.material-icons),
+[data-theme="dark"] .obs2-wrapper .obs-paradox-btn > span:not(.material-icons) {
+    color: inherit !important;
+    opacity: 1 !important;
+}
+
+/* Contadores dos filtros de Educação: contraste correto no amarelo/escuro. */
+[data-theme="dark"] .obs2-wrapper .obs-edu-filter button > span {
+    color: var(--obs-text) !important;
+}
+[data-theme="dark"] .obs2-wrapper .obs-edu-filter button.active > span {
+    color: var(--on-accent) !important;
+}
+
+/* No Observatório mobile, não reduzir conteúdo funcional para 14px. */
+@media (max-width: 760px) {
+    .obs2-wrapper #obs-display p,
+    .obs2-wrapper #obs-display li,
+    .obs2-wrapper #obs-display a,
+    .obs2-wrapper #obs-display button,
+    .obs2-wrapper #obs-display input,
+    .obs2-wrapper #obs-display select,
+    .obs2-wrapper #obs-display label {
+        font-size: 1rem !important;
+    }
+
+    .obs2-wrapper .obs-research-link {
+        min-height: 48px;
+        padding: .68rem .82rem;
+        line-height: 1.45;
+    }
+
+    .obs2-wrapper .obs2-nav-item {
+        min-height: 48px;
+    }
+
+    .obs2-wrapper .obs2-nav-label,
+    .obs2-wrapper .obs2-nav-item {
+        font-size: .8125rem !important;
+    }
+}
+
+/* O seletor global do tema escuro é muito específico; o ID do painel garante
+   que os contadores mantenham a cor correta dentro dos filtros. */
+[data-theme="dark"] .obs2-wrapper #obs-display .obs-edu-filter button > span {
+    color: var(--obs-text) !important;
+}
+[data-theme="dark"] .obs2-wrapper #obs-display .obs-edu-filter button.active > span {
+    color: var(--on-accent) !important;
+}
+
+/* Mesma correção para links de fonte em cartões claros convertidos ao tema escuro. */
+[data-theme="dark"] .obs2-wrapper #obs-display .obs-research-link > span:not(.material-icons),
+[data-theme="dark"] .obs2-wrapper #obs-display .obs-research-link strong {
+    color: inherit !important;
+    opacity: 1 !important;
+}
